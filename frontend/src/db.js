@@ -1,12 +1,16 @@
 const sql = require('mssql');
 
+const dbInstance = process.env.DB_INSTANCE || undefined;
+const dbPort = process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined;
+
 const config = {
     server: process.env.DB_SERVER || 'localhost',
-    port: Number(process.env.DB_PORT || 1433),
+    ...(dbInstance ? {} : { port: dbPort || 1433 }),
     user: process.env.DB_USER || 'foodJet_backend',
     password: process.env.DB_PASSWORD || 'ContraseniaSegura.67!',
     database: process.env.DB_NAME || 'FoodjetBackend',
     options: {
+        ...(dbInstance ? { instanceName: dbInstance } : {}),
         encrypt: process.env.DB_ENCRYPT === 'true',
         trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE !== 'false'
     },

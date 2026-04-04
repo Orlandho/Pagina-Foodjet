@@ -37,11 +37,11 @@ async function loadProducts() {
         products = Array.isArray(data) ? data : [];
 
         if (products.length === 0) {
-            showToast('No hay productos disponibles en SQL.', 'warning');
+            showToast('Por ahora no hay productos disponibles. Intenta nuevamente en unos minutos.', 'warning');
         }
     } catch (_error) {
         products = [];
-        showToast('No se pudo leer productos desde SQL.', 'warning');
+        showToast('No pudimos cargar el menu en este momento. Intenta nuevamente.', 'warning');
     }
 
     renderProducts();
@@ -55,7 +55,7 @@ function renderProducts() {
         grid.innerHTML = `
             <div class="col-12">
                 <div class="alert alert-warning mb-0" role="alert">
-                    No hay productos para mostrar. Verifica la tabla dbo.products en SQL Server.
+                    Por ahora no hay productos disponibles. Vuelve a intentarlo en unos minutos.
                 </div>
             </div>
         `;
