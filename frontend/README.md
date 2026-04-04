@@ -16,15 +16,19 @@ Copia .env.example a .env y ajusta los datos de tu SQL Server:
 
 PORT=3000
 DB_SERVER=localhost
-DB_PORT=1433
+DB_PORT=
 DB_INSTANCE=
+DB_DRIVER=msnodesqlv8
+DB_PROTOCOL=lpc
 DB_USER=foodJet_backend
 DB_PASSWORD=ContraseniaSegura.67!
 DB_NAME=FoodjetBackend
 DB_ENCRYPT=false
 DB_TRUST_SERVER_CERTIFICATE=true
+DB_TRUSTED_CONNECTION=false
 
 Nota: si usas una instancia con nombre (por ejemplo, SQLEXPRESS), puedes dejar DB_PORT vacio y usar DB_INSTANCE=SQLEXPRESS.
+Para SQL Server local en Windows donde TCP no responde, usa DB_DRIVER=msnodesqlv8 y DB_PROTOCOL=lpc.
 
 ## 3) Instalar dependencias
 
