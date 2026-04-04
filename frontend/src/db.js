@@ -3,8 +3,8 @@ const sql = require('mssql');
 const config = {
     server: process.env.DB_SERVER || 'localhost',
     port: Number(process.env.DB_PORT || 1433),
-    user: process.env.DB_USER || 'sa',
-    password: process.env.DB_PASSWORD || '',
+    user: process.env.DB_USER || 'foodJet_backend',
+    password: process.env.DB_PASSWORD || 'ContraseniaSegura.67!',
     database: process.env.DB_NAME || 'FoodjetBackend',
     options: {
         encrypt: process.env.DB_ENCRYPT === 'true',
