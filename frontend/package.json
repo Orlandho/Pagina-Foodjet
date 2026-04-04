@@ -1,0 +1,17 @@
+{
+  "name": "foodjet-app",
+  "version": "1.0.0",
+  "description": "FoodJet frontend + backend con SQL Server",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "mssql": "^11.0.1"
+  }
+}

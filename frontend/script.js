@@ -2,78 +2,15 @@
 // FoodJet - JavaScript
 // ============================
 // Datos de Productos
-const products = [
-    {
-        id: 1,
-        name: "Hamburguesa Clásica",
-        description: "Jugosa hamburguesa con queso, lechuga, tomate y salsa especial",
-        price: 18.90,
-        image: "https://images.unsplash.com/photo-1651843465180-5965076f7368?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Hamburguesas"
-    },
-    {
-        id: 2,
-        name: "Pizza Napolitana",
-        description: "Pizza tradicional con salsa de tomate, mozzarella y albahaca fresca",
-        price: 32.90,
-        image: "https://images.unsplash.com/photo-1678443238947-e58d71bf2e23?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Pizzas"
-    },
-    {
-        id: 3,
-        name: "Ramen Picante",
-        description: "Deliciosos fideos japoneses en caldo picante con cerdo y huevo",
-        price: 25.90,
-        image: "https://images.unsplash.com/photo-1652937916838-09b9c2ff8b45?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Asiática"
-    },
-    {
-        id: 4,
-        name: "Sushi Mix",
-        description: "Variedad de sushi fresco con salmón, atún y vegetales",
-        price: 45.90,
-        image: "https://images.unsplash.com/photo-1625937751876-4515cd8e78bd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Asiática"
-    },
-    {
-        id: 5,
-        name: "Alitas BBQ",
-        description: "Alitas de pollo crujientes con salsa BBQ casera",
-        price: 22.90,
-        image: "https://images.unsplash.com/photo-1618416682145-2fe1aaa6bd40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Pollo"
-    },
-    {
-        id: 6,
-        name: "Cheesecake de Fresa",
-        description: "Delicioso cheesecake con topping de fresas frescas",
-        price: 15.90,
-        image: "https://images.unsplash.com/photo-1759426016293-1b8be5849a72?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Postres"
-    },
-    {
-        id: 7,
-        name: "Ensalada César",
-        description: "Ensalada fresca con pollo, crutones y aderezo césar",
-        price: 18.90,
-        image: "https://images.unsplash.com/photo-1654458804670-2f4f26ab3154?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Saludable"
-    },
-    {
-        id: 8,
-        name: "Tacos al Pastor",
-        description: "Tres tacos mexicanos con carne al pastor y piña",
-        price: 19.90,
-        image: "https://www.elfinanciero.com.mx/resizer/v2/PI7RTVF57RBAVEASTTWNJTW4OU.jpg?smart=true&auth=6e8833568df9cf61a4935c3c8f1a6c7139315e31d037857dfe33c09c68b59eb9&width=1440&height=810",
-        category: "Mexicana"
-    }
-];
+
+let products = [];
 
 // Gestión del Estado
 let cart = {}; // Carrito de compras
 let currentUser = null; // { name: '...', email: '...', role: 'customer' | 'admin' }
 let charts = {}; // Almacenar instancias de gráficos para destruirlas después
 let orderPaymentMethod = 'cash';
+const API_BASE_URL = '/api';
 
 // Inicializar aplicación
 document.addEventListener('DOMContentLoaded', function() {
@@ -84,14 +21,47 @@ document.addEventListener('DOMContentLoaded', function() {
     const dashboardView = document.getElementById('dashboardView');
     const allViews = [homeView, checkoutView, trackingView, dashboardView];
 
-    renderProducts();
     initializeEventListeners(allViews);
     updateCartUI();
+    loadProducts();
 });
+
+async function loadProducts() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/products`);
+        if (!response.ok) {
+            throw new Error('No se pudieron cargar los productos desde SQL');
+        }
+
+        const data = await response.json();
+        products = Array.isArray(data) ? data : [];
+
+        if (products.length === 0) {
+            showToast('No hay productos disponibles en SQL.', 'warning');
+        }
+    } catch (_error) {
+        products = [];
+        showToast('No se pudo leer productos desde SQL.', 'warning');
+    }
+
+    renderProducts();
+}
 
 // Productos de renderizado
 function renderProducts() {
     const grid = document.getElementById('productsGrid');
+
+    if (!products.length) {
+        grid.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-warning mb-0" role="alert">
+                    No hay productos para mostrar. Verifica la tabla dbo.products en SQL Server.
+                </div>
+            </div>
+        `;
+        return;
+    }
+
     grid.innerHTML = products.map(product => `
         <div class="col-md-6 col-lg-3">
             <div class="card product-card">
@@ -477,23 +447,100 @@ function toggleCardDetails() {
 }
 
 // Manejar el pago Enviar
-function handleCheckoutSubmit(e) {
+async function handleCheckoutSubmit(e) {
     e.preventDefault();
+
+    const customerName = document.getElementById('customerName').value.trim();
+    const customerPhone = document.getElementById('customerPhone').value.trim();
+    const customerAddress = document.getElementById('customerAddress').value.trim();
+    const customerReference = document.getElementById('customerReference').value.trim();
+
+    if (!customerName || !customerPhone || !customerAddress) {
+        showToast('Completa todos los datos del cliente', 'warning');
+        return;
+    }
+
+    const cartEntries = Object.entries(cart);
+    if (cartEntries.length === 0) {
+        showToast('El carrito está vacío', 'warning');
+        return;
+    }
     
     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
     orderPaymentMethod = paymentMethod;
+
+    const subtotal = cartEntries.reduce((sum, [productId, quantity]) => {
+        const product = products.find(p => p.id == productId);
+        return product ? sum + (product.price * quantity) : sum;
+    }, 0);
+    const deliveryFee = 5.00;
+    const total = subtotal + deliveryFee;
+
+    const payload = {
+        customer: {
+            name: customerName,
+            phone: customerPhone,
+            address: customerAddress,
+            reference: customerReference || null
+        },
+        paymentMethod,
+        items: cartEntries
+            .map(([productId, quantity]) => {
+                const product = products.find(p => p.id == productId);
+                if (!product) return null;
+
+                return {
+                    productId: product.id,
+                    name: product.name,
+                    unitPrice: Number(product.price.toFixed(2)),
+                    quantity,
+                    lineTotal: Number((product.price * quantity).toFixed(2))
+                };
+            })
+            .filter(Boolean),
+        subtotal: Number(subtotal.toFixed(2)),
+        deliveryFee: Number(deliveryFee.toFixed(2)),
+        total: Number(total.toFixed(2))
+    };
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/orders`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        let responseData = null;
+        try {
+            responseData = await response.json();
+        } catch {
+            responseData = null;
+        }
+
+        if (!response.ok) {
+            throw new Error(responseData?.message || 'No se pudo guardar el pedido');
+        }
+
+        // Limpiar carrito solo cuando el guardado en SQL fue exitoso.
+        cart = {};
+        updateCartUI();
+        document.getElementById('checkoutForm').reset();
+        toggleCardDetails();
     
-    // Limpiar carrito
-    cart = {};
-    updateCartUI();
-    
-    // Mostrar seguimiento
-    const checkoutView = document.getElementById('checkoutView');
-    const homeView = document.getElementById('homeView');
-    const trackingView = document.getElementById('trackingView');
-    const dashboardView = document.getElementById('dashboardView');
-    showView(trackingView, [homeView, checkoutView, trackingView, dashboardView]);
-    startOrderTracking(paymentMethod);
+        // Mostrar seguimiento
+        const checkoutView = document.getElementById('checkoutView');
+        const homeView = document.getElementById('homeView');
+        const trackingView = document.getElementById('trackingView');
+        const dashboardView = document.getElementById('dashboardView');
+        showView(trackingView, [homeView, checkoutView, trackingView, dashboardView]);
+        startOrderTracking(paymentMethod, responseData);
+
+        showToast('Pedido guardado correctamente', 'success');
+    } catch (error) {
+        showToast(error.message || 'No se pudo guardar el pedido', 'danger');
+    }
 }
 
 // Mostrar vista
@@ -510,9 +557,11 @@ function showView(viewToShow, allViews) {
 }
 
 // Iniciar seguimiento de pedidos
-function startOrderTracking(paymentMethod) {
-    const orderNumber = '#FJ' + Math.floor(Math.random() * 10000);
-    const orderDate = new Date().toLocaleDateString('es-PE');
+function startOrderTracking(paymentMethod, savedOrder = null) {
+    const orderNumber = savedOrder?.orderNumber || ('#FJ' + Math.floor(Math.random() * 10000));
+    const orderDate = savedOrder?.createdAt
+        ? new Date(savedOrder.createdAt).toLocaleDateString('es-PE')
+        : new Date().toLocaleDateString('es-PE');
     
     document.getElementById('orderNumber').textContent = orderNumber;
     document.getElementById('orderDate').textContent = orderDate;
