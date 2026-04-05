@@ -11,12 +11,30 @@ IF OBJECT_ID('dbo.order_items', 'U') IS NOT NULL
 	DROP TABLE dbo.order_items;
 GO
 
+IF OBJECT_ID('dbo.orders', 'U') IS NOT NULL
+	DROP TABLE dbo.orders;
+GO
+
+IF OBJECT_ID('dbo.users', 'U') IS NOT NULL
+	DROP TABLE dbo.users;
+GO
+
 IF OBJECT_ID('dbo.products', 'U') IS NOT NULL
 	DROP TABLE dbo.products;
 GO
 
-IF OBJECT_ID('dbo.orders', 'U') IS NOT NULL
-	DROP TABLE dbo.orders;
+CREATE TABLE dbo.users (
+	id INT IDENTITY(1,1) PRIMARY KEY,
+	name NVARCHAR(120) NOT NULL,
+	email NVARCHAR(150) NOT NULL UNIQUE,
+	password NVARCHAR(255) NOT NULL,
+	created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
+GO
+
+INSERT INTO dbo.users (name, email, password)
+VALUES
+	(N'Juan Perez', N'juan@example.com', N'$2a$10$7qB2v.R.m09QhI1R805B7O9V90r9G/h/w4Vz5bTq3m/qjA22O/E9a'); -- password is '123456' hashed with bcrypt
 GO
 
 CREATE TABLE dbo.products (
@@ -44,6 +62,7 @@ GO
 CREATE TABLE dbo.orders (
 	id INT IDENTITY(1,1) PRIMARY KEY,
 	order_number VARCHAR(50) NOT NULL UNIQUE,
+	user_id INT NOT NULL,
 	customer_name NVARCHAR(120) NOT NULL,
 	customer_phone VARCHAR(30) NOT NULL,
 	customer_address NVARCHAR(250) NOT NULL,
@@ -53,7 +72,9 @@ CREATE TABLE dbo.orders (
 	delivery_fee DECIMAL(10,2) NOT NULL,
 	total DECIMAL(10,2) NOT NULL,
 	status VARCHAR(20) NOT NULL,
-	created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+	created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+	CONSTRAINT FK_orders_users
+		FOREIGN KEY (user_id) REFERENCES dbo.users(id)
 );
 GO
 
