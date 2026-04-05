@@ -18,8 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const homeView = document.getElementById('homeView');
     const checkoutView = document.getElementById('checkoutView');
     const trackingView = document.getElementById('trackingView');
-    const dashboardView = document.getElementById('dashboardView');
-    const allViews = [homeView, checkoutView, trackingView, dashboardView];
+    const allViews = [homeView, checkoutView, trackingView];
 
     initializeEventListeners(allViews);
     updateCartUI();
@@ -219,13 +218,6 @@ function initializeEventListeners(allViews) {
     const homeView = document.getElementById('homeView');
     const checkoutView = document.getElementById('checkoutView');
     const trackingView = document.getElementById('trackingView');
-    const dashboardView = document.getElementById('dashboardView');
-
-    // --- ELEMENTOS DEL DASHBOARD ---
-    const dashboardBtn = document.getElementById('dashboardBtn');
-    const backToMenuFromDashboard = document.getElementById('backToMenuFromDashboard');
-    const orderNowFromDashboard = document.getElementById('orderNowFromDashboard');
-    const logoutBtnDashboard = document.getElementById('logoutBtnDashboard');
 
     // --- ELEMENTOS DE NAVEGACIÓN DE USUARIO ---
     const logoutBtn = document.getElementById('logoutBtn');
@@ -239,14 +231,25 @@ function initializeEventListeners(allViews) {
         loginModal.show();
     });
     
+    // Modals toggle
+    document.getElementById('showRegisterBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
+        new bootstrap.Modal(document.getElementById('registerModal')).show();
+    });
+
+    document.getElementById('showLoginBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        bootstrap.Modal.getInstance(document.getElementById('registerModal')).hide();
+        new bootstrap.Modal(document.getElementById('loginModal')).show();
+    });
+
     // Checkout button
     document.getElementById('checkoutBtn').addEventListener('click', handleCheckout);
     
-    // Login form
+    // Login and Register forms
     document.getElementById('loginForm').addEventListener('submit', (e) => handleLogin(e, allViews));
-    
-    // Quick demo button
-    document.getElementById('quickDemoBtn').addEventListener('click', () => handleQuickDemo(allViews));
+    document.getElementById('registerForm').addEventListener('submit', (e) => handleRegister(e, allViews));
     
     // Checkout form
     document.getElementById('checkoutForm').addEventListener('submit', handleCheckoutSubmit);
@@ -254,34 +257,14 @@ function initializeEventListeners(allViews) {
     // Back to menu buttons
     document.getElementById('backToMenuBtn').addEventListener('click', () => showView(homeView, allViews));
     document.getElementById('backToMenuFromTracking').addEventListener('click', () => showView(homeView, allViews));
-    document.getElementById('backToMenuFromDashboard').addEventListener('click', () => showView(homeView, allViews));
     
     // Payment method toggle
     document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
         radio.addEventListener('change', toggleCardDetails);
     });
 
-    // --- EVENT LISTENERS PARA EL DASHBOARD ---
-    if (dashboardBtn) {
-        dashboardBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            displayDashboard(allViews);
-        });
-    }
-
-    if (orderNowFromDashboard) {
-        orderNowFromDashboard.addEventListener('click', (e) => {
-            e.preventDefault();
-            showView(homeView, allViews);
-            setTimeout(() => document.getElementById('menu').scrollIntoView({ behavior: 'smooth' }), 100);
-        });
-    }
-
     if (logoutBtn) {
         logoutBtn.addEventListener('click', (e) => handleLogout(e, allViews));
-    }
-    if (logoutBtnDashboard) {
-        logoutBtnDashboard.addEventListener('click', (e) => handleLogout(e, allViews));
     }
 }
 
@@ -291,35 +274,69 @@ function openCart() {
     cartOffcanvas.show();
 }
 
-// Iniciar sesión
-function handleLogin(e, allViews) {
+// Registro
+async function handleRegister(e, allViews) {
     e.preventDefault();
-    const name = document.getElementById('loginName').value.trim();
+    const name = document.getElementById('registerName').value.trim();
+    const email = document.getElementById('registerEmail').value.trim();
+    const password = document.getElementById('registerPassword').value;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al registrar');
+        }
+
+        currentUser = data;
+        updateUserUI(currentUser);
+
+        const registerModal = bootstrap.Modal.getInstance(document.getElementById('registerModal'));
+        registerModal.hide();
+
+        showToast(`¡Cuenta creada con éxito, ${name}!`);
+        document.getElementById('registerForm').reset();
+    } catch (error) {
+        showToast(error.message, 'warning');
+    }
+}
+
+// Iniciar sesión
+async function handleLogin(e, allViews) {
+    e.preventDefault();
     const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
     
-    if (name) {
-        // Lógica simple para rol de admin
-        const role = name.toLowerCase() === 'admin' ? 'admin' : 'customer';
-        currentUser = { name: name, email: email, role: role };
+    try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al iniciar sesión');
+        }
+
+        currentUser = data;
         updateUserUI(currentUser);
         
         const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
         loginModal.hide();
         
-        showToast(`¡Bienvenido, ${name}!`);
+        showToast(`¡Bienvenido de vuelta, ${data.name}!`);
         document.getElementById('loginForm').reset();
+    } catch (error) {
+        showToast(error.message, 'warning');
     }
-}
-
-// Inicio Demo
-function handleQuickDemo(allViews) {
-    currentUser = { name: "Usuario Demo", email: "demo@foodjet.com", role: "customer" };
-    updateUserUI(currentUser);
-    
-    const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-    loginModal.hide();
-    
-    showToast('¡Bienvenido, Usuario Demo!');
 }
 
 // Cerrar Sesión
@@ -336,30 +353,16 @@ function updateUserUI(user) {
     const userMenu = document.getElementById('userMenu');
     const loginNav = document.getElementById('loginNav');
     const userNameDropdown = document.getElementById('userNameDropdown');
-    const dashboardUserName = document.getElementById('dashboardUserName');
-    const dashboardUserEmail = document.getElementById('dashboardUserEmail');
 
-    const dashboardBtn = document.getElementById('dashboardBtn');
     if (user) {
         // Usuario ha iniciado sesión
         userNameDropdown.textContent = user.name;
-        dashboardUserName.textContent = user.name;
-        dashboardUserEmail.textContent = user.email || 'No se ha proporcionado email';
         userMenu.style.display = 'block';
         loginNav.style.display = 'none';
-
-        // Mostrar botón de dashboard solo si es admin
-        dashboardBtn.style.display = user.role === 'admin' ? 'block' : 'none';
-
-        // Cambiar el ícono si es admin
-        const userIcon = userMenu.querySelector('i');
-        userIcon.classList.toggle('bi-person-gear', user.role === 'admin');
-        userIcon.classList.toggle('bi-person-circle', user.role !== 'admin');
     } else {
         // Usuario ha cerrado sesión
         userMenu.style.display = 'none';
         loginNav.style.display = 'block';
-        dashboardBtn.style.display = 'none';
     }
 }
 
@@ -387,8 +390,7 @@ function handleCheckout() {
     const checkoutView = document.getElementById('checkoutView');
     const homeView = document.getElementById('homeView');
     const trackingView = document.getElementById('trackingView');
-    const dashboardView = document.getElementById('dashboardView');
-    showView(checkoutView, [homeView, checkoutView, trackingView, dashboardView]);
+    showView(checkoutView, [homeView, checkoutView, trackingView]);
     
     const cartOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('cartOffcanvas'));
     if (cartOffcanvas) {
@@ -477,6 +479,7 @@ async function handleCheckoutSubmit(e) {
     const total = subtotal + deliveryFee;
 
     const payload = {
+        userId: currentUser.id,
         customer: {
             name: customerName,
             phone: customerPhone,
@@ -533,8 +536,7 @@ async function handleCheckoutSubmit(e) {
         const checkoutView = document.getElementById('checkoutView');
         const homeView = document.getElementById('homeView');
         const trackingView = document.getElementById('trackingView');
-        const dashboardView = document.getElementById('dashboardView');
-        showView(trackingView, [homeView, checkoutView, trackingView, dashboardView]);
+        showView(trackingView, [homeView, checkoutView, trackingView]);
         startOrderTracking(paymentMethod, responseData);
 
         showToast('Pedido guardado correctamente', 'success');
@@ -637,112 +639,6 @@ function updateOrderStatus(status) {
         line2.classList.add('completed');
     }
 }
-
-// --- LÓGICA DEL DASHBOARD ---
-
-function displayDashboard(allViews) {
-    // Esta función ahora solo es llamada por administradores.
-    const dashboardView = document.getElementById('dashboardView');
-    showView(dashboardView, allViews);
-    // Renderiza directamente los gráficos del administrador.
-    renderAdminCharts();
-}
-
-// --- FUNCIONES PARA GRÁFICOS DEL ADMIN ---
-function renderAdminCharts() {
-    // Destruir gráficos anteriores para evitar duplicados
-    Object.values(charts).forEach(chart => chart.destroy());
-
-    // Datos de ejemplo para los gráficos
-    const salesData = {
-        labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
-        datasets: [{
-            label: 'Ventas (S/)',
-            data: [120, 190, 300, 500, 210, 350, 450],
-            fill: false,
-            borderColor: 'rgb(245, 175, 105)',
-            tension: 0.1
-        }]
-    };
-
-    const topProductsData = {
-        labels: ['Hamburguesa', 'Pizza', 'Sushi', 'Tacos', 'Alitas BBQ'],
-        datasets: [{
-            label: 'Unidades Vendidas',
-            data: [65, 59, 80, 81, 56],
-            backgroundColor: [
-                'rgba(243, 157, 74, 0.5)',
-                'rgba(245, 175, 105, 0.5)',
-                'rgba(254, 243, 232, 0.8)',
-                'rgba(108, 117, 125, 0.5)',
-                'rgba(26, 26, 26, 0.5)',
-            ],
-            borderColor: [
-                'rgb(243, 157, 74)',
-                'rgb(245, 175, 105)',
-                'rgb(254, 243, 232)',
-                'rgb(108, 117, 125)',
-                'rgb(26, 26, 26)',
-            ],
-            borderWidth: 1
-        }]
-    };
-
-    const categoryData = {
-        labels: ['Hamburguesas', 'Pizzas', 'Asiática', 'Mexicana', 'Postres'],
-        datasets: [{
-            label: 'Ventas por Categoría',
-            data: [300, 500, 400, 200, 150],
-            backgroundColor: [
-                '#f5af69',
-                '#f39d4a',
-                '#6c757d',
-                '#fef3e8',
-                '#1a1a1a'
-            ],
-            hoverOffset: 4
-        }]
-    };
-
-    // Crear Gráfico de Ventas
-    const salesCtx = document.getElementById('salesChart').getContext('2d');
-    charts.sales = new Chart(salesCtx, {
-        type: 'line',
-        data: salesData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
-    // Crear Gráfico de Productos Top
-    const productsCtx = document.getElementById('topProductsChart').getContext('2d');
-    charts.products = new Chart(productsCtx, {
-        type: 'bar',
-        data: topProductsData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-
-    // Crear Gráfico de Categorías
-    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
-    charts.categories = new Chart(categoryCtx, {
-        type: 'doughnut',
-        data: categoryData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-        }
-    });
-}
-
 
 // Clases de restablecimiento
 function showToast(message, type = 'success') {

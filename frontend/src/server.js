@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const bcrypt = require('bcrypt');
 const { sql, getPool } = require('./db');
 
 dotenv.config({ quiet: true });
@@ -45,8 +46,95 @@ app.get('/api/products', async (_req, res) => {
     }
 });
 
+app.post('/api/register', async (req, res) => {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+        return res.status(400).json({ message: 'Nombre, email y contraseña son obligatorios' });
+    }
+
+    try {
+        const pool = await getPool();
+
+        // Verificar si el email ya existe
+        const checkRequest = new sql.Request(pool);
+        checkRequest.input('email', sql.NVarChar(150), email);
+        const checkResult = await checkRequest.query('SELECT id FROM dbo.users WHERE email = @email');
+        if (checkResult.recordset.length > 0) {
+            return res.status(400).json({ message: 'El correo electrónico ya está registrado' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const insertRequest = new sql.Request(pool);
+        insertRequest.input('name', sql.NVarChar(120), name);
+        insertRequest.input('email', sql.NVarChar(150), email);
+        insertRequest.input('password', sql.NVarChar(255), hashedPassword);
+
+        const result = await insertRequest.query(`
+            INSERT INTO dbo.users (name, email, password)
+            OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.created_at
+            VALUES (@name, @email, @password)
+        `);
+
+        const user = result.recordset[0];
+        return res.status(201).json({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: 'customer'
+        });
+    } catch (error) {
+        return res.status(500).json({ message: 'Error al registrar el usuario', error: error.message });
+    }
+});
+
+app.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email y contraseña son obligatorios' });
+    }
+
+    try {
+        const pool = await getPool();
+        const request = new sql.Request(pool);
+        request.input('email', sql.NVarChar(150), email);
+
+        const result = await request.query(`
+            SELECT id, name, email, password
+            FROM dbo.users
+            WHERE email = @email
+        `);
+
+        if (result.recordset.length === 0) {
+            return res.status(401).json({ message: 'Credenciales inválidas' });
+        }
+
+        const user = result.recordset[0];
+        const match = await bcrypt.compare(password, user.password);
+
+        if (!match) {
+            return res.status(401).json({ message: 'Credenciales inválidas' });
+        }
+
+        return res.json({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: 'customer'
+        });
+    } catch (error) {
+        return res.status(500).json({ message: 'Error al iniciar sesión', error: error.message });
+    }
+});
+
 app.post('/api/orders', async (req, res) => {
-    const { customer, paymentMethod, items, subtotal, deliveryFee, total } = req.body;
+    const { userId, customer, paymentMethod, items, subtotal, deliveryFee, total } = req.body;
+
+    if (!userId) {
+        return res.status(401).json({ message: 'Debe iniciar sesión para realizar un pedido' });
+    }
 
     if (!customer || !customer.name || !customer.phone || !customer.address) {
         return res.status(400).json({ message: 'Faltan datos de cliente obligatorios' });
@@ -71,6 +159,7 @@ app.post('/api/orders', async (req, res) => {
         try {
             const orderRequest = new sql.Request(transaction);
             orderRequest.input('order_number', sql.VarChar(50), orderNumber);
+            orderRequest.input('user_id', sql.Int, userId);
             orderRequest.input('customer_name', sql.NVarChar(120), customer.name);
             orderRequest.input('customer_phone', sql.VarChar(30), customer.phone);
             orderRequest.input('customer_address', sql.NVarChar(250), customer.address);
@@ -84,6 +173,7 @@ app.post('/api/orders', async (req, res) => {
             const orderResult = await orderRequest.query(`
                 INSERT INTO dbo.orders (
                     order_number,
+                    user_id,
                     customer_name,
                     customer_phone,
                     customer_address,
@@ -97,6 +187,7 @@ app.post('/api/orders', async (req, res) => {
                 OUTPUT INSERTED.id
                 VALUES (
                     @order_number,
+                    @user_id,
                     @customer_name,
                     @customer_phone,
                     @customer_address,
