@@ -1,82 +1,18 @@
 // ============================
 // FoodJet - JavaScript
 // ============================
-// Datos de Productos
-const products = [
-    {
-        id: 1,
-        name: "Hamburguesa Clásica",
-        description: "Jugosa hamburguesa con queso, lechuga, tomate y salsa especial",
-        price: 18.90,
-        image: "https://images.unsplash.com/photo-1651843465180-5965076f7368?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Hamburguesas"
-    },
-    {
-        id: 2,
-        name: "Pizza Napolitana",
-        description: "Pizza tradicional con salsa de tomate, mozzarella y albahaca fresca",
-        price: 32.90,
-        image: "https://images.unsplash.com/photo-1678443238947-e58d71bf2e23?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Pizzas"
-    },
-    {
-        id: 3,
-        name: "Ramen Picante",
-        description: "Deliciosos fideos japoneses en caldo picante con cerdo y huevo",
-        price: 25.90,
-        image: "https://images.unsplash.com/photo-1652937916838-09b9c2ff8b45?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Asiática"
-    },
-    {
-        id: 4,
-        name: "Sushi Mix",
-        description: "Variedad de sushi fresco con salmón, atún y vegetales",
-        price: 45.90,
-        image: "https://images.unsplash.com/photo-1625937751876-4515cd8e78bd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Asiática"
-    },
-    {
-        id: 5,
-        name: "Alitas BBQ",
-        description: "Alitas de pollo crujientes con salsa BBQ casera",
-        price: 22.90,
-        image: "https://images.unsplash.com/photo-1618416682145-2fe1aaa6bd40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Pollo"
-    },
-    {
-        id: 6,
-        name: "Cheesecake de Fresa",
-        description: "Delicioso cheesecake con topping de fresas frescas",
-        price: 15.90,
-        image: "https://images.unsplash.com/photo-1759426016293-1b8be5849a72?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Postres"
-    },
-    {
-        id: 7,
-        name: "Ensalada César",
-        description: "Ensalada fresca con pollo, crutones y aderezo césar",
-        price: 18.90,
-        image: "https://images.unsplash.com/photo-1654458804670-2f4f26ab3154?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=500",
-        category: "Saludable"
-    },
-    {
-        id: 8,
-        name: "Tacos al Pastor",
-        description: "Tres tacos mexicanos con carne al pastor y piña",
-        price: 19.90,
-        image: "https://www.elfinanciero.com.mx/resizer/v2/PI7RTVF57RBAVEASTTWNJTW4OU.jpg?smart=true&auth=6e8833568df9cf61a4935c3c8f1a6c7139315e31d037857dfe33c09c68b59eb9&width=1440&height=810",
-        category: "Mexicana"
-    }
-];
-
 // Gestión del Estado
+let products = []; // Se cargará desde el backend
 let cart = {}; // Carrito de compras
-let currentUser = null; // { name: '...', email: '...', role: 'customer' | 'admin' }
+let currentUser = null; // { id: 1, name: '...', email: '...', role: 'cliente' | 'admin' }
 let charts = {}; // Almacenar instancias de gráficos para destruirlas después
 let orderPaymentMethod = 'cash';
+let authToken = localStorage.getItem('token') || null;
+
+const API_URL = 'http://localhost:3000/api';
 
 // Inicializar aplicación
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Vistas
     const homeView = document.getElementById('homeView');
     const checkoutView = document.getElementById('checkoutView');
@@ -84,26 +20,62 @@ document.addEventListener('DOMContentLoaded', function() {
     const dashboardView = document.getElementById('dashboardView');
     const allViews = [homeView, checkoutView, trackingView, dashboardView];
 
-    renderProducts();
+    checkExistingSession();
+    await fetchProducts();
     initializeEventListeners(allViews);
     updateCartUI();
 });
 
+// Restaurar sesión de localStorage
+function checkExistingSession() {
+    const userStr = localStorage.getItem('user');
+    if (userStr && authToken) {
+        try {
+            currentUser = JSON.parse(userStr);
+            updateUserUI(currentUser);
+        } catch (e) {
+            handleLogout(new Event('click'), []);
+        }
+    }
+}
+
+// Cargar productos desde el backend
+async function fetchProducts() {
+    try {
+        const response = await fetch(`${API_URL}/products`);
+        if (response.ok) {
+            products = await response.json();
+            renderProducts();
+        } else {
+            console.error('Error al cargar productos');
+            showToast('No se pudieron cargar los productos', 'warning');
+        }
+    } catch (error) {
+        console.error('Error de conexión:', error);
+        showToast('Error de conexión con el servidor', 'warning');
+    }
+}
+
 // Productos de renderizado
 function renderProducts() {
     const grid = document.getElementById('productsGrid');
+    if (products.length === 0) {
+        grid.innerHTML = '<p class="text-center w-100">No hay productos disponibles por ahora.</p>';
+        return;
+    }
+
     grid.innerHTML = products.map(product => `
         <div class="col-md-6 col-lg-3">
             <div class="card product-card">
                 <div class="position-relative overflow-hidden">
-                    <img src="${product.image}" class="card-img-top product-image" alt="${product.name}">
-                    <span class="product-badge">${product.category}</span>
+                    <img src="${product.imagen_url || 'https://via.placeholder.com/500x300?text=FoodJet'}" class="card-img-top product-image" alt="${product.nombre}">
+                    <span class="product-badge">${product.categoria}</span>
                 </div>
                 <div class="card-body">
-                    <h3 class="h5 card-title mb-2">${product.name}</h3>
-                    <p class="card-text text-muted small mb-3">${product.description}</p>
+                    <h3 class="h5 card-title mb-2">${product.nombre}</h3>
+                    <p class="card-text text-muted small mb-3">${product.descripcion || ''}</p>
                     <div class="d-flex justify-content-between align-items-center">
-                        <div class="fs-4 fw-bold">S/ ${product.price.toFixed(2)}</div>
+                        <div class="fs-4 fw-bold">S/ ${product.precio.toFixed(2)}</div>
                         <div id="product-controls-${product.id}">
                             ${renderProductControls(product.id)}
                         </div>
@@ -217,18 +189,18 @@ function renderCartItems() {
         const product = products.find(p => p.id == productId);
         if (!product) return '';
         
-        const itemTotal = product.price * quantity;
+        const itemTotal = product.precio * quantity;
         total += itemTotal;
         
         return `
             <div class="cart-item">
-                <img src="${product.image}" class="cart-item-image" alt="${product.name}">
+                <img src="${product.imagen_url || 'https://via.placeholder.com/500x300?text=FoodJet'}" class="cart-item-image" alt="${product.nombre}">
                 <div class="cart-item-details">
-                    <h6 class="mb-1">${product.name}</h6>
+                    <h6 class="mb-1">${product.nombre}</h6>
                     <p class="text-muted small mb-1">Cantidad: ${quantity}</p>
                     <p class="fw-bold mb-0">S/ ${itemTotal.toFixed(2)}</p>
                 </div>
-                <button class="remove-item-btn" onclick="removeItemCompletely(${product.id})" aria-label="Eliminar ${product.name}">
+                <button class="remove-item-btn" onclick="removeItemCompletely(${product.id})" aria-label="Eliminar ${product.nombre}">
                     <i class="bi bi-trash"></i>
                 </button>
             </div>
@@ -321,43 +293,104 @@ function openCart() {
     cartOffcanvas.show();
 }
 
-// Iniciar sesión
-function handleLogin(e, allViews) {
+// Iniciar sesión (ahora llama al backend)
+async function handleLogin(e, allViews) {
     e.preventDefault();
-    const name = document.getElementById('loginName').value.trim();
     const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) {
+        showToast('Por favor, ingresa email y contraseña', 'warning');
+        return;
+    }
     
-    if (name) {
-        // Lógica simple para rol de admin
-        const role = name.toLowerCase() === 'admin' ? 'admin' : 'customer';
-        currentUser = { name: name, email: email, role: role };
-        updateUserUI(currentUser);
+    try {
+        const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
         
-        const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-        loginModal.hide();
+        const data = await response.json();
         
-        showToast(`¡Bienvenido, ${name}!`);
-        document.getElementById('loginForm').reset();
+        if (response.ok) {
+            currentUser = data.user;
+            authToken = data.token;
+
+            // Guardar en localStorage
+            localStorage.setItem('token', authToken);
+            localStorage.setItem('user', JSON.stringify(currentUser));
+
+            updateUserUI(currentUser);
+
+            const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+            loginModal.hide();
+
+            showToast(`¡Bienvenido, ${currentUser.nombre}!`);
+            document.getElementById('loginForm').reset();
+        } else {
+            showToast(data.error || 'Error al iniciar sesión', 'warning');
+        }
+    } catch (error) {
+        console.error(error);
+        showToast('Error de conexión con el servidor', 'warning');
     }
 }
 
-// Inicio Demo
-function handleQuickDemo(allViews) {
-    currentUser = { name: "Usuario Demo", email: "demo@foodjet.com", role: "customer" };
-    updateUserUI(currentUser);
+// Inicio Demo - Registra temporalmente o usa uno existente
+async function handleQuickDemo(allViews) {
+    const demoEmail = 'demo@foodjet.com';
+    const demoPassword = 'password123';
     
-    const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-    loginModal.hide();
-    
-    showToast('¡Bienvenido, Usuario Demo!');
+    try {
+        // Intentar registrar (ignoramos error si ya existe)
+        await fetch(`${API_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: 'Usuario Demo', email: demoEmail, password: demoPassword, rol: 'cliente' })
+        });
+
+        // Iniciar sesión
+        const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: demoEmail, password: demoPassword })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            currentUser = data.user;
+            authToken = data.token;
+            localStorage.setItem('token', authToken);
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            updateUserUI(currentUser);
+
+            const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+            loginModal.hide();
+            showToast('¡Bienvenido, Usuario Demo!');
+        } else {
+            showToast('No se pudo iniciar la demo', 'warning');
+        }
+    } catch(err) {
+        console.error(err);
+        showToast('Error de conexión', 'warning');
+    }
 }
 
 // Cerrar Sesión
 function handleLogout(e, allViews) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     currentUser = null;
+    authToken = null;
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     updateUserUI(null);
-    showView(document.getElementById('homeView'), allViews);
+
+    // Si estamos en dashboard o profile, volver a home
+    const homeView = document.getElementById('homeView');
+    if (allViews && homeView) {
+        showView(homeView, allViews);
+    }
     showToast('Has cerrado sesión', 'info');
 }
 
@@ -372,19 +405,19 @@ function updateUserUI(user) {
     const dashboardBtn = document.getElementById('dashboardBtn');
     if (user) {
         // Usuario ha iniciado sesión
-        userNameDropdown.textContent = user.name;
-        dashboardUserName.textContent = user.name;
+        userNameDropdown.textContent = user.nombre;
+        dashboardUserName.textContent = user.nombre;
         dashboardUserEmail.textContent = user.email || 'No se ha proporcionado email';
         userMenu.style.display = 'block';
         loginNav.style.display = 'none';
 
         // Mostrar botón de dashboard solo si es admin
-        dashboardBtn.style.display = user.role === 'admin' ? 'block' : 'none';
+        dashboardBtn.style.display = user.rol === 'admin' ? 'block' : 'none';
 
         // Cambiar el ícono si es admin
         const userIcon = userMenu.querySelector('i');
-        userIcon.classList.toggle('bi-person-gear', user.role === 'admin');
-        userIcon.classList.toggle('bi-person-circle', user.role !== 'admin');
+        userIcon.classList.toggle('bi-person-gear', user.rol === 'admin');
+        userIcon.classList.toggle('bi-person-circle', user.rol !== 'admin');
     } else {
         // Usuario ha cerrado sesión
         userMenu.style.display = 'none';
@@ -440,12 +473,12 @@ function renderCheckoutSummary() {
         const product = products.find(p => p.id == productId);
         if (!product) return '';
         
-        const itemTotal = product.price * quantity;
+        const itemTotal = product.precio * quantity;
         subtotal += itemTotal;
         
         return `
             <div class="d-flex justify-content-between text-sm mb-2">
-                <span class="text-muted">${product.name} x${quantity}</span>
+                <span class="text-muted">${product.nombre} x${quantity}</span>
                 <span>S/ ${itemTotal.toFixed(2)}</span>
             </div>
         `;
@@ -476,24 +509,57 @@ function toggleCardDetails() {
     }
 }
 
-// Manejar el pago Enviar
-function handleCheckoutSubmit(e) {
+// Manejar el pago Enviar (ahora interactúa con backend)
+async function handleCheckoutSubmit(e) {
     e.preventDefault();
     
     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
     orderPaymentMethod = paymentMethod;
     
-    // Limpiar carrito
-    cart = {};
-    updateCartUI();
-    
-    // Mostrar seguimiento
-    const checkoutView = document.getElementById('checkoutView');
-    const homeView = document.getElementById('homeView');
-    const trackingView = document.getElementById('trackingView');
-    const dashboardView = document.getElementById('dashboardView');
-    showView(trackingView, [homeView, checkoutView, trackingView, dashboardView]);
-    startOrderTracking(paymentMethod);
+    if (!authToken) {
+        showToast('Debes iniciar sesión para completar la compra', 'warning');
+        return;
+    }
+
+    // Preparar el cuerpo para la API
+    const items = Object.entries(cart).map(([productId, quantity]) => ({
+        productId: parseInt(productId),
+        cantidad: quantity
+    }));
+
+    try {
+        const response = await fetch(`${API_URL}/orders`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ items })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Limpiar carrito
+            cart = {};
+            updateCartUI();
+
+            // Mostrar seguimiento
+            const checkoutView = document.getElementById('checkoutView');
+            const homeView = document.getElementById('homeView');
+            const trackingView = document.getElementById('trackingView');
+            const dashboardView = document.getElementById('dashboardView');
+            showView(trackingView, [homeView, checkoutView, trackingView, dashboardView]);
+
+            // Usar el ID de la orden real
+            startOrderTracking(paymentMethod, data.order.id);
+        } else {
+            showToast(data.error || 'Error al procesar el pedido', 'warning');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Error de conexión al crear el pedido', 'warning');
+    }
 }
 
 // Mostrar vista
@@ -510,8 +576,8 @@ function showView(viewToShow, allViews) {
 }
 
 // Iniciar seguimiento de pedidos
-function startOrderTracking(paymentMethod) {
-    const orderNumber = '#FJ' + Math.floor(Math.random() * 10000);
+function startOrderTracking(paymentMethod, realOrderId) {
+    const orderNumber = '#FJ' + (realOrderId ? realOrderId.toString().padStart(4, '0') : Math.floor(Math.random() * 10000));
     const orderDate = new Date().toLocaleDateString('es-PE');
     
     document.getElementById('orderNumber').textContent = orderNumber;
@@ -599,10 +665,29 @@ function displayDashboard(allViews) {
     renderAdminCharts();
 }
 
-// --- FUNCIONES PARA GRÁFICOS DEL ADMIN ---
-function renderAdminCharts() {
+// --- FUNCIONES PARA GRÁFICOS DEL ADMIN Y DASHBOARD ---
+async function fetchMyOrders() {
+    if (!authToken) return [];
+    try {
+        const response = await fetch(`${API_URL}/orders/my-orders`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (response.ok) {
+            return await response.json();
+        }
+        return [];
+    } catch (err) {
+        console.error(err);
+        return [];
+    }
+}
+
+async function renderAdminCharts() {
     // Destruir gráficos anteriores para evitar duplicados
     Object.values(charts).forEach(chart => chart.destroy());
+
+    // Obtener los pedidos para generar gráficas reales si es posible (en este caso lo haremos mixto o basándonos en historial real)
+    const orders = await fetchMyOrders();
 
     // Datos de ejemplo para los gráficos
     const salesData = {
