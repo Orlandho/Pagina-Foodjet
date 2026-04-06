@@ -1,7 +1,7 @@
 {
   "name": "foodjet-app",
   "version": "1.0.0",
-  "description": "FoodJet frontend + backend con SQL Server",
+  "description": "FoodJet frontend + backend con MySQL",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -13,7 +13,6 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
-    "msnodesqlv8": "^5.1.8",
-    "mssql": "^11.0.1"
+    "mysql2": "^3.20.0"
   }
 }

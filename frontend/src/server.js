@@ -3,7 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const bcrypt = require('bcrypt');
-const { sql, getPool } = require('./db');
+const { getPool } = require('./db');
 
 dotenv.config({ quiet: true });
 
@@ -18,17 +18,17 @@ app.use(express.static(frontendPath));
 app.get('/api/health', async (_req, res) => {
     try {
         const pool = await getPool();
-        await pool.request().query('SELECT 1 AS ok');
-        res.json({ ok: true, message: 'API y SQL Server operativos' });
+        await pool.query('SELECT 1 AS ok');
+        res.json({ ok: true, message: 'API y MySQL operativos' });
     } catch (error) {
-        res.status(500).json({ ok: false, message: 'No se pudo conectar a SQL Server', error: error.message });
+        res.status(500).json({ ok: false, message: 'No se pudo conectar a MySQL', error: error.message });
     }
 });
 
 app.get('/api/products', async (_req, res) => {
     try {
         const pool = await getPool();
-        const result = await pool.request().query(`
+        const [rows] = await pool.query(`
             SELECT
                 id,
                 name,
@@ -36,11 +36,11 @@ app.get('/api/products', async (_req, res) => {
                 CAST(price AS DECIMAL(10,2)) AS price,
                 image_url AS image,
                 category
-            FROM dbo.products
+            FROM products
             ORDER BY id ASC
         `);
 
-        return res.json(result.recordset);
+        return res.json(rows);
     } catch (error) {
         return res.status(500).json({ message: 'No se pudieron obtener los productos', error: error.message });
     }
@@ -57,31 +57,22 @@ app.post('/api/register', async (req, res) => {
         const pool = await getPool();
 
         // Verificar si el email ya existe
-        const checkRequest = new sql.Request(pool);
-        checkRequest.input('email', sql.NVarChar(150), email);
-        const checkResult = await checkRequest.query('SELECT id FROM dbo.users WHERE email = @email');
-        if (checkResult.recordset.length > 0) {
+        const [checkResult] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+        if (checkResult.length > 0) {
             return res.status(400).json({ message: 'El correo electrónico ya está registrado' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const insertRequest = new sql.Request(pool);
-        insertRequest.input('name', sql.NVarChar(120), name);
-        insertRequest.input('email', sql.NVarChar(150), email);
-        insertRequest.input('password', sql.NVarChar(255), hashedPassword);
+        const [insertResult] = await pool.query(`
+            INSERT INTO users (name, email, password)
+            VALUES (?, ?, ?)
+        `, [name, email, hashedPassword]);
 
-        const result = await insertRequest.query(`
-            INSERT INTO dbo.users (name, email, password)
-            OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.created_at
-            VALUES (@name, @email, @password)
-        `);
-
-        const user = result.recordset[0];
         return res.status(201).json({
-            id: user.id,
-            name: user.name,
-            email: user.email,
+            id: insertResult.insertId,
+            name: name,
+            email: email,
             role: 'customer'
         });
     } catch (error) {
@@ -98,20 +89,18 @@ app.post('/api/login', async (req, res) => {
 
     try {
         const pool = await getPool();
-        const request = new sql.Request(pool);
-        request.input('email', sql.NVarChar(150), email);
 
-        const result = await request.query(`
+        const [rows] = await pool.query(`
             SELECT id, name, email, password
-            FROM dbo.users
-            WHERE email = @email
-        `);
+            FROM users
+            WHERE email = ?
+        `, [email]);
 
-        if (result.recordset.length === 0) {
+        if (rows.length === 0) {
             return res.status(401).json({ message: 'Credenciales inválidas' });
         }
 
-        const user = result.recordset[0];
+        const user = rows[0];
         const match = await bcrypt.compare(password, user.password);
 
         if (!match) {
@@ -153,25 +142,12 @@ app.post('/api/orders', async (req, res) => {
 
     try {
         const pool = await getPool();
-        const transaction = new sql.Transaction(pool);
-        await transaction.begin();
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
 
         try {
-            const orderRequest = new sql.Request(transaction);
-            orderRequest.input('order_number', sql.VarChar(50), orderNumber);
-            orderRequest.input('user_id', sql.Int, userId);
-            orderRequest.input('customer_name', sql.NVarChar(120), customer.name);
-            orderRequest.input('customer_phone', sql.VarChar(30), customer.phone);
-            orderRequest.input('customer_address', sql.NVarChar(250), customer.address);
-            orderRequest.input('customer_reference', sql.NVarChar(250), customer.reference || null);
-            orderRequest.input('payment_method', sql.VarChar(20), paymentMethod);
-            orderRequest.input('subtotal', sql.Decimal(10, 2), subtotal);
-            orderRequest.input('delivery_fee', sql.Decimal(10, 2), deliveryFee);
-            orderRequest.input('total', sql.Decimal(10, 2), total);
-            orderRequest.input('status', sql.VarChar(20), initialStatus);
-
-            const orderResult = await orderRequest.query(`
-                INSERT INTO dbo.orders (
+            const [orderResult] = await connection.query(`
+                INSERT INTO orders (
                     order_number,
                     user_id,
                     customer_name,
@@ -184,35 +160,26 @@ app.post('/api/orders', async (req, res) => {
                     total,
                     status
                 )
-                OUTPUT INSERTED.id
-                VALUES (
-                    @order_number,
-                    @user_id,
-                    @customer_name,
-                    @customer_phone,
-                    @customer_address,
-                    @customer_reference,
-                    @payment_method,
-                    @subtotal,
-                    @delivery_fee,
-                    @total,
-                    @status
-                )
-            `);
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                orderNumber,
+                userId,
+                customer.name,
+                customer.phone,
+                customer.address,
+                customer.reference || null,
+                paymentMethod,
+                subtotal,
+                deliveryFee,
+                total,
+                initialStatus
+            ]);
 
-            const orderId = orderResult.recordset[0].id;
+            const orderId = orderResult.insertId;
 
             for (const item of items) {
-                const itemRequest = new sql.Request(transaction);
-                itemRequest.input('order_id', sql.Int, orderId);
-                itemRequest.input('product_id', sql.Int, item.productId);
-                itemRequest.input('product_name', sql.NVarChar(150), item.name);
-                itemRequest.input('unit_price', sql.Decimal(10, 2), item.unitPrice);
-                itemRequest.input('quantity', sql.Int, item.quantity);
-                itemRequest.input('line_total', sql.Decimal(10, 2), item.lineTotal);
-
-                await itemRequest.query(`
-                    INSERT INTO dbo.order_items (
+                await connection.query(`
+                    INSERT INTO order_items (
                         order_id,
                         product_id,
                         product_name,
@@ -220,18 +187,19 @@ app.post('/api/orders', async (req, res) => {
                         quantity,
                         line_total
                     )
-                    VALUES (
-                        @order_id,
-                        @product_id,
-                        @product_name,
-                        @unit_price,
-                        @quantity,
-                        @line_total
-                    )
-                `);
+                    VALUES (?, ?, ?, ?, ?, ?)
+                `, [
+                    orderId,
+                    item.productId,
+                    item.name,
+                    item.unitPrice,
+                    item.quantity,
+                    item.lineTotal
+                ]);
             }
 
-            await transaction.commit();
+            await connection.commit();
+            connection.release();
 
             return res.status(201).json({
                 id: orderId,
@@ -240,7 +208,8 @@ app.post('/api/orders', async (req, res) => {
                 createdAt: new Date().toISOString()
             });
         } catch (error) {
-            await transaction.rollback();
+            await connection.rollback();
+            connection.release();
             throw error;
         }
     } catch (error) {
