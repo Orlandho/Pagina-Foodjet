@@ -40,7 +40,12 @@ app.get('/api/products', async (_req, res) => {
             ORDER BY id ASC
         `);
 
-        return res.json(rows);
+        const formattedRows = rows.map(row => ({
+            ...row,
+            price: Number(row.price)
+        }));
+
+        return res.json(formattedRows);
     } catch (error) {
         return res.status(500).json({ message: 'No se pudieron obtener los productos', error: error.message });
     }
