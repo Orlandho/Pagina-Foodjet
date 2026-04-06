@@ -46,13 +46,6 @@ CREATE TABLE IF NOT EXISTS "OrderItem" (
 );
 
 -- 3. Insertar Datos de Prueba (Dummy Data)
-
--- Insertar Usuarios
-INSERT INTO "User" ("nombre", "email", "password", "rol") VALUES
-('Admin', 'admin@foodjet.com', '$2b$10$EP/k3zN/JbOEK2o6YgZHeu12w.Kk1/tKx4A9vRj8wI9Xo2H0Kx.P6', 'admin'),
-('Juan Perez', 'juan@ejemplo.com', 'secreto123', 'cliente'),
-('Maria Lopez', 'maria@ejemplo.com', 'secreto123', 'cliente');
-
 -- Insertar Productos
 INSERT INTO "Product" ("nombre", "descripcion", "precio", "imagen_url", "categoria", "disponibilidad") VALUES
 ('Hamburguesa Clásica', 'Doble carne, queso cheddar, lechuga, tomate y salsa especial', 8.50, 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', 'Hamburguesas', true),
