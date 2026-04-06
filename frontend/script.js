@@ -247,8 +247,11 @@ function initializeEventListeners(allViews) {
     // Login form
     document.getElementById('loginForm').addEventListener('submit', (e) => handleLogin(e, allViews));
     
-    // Quick demo button
-    document.getElementById('quickDemoBtn').addEventListener('click', () => handleQuickDemo(allViews));
+    // Register form
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', handleRegister);
+    }
     
     // Checkout form
     document.getElementById('checkoutForm').addEventListener('submit', handleCheckoutSubmit);
@@ -337,43 +340,46 @@ async function handleLogin(e, allViews) {
     }
 }
 
-// Inicio Demo - Registra temporalmente o usa uno existente
-async function handleQuickDemo(allViews) {
-    const demoEmail = 'demo@foodjet.com';
-    const demoPassword = 'password123';
+// Registro de usuario
+async function handleRegister(e) {
+    e.preventDefault();
+    const nombre = document.getElementById('registerName').value.trim();
+    const email = document.getElementById('registerEmail').value.trim();
+    const password = document.getElementById('registerPassword').value;
+
+    if (!nombre || !email || !password) {
+        showToast('Por favor, completa todos los campos', 'warning');
+        return;
+    }
     
     try {
-        // Intentar registrar (ignoramos error si ya existe)
-        await fetch(`${API_URL}/auth/register`, {
+        const response = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre: 'Usuario Demo', email: demoEmail, password: demoPassword, rol: 'cliente' })
-        });
-
-        // Iniciar sesión
-        const response = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: demoEmail, password: demoPassword })
+            body: JSON.stringify({ nombre, email, password, rol: 'cliente' })
         });
 
         const data = await response.json();
-        if (response.ok) {
-            currentUser = data.user;
-            authToken = data.token;
-            localStorage.setItem('token', authToken);
-            localStorage.setItem('user', JSON.stringify(currentUser));
-            updateUserUI(currentUser);
 
-            const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-            loginModal.hide();
-            showToast('¡Bienvenido, Usuario Demo!');
+        if (response.ok) {
+            showToast('Usuario registrado exitosamente. Por favor, inicia sesión.');
+
+            // Cerrar modal de registro y abrir modal de login
+            const registerModal = bootstrap.Modal.getInstance(document.getElementById('registerModal'));
+            if (registerModal) registerModal.hide();
+
+            setTimeout(() => {
+                const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                loginModal.show();
+            }, 500);
+
+            document.getElementById('registerForm').reset();
         } else {
-            showToast('No se pudo iniciar la demo', 'warning');
+            showToast(data.error || 'Error al registrar el usuario', 'warning');
         }
-    } catch(err) {
-        console.error(err);
-        showToast('Error de conexión', 'warning');
+    } catch (error) {
+        console.error(error);
+        showToast('Error de conexión con el servidor', 'warning');
     }
 }
 
