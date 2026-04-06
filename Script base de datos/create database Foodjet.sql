@@ -56,7 +56,7 @@ INSERT INTO "User" ("nombre", "email", "password", "rol") VALUES
 -- Insertar Productos
 INSERT INTO "Product" ("nombre", "descripcion", "precio", "imagen_url", "categoria", "disponibilidad") VALUES
 ('Hamburguesa Clásica', 'Doble carne, queso cheddar, lechuga, tomate y salsa especial', 8.50, 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', 'Hamburguesas', true),
-('Pizza Margarita', 'Salsa de tomate casera, mozzarella fresca y albahaca', 12.00, 'https://images.unsplash.com/photo-1604068549290-dea0e4a30536?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', 'Pizzas', true),
+('Pizza Margarita', 'Salsa de tomate casera, mozzarella fresca y albahaca', 12.00, 'https://imag.bonviveur.com/pizza-margarita.jpg', 'Pizzas', true),
 ('Pizza Pepperoni', 'Salsa de tomate, mozzarella y abundante pepperoni', 14.50, 'https://images.unsplash.com/photo-1628840042765-356cda07504e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', 'Pizzas', true),
 ('Sushi Roll California', 'Cangrejo, aguacate, pepino y sésamo tostado', 9.00, 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', 'Sushi', true),
 ('Ensalada César', 'Lechuga romana, crutones, queso parmesano y aderezo César', 7.00, 'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', 'Ensaladas', true),
