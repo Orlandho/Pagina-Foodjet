@@ -34,7 +34,7 @@ GO
 
 INSERT INTO dbo.users (name, email, password)
 VALUES
-	(N'Juan Perez', N'juan@example.com', N'$2a$10$7qB2v.R.m09QhI1R805B7O9V90r9G/h/w4Vz5bTq3m/qjA22O/E9a'); -- password is '123456' hashed with bcrypt
+	(N'Juan Perez', N'juan@example.com', N'$2b$10$9fngW4z4zcmSvTuqnTq33O9VEsuwUDHQeWYU8NuqLcJNxFZOe5mRu'); -- password is '123456' hashed with bcrypt
 GO
 
 CREATE TABLE dbo.products (
