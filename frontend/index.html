@@ -572,32 +572,60 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-info">
-                        <p class="mb-2">🎯 <strong>Modo Demo:</strong> Ingresa cualquier nombre o usa el botón de acceso rápido.</p>
-                        <button class="btn btn-sm btn-outline-primary w-100" id="quickDemoBtn">Acceso Demo Rápido</button>
-                    </div>
-                    <p class="text-center text-muted small my-2">Para acceder como administrador, usa el nombre "admin".</p>
                     <form id="loginForm">
                         <div class="mb-3">
-                            <label for="loginName" class="form-label">
-                                <i class="bi bi-person me-2"></i>Nombre
-                            </label>
-                            <input type="text" class="form-control" id="loginName" placeholder="Ingresa tu nombre" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="loginEmail" class="form-label">Email (opcional)</label>
-                            <input type="email" class="form-control" id="loginEmail" placeholder="tu@email.com">
+                            <label for="loginEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="loginEmail" placeholder="tu@email.com" required>
                         </div>
                         <div class="mb-3">
                             <label for="loginPassword" class="form-label">
-                                <i class="bi bi-lock me-2"></i>Contraseña (opcional)
+                                <i class="bi bi-lock me-2"></i>Contraseña
                             </label>
-                            <input type="password" class="form-control" id="loginPassword" placeholder="••••••••">
+                            <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Ingresar</button>
                     </form>
                     <div class="text-center mt-3">
-                        <small class="text-muted">¿No tienes cuenta? <a href="#" class="text-primary">Regístrate aquí</a></small>
+                        <small class="text-muted">¿No tienes cuenta? <a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#registerModal">Regístrate aquí</a></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Registro -->
+    <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title w-100 text-center" id="registerModalLabel">
+                        <i class="bi bi-person-plus-fill me-2"></i>
+                        Crear Cuenta
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label for="registerName" class="form-label">
+                                <i class="bi bi-person me-2"></i>Nombre completo
+                            </label>
+                            <input type="text" class="form-control" id="registerName" placeholder="Juan Pérez" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="registerEmail" placeholder="tu@email.com" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerPassword" class="form-label">
+                                <i class="bi bi-lock me-2"></i>Contraseña
+                            </label>
+                            <input type="password" class="form-control" id="registerPassword" placeholder="••••••••" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Registrarse</button>
+                    </form>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">¿Ya tienes cuenta? <a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#loginModal">Inicia sesión aquí</a></small>
                     </div>
                 </div>
             </div>
