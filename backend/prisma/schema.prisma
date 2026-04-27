@@ -8,42 +8,94 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  nombre    String
-  email     String   @unique
-  password  String
-  rol       String   @default("cliente") // "cliente" o "admin"
-  createdAt DateTime @default(now())
-  orders    Order[]
+  id                Int               @id @default(autoincrement())
+  nombre            String
+  email             String            @unique
+  password          String
+  telefono          String?
+  rol               String            @default("cliente") // "cliente", "admin", "repartidor"
+  createdAt         DateTime          @default(now())
+  orders            Order[]           @relation("UserOrders")
+  deliveredOrders   Order[]           @relation("RepartidorOrders")
+  deliveryAddresses DeliveryAddress[]
+}
+
+model DeliveryAddress {
+  id                  Int     @id @default(autoincrement())
+  usuario_id          Int
+  usuario             User    @relation(fields: [usuario_id], references: [id])
+  direccion_detallada String
+  referencia          String?
+  latitud             Float
+  longitud            Float
+  orders              Order[]
+}
+
+model Restaurant {
+  id                Int       @id @default(autoincrement())
+  nombre            String
+  estado_afiliacion String
+  products          Product[]
+  orders            Order[]
 }
 
 model Product {
-  id            Int         @id @default(autoincrement())
-  nombre        String
-  descripcion   String?
-  precio        Float
-  imagen_url    String?
-  categoria     String
-  disponibilidad Boolean    @default(true)
-  orderItems    OrderItem[]
+  id             Int         @id @default(autoincrement())
+  restaurante_id Int
+  restaurante    Restaurant  @relation(fields: [restaurante_id], references: [id])
+  nombre         String
+  descripcion    String?
+  precio         Float
+  imagen_url     String?
+  categoria      String
+  disponibilidad Boolean     @default(true)
+  orderItems     OrderItem[]
+}
+
+model DiscountCoupon {
+  id                   Int     @id @default(autoincrement())
+  codigo               String  @unique
+  porcentaje_descuento Float
+  estado               Boolean @default(true)
+  orders               Order[]
 }
 
 model Order {
-  id         Int         @id @default(autoincrement())
-  user_id    Int
-  user       User        @relation(fields: [user_id], references: [id])
-  total      Float
-  estado     String      @default("pendiente") // pendiente, en_preparacion, en_camino, entregado
-  fecha      DateTime    @default(now())
-  orderItems OrderItem[]
+  id                   Int             @id @default(autoincrement())
+  user_id              Int
+  user                 User            @relation("UserOrders", fields: [user_id], references: [id])
+  restaurante_id       Int
+  restaurante          Restaurant      @relation(fields: [restaurante_id], references: [id])
+  direccion_entrega_id Int
+  direccion_entrega    DeliveryAddress @relation(fields: [direccion_entrega_id], references: [id])
+  repartidor_id        Int?
+  repartidor           User?           @relation("RepartidorOrders", fields: [repartidor_id], references: [id])
+  cupon_id             Int?
+  cupon                DiscountCoupon? @relation(fields: [cupon_id], references: [id])
+  total                Float
+  impuestos            Float
+  costo_envio          Float
+  estado               String          @default("pendiente") // pendiente, confirmado, en_preparacion, en_camino, entregado
+  fecha                DateTime        @default(now())
+  orderItems           OrderItem[]
+  transactions         Transaction[]
 }
 
 model OrderItem {
-  id               Int     @id @default(autoincrement())
-  order_id         Int
-  order            Order   @relation(fields: [order_id], references: [id])
-  product_id       Int
-  product          Product @relation(fields: [product_id], references: [id])
-  cantidad         Int
-  precio_unitario  Float
+  id              Int     @id @default(autoincrement())
+  order_id        Int
+  order           Order   @relation(fields: [order_id], references: [id])
+  product_id      Int
+  product         Product @relation(fields: [product_id], references: [id])
+  cantidad        Int
+  precio_unitario Float
+}
+
+model Transaction {
+  id          Int    @id @default(autoincrement())
+  pedido_id   Int
+  pedido      Order  @relation(fields: [pedido_id], references: [id])
+  metodo_pago String
+  monto       Float
+  estado_pago String
 }
