@@ -20,12 +20,12 @@ export async function fetchProductsAPI() {
 }
 
 /**
- * Crea un nuevo pedido enviando los items al backend.
- * @param {Array} items Lista de items en el carrito {productId, cantidad}
+ * Crea un nuevo pedido enviando el payload completo al backend.
+ * @param {Object} payload Objeto con los datos de la orden (items, restaurante_id, direccion_entrega_id, metodo_pago)
  * @param {string} token Token de autorización del usuario
  * @returns {Promise<Object>} Resultado de la creación del pedido.
  */
-export async function createOrderAPI(items, token) {
+export async function createOrderAPI(payload, token) {
     try {
         const response = await fetch(`${API_URL}/orders`, {
             method: 'POST',
@@ -33,7 +33,7 @@ export async function createOrderAPI(items, token) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ items })
+            body: JSON.stringify(payload)
         });
 
         const data = await response.json();

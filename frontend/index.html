@@ -348,9 +348,13 @@
                                         <span class="text-muted">Subtotal</span>
                                         <span id="checkoutSubtotal">S/ 0.00</span>
                                     </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Impuestos (18%)</span>
+                                        <span id="checkoutTaxes">S/ 0.00</span>
+                                    </div>
                                     <div class="d-flex justify-content-between mb-3">
                                         <span class="text-muted">Delivery</span>
-                                        <span>S/ 5.00</span>
+                                        <span id="checkoutDelivery">S/ 5.00</span>
                                     </div>
                                     <hr>
                                     <div class="d-flex justify-content-between mb-4">
@@ -493,9 +497,26 @@
                                         <span class="text-muted">Método de pago:</span>
                                         <span class="fw-bold" id="orderPayment">-</span>
                                     </div>
-                                    <div class="d-flex justify-content-between">
+                                    <div class="d-flex justify-content-between mb-2">
                                         <span class="text-muted">Fecha:</span>
                                         <span class="fw-bold" id="orderDate">-</span>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Subtotal:</span>
+                                        <span class="fw-bold" id="orderSubtotal">-</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Impuestos:</span>
+                                        <span class="fw-bold" id="orderTaxes">-</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Envío:</span>
+                                        <span class="fw-bold" id="orderDelivery">-</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="fw-bold">Total Final:</span>
+                                        <span class="fw-bold fs-5" id="orderTotalFinal">-</span>
                                     </div>
                                 </div>
 

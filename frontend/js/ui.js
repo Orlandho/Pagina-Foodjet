@@ -207,6 +207,8 @@ function renderCartItems() {
 export function renderCheckoutSummary() {
     const checkoutItems = document.getElementById('checkoutItems');
     const checkoutSubtotal = document.getElementById('checkoutSubtotal');
+    const checkoutTaxes = document.getElementById('checkoutTaxes');
+    const checkoutDelivery = document.getElementById('checkoutDelivery');
     const checkoutTotal = document.getElementById('checkoutTotal');
     const cart = state.getCart();
 
@@ -227,10 +229,14 @@ export function renderCheckoutSummary() {
         `;
     }).join('');
 
+    const taxPercentage = 0.18;
+    const taxes = subtotal * taxPercentage;
     const deliveryFee = 5.00;
-    const total = subtotal + deliveryFee;
+    const total = subtotal + taxes + deliveryFee;
 
     checkoutSubtotal.textContent = `S/ ${subtotal.toFixed(2)}`;
+    if (checkoutTaxes) checkoutTaxes.textContent = `S/ ${taxes.toFixed(2)}`;
+    if (checkoutDelivery) checkoutDelivery.textContent = `S/ ${deliveryFee.toFixed(2)}`;
     checkoutTotal.textContent = `S/ ${total.toFixed(2)}`;
 }
 
@@ -254,13 +260,28 @@ export function toggleCardDetails() {
 // ==========================================
 // RASTREO DE ESTADO
 // ==========================================
-export function startOrderTracking(paymentMethod, realOrderId) {
+export function startOrderTracking(paymentMethod, orderData) {
+    const realOrderId = orderData?.id;
     const orderNumber = '#FJ' + (realOrderId ? realOrderId.toString().padStart(4, '0') : Math.floor(Math.random() * 10000));
     const orderDate = new Date().toLocaleDateString('es-PE');
 
     document.getElementById('orderNumber').textContent = orderNumber;
     document.getElementById('orderDate').textContent = orderDate;
     document.getElementById('orderPayment').textContent = paymentMethod === 'card' ? 'Tarjeta de crédito/débito' : 'Efectivo al recibir';
+
+    if (orderData) {
+        const subtotal = orderData.total - orderData.impuestos - orderData.costo_envio;
+
+        const orderSubtotalEl = document.getElementById('orderSubtotal');
+        const orderTaxesEl = document.getElementById('orderTaxes');
+        const orderDeliveryEl = document.getElementById('orderDelivery');
+        const orderTotalFinalEl = document.getElementById('orderTotalFinal');
+
+        if (orderSubtotalEl) orderSubtotalEl.textContent = `S/ ${subtotal.toFixed(2)}`;
+        if (orderTaxesEl) orderTaxesEl.textContent = `S/ ${Number(orderData.impuestos).toFixed(2)}`;
+        if (orderDeliveryEl) orderDeliveryEl.textContent = `S/ ${Number(orderData.costo_envio).toFixed(2)}`;
+        if (orderTotalFinalEl) orderTotalFinalEl.textContent = `S/ ${Number(orderData.total).toFixed(2)}`;
+    }
 
     updateOrderStatus('preparing');
 

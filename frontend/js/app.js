@@ -20,14 +20,7 @@ async function initCatalog() {
         ui.showToast('No se pudieron cargar los productos o el catálogo está vacío', 'warning');
     }
 
-    // Para propósitos de simulación y testing: si no hay disponibilidad definida por backend, asumimos true,
-    // y hacemos que el primer producto esté agotado artificialmente (si la base de datos no lo ha implementado aún).
-    const mappedProducts = products.map((p, index) => ({
-        ...p,
-        disponibilidad: p.disponibilidad !== undefined ? p.disponibilidad : (index !== 0) // El primero false si es simulado
-    }));
-
-    state.setProducts(mappedProducts);
+    state.setProducts(products);
     ui.renderProducts();
 }
 
@@ -108,8 +101,17 @@ async function handleCheckoutSubmit(e) {
         cantidad: quantity
     }));
 
+    // Preparar payload completo (con valores temporales hardcoded para restaurante y dirección)
+    const orderPayload = {
+        items: items,
+        metodo_pago: paymentMethod,
+        // TODO: Implementar selección dinámica de dirección y restaurante
+        restaurante_id: 1,
+        direccion_entrega_id: 1
+    };
+
     try {
-        const result = await api.createOrderAPI(items, window.authToken);
+        const result = await api.createOrderAPI(orderPayload, window.authToken);
 
         if (result.ok) {
             // Limpiar carrito
@@ -118,7 +120,7 @@ async function handleCheckoutSubmit(e) {
 
             // Mostrar seguimiento
             ui.showView('trackingView');
-            ui.startOrderTracking(paymentMethod, result.data.order?.id);
+            ui.startOrderTracking(paymentMethod, result.data.order);
         } else {
             ui.showToast(result.data.error || 'Error al procesar el pedido', 'warning');
         }
