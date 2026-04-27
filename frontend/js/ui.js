@@ -71,7 +71,7 @@ export function renderProducts() {
             <div class="card product-card ${!isAvailable ? 'opacity-50' : ''}">
                 <div class="position-relative overflow-hidden">
                     <img src="${product.imagen_url || 'https://via.placeholder.com/500x300?text=FoodJet'}" class="card-img-top product-image" alt="${product.nombre}">
-                    <span class="product-badge">${product.categoria}</span>
+                    ${product.categoria ? `<span class="product-badge">${product.categoria}</span>` : ''}
                     ${!isAvailable ? '<span class="position-absolute top-50 start-50 translate-middle badge bg-danger fs-5">Agotado</span>' : ''}
                 </div>
                 <div class="card-body">
