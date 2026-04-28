@@ -210,6 +210,8 @@ export function renderCheckoutSummary() {
     const checkoutTaxes = document.getElementById('checkoutTaxes');
     const checkoutDelivery = document.getElementById('checkoutDelivery');
     const checkoutTotal = document.getElementById('checkoutTotal');
+    const checkoutDiscountRow = document.getElementById('checkoutDiscountRow');
+    const checkoutDiscount = document.getElementById('checkoutDiscount');
     const cart = state.getCart();
 
     let subtotal = 0;
@@ -229,10 +231,21 @@ export function renderCheckoutSummary() {
         `;
     }).join('');
 
+    let discountAmount = 0;
+    const activeCoupon = state.getActiveCoupon();
+    if (activeCoupon) {
+        discountAmount = subtotal * (activeCoupon.porcentaje_descuento / 100);
+        if (checkoutDiscountRow) checkoutDiscountRow.style.setProperty('display', 'flex', 'important');
+        if (checkoutDiscount) checkoutDiscount.textContent = `-S/ ${discountAmount.toFixed(2)}`;
+    } else {
+        if (checkoutDiscountRow) checkoutDiscountRow.style.setProperty('display', 'none', 'important');
+    }
+
+    const subtotalWithDiscount = subtotal - discountAmount;
     const taxPercentage = 0.18;
-    const taxes = subtotal * taxPercentage;
+    const taxes = subtotalWithDiscount * taxPercentage;
     const deliveryFee = 5.00;
-    const total = subtotal + taxes + deliveryFee;
+    const total = subtotalWithDiscount + taxes + deliveryFee;
 
     checkoutSubtotal.textContent = `S/ ${subtotal.toFixed(2)}`;
     if (checkoutTaxes) checkoutTaxes.textContent = `S/ ${taxes.toFixed(2)}`;

@@ -63,3 +63,13 @@ export function getCartTotal() {
     });
     return total;
 }
+
+let activeCoupon = null;
+
+export function setActiveCoupon(coupon) {
+    activeCoupon = coupon;
+}
+
+export function getActiveCoupon() {
+    return activeCoupon;
+}
