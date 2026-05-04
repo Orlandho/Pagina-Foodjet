@@ -120,10 +120,16 @@ async function handleRegister(e) {
     e.preventDefault();
     const nombre = document.getElementById('registerName').value.trim();
     const email = document.getElementById('registerEmail').value.trim();
+    const telefono = document.getElementById('registerPhone').value.trim();
     const password = document.getElementById('registerPassword').value;
 
-    if (!nombre || !email || !password) {
+    if (!nombre || !email || !telefono || !password) {
         showToast('Por favor, completa todos los campos', 'warning');
+        return;
+    }
+
+    if (!/^\d{9}$/.test(telefono)) {
+        showToast('El teléfono debe tener exactamente 9 dígitos.', 'warning');
         return;
     }
 
@@ -131,7 +137,7 @@ async function handleRegister(e) {
         const response = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, email, password, rol: 'cliente' })
+            body: JSON.stringify({ nombre, email, telefono, password, rol: 'cliente' })
         });
 
         const data = await response.json();
