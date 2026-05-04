@@ -76,6 +76,8 @@ function handleCheckoutNavigation() {
     }
 
     ui.renderCheckoutSummary();
+    ui.fillCheckoutUserData();
+    ui.requestUserLocation();
 }
 
 async function handleCheckoutSubmit(e) {
