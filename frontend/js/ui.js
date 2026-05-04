@@ -202,6 +202,70 @@ function renderCartItems() {
 }
 
 // ==========================================
+// CHECKOUT Y AUTOCOMPLETADO
+// ==========================================
+
+export function fillCheckoutUserData() {
+    const customerName = document.getElementById('customerName');
+    const customerPhone = document.getElementById('customerPhone');
+
+    if (window.currentUser) {
+        if (window.currentUser.nombre) {
+            customerName.value = window.currentUser.nombre;
+        }
+        if (window.currentUser.telefono) {
+            customerPhone.value = window.currentUser.telefono;
+        }
+    }
+}
+
+export function requestUserLocation() {
+    const addressInput = document.getElementById('customerAddress');
+
+    if ('geolocation' in navigator) {
+        // Mostramos un mensaje de que estamos obteniendo la ubicación
+        addressInput.placeholder = "Obteniendo tu ubicación...";
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                try {
+                    // Usamos Nominatim de OpenStreetMap para geocoding inverso (gratuito)
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.display_name) {
+                            addressInput.value = data.display_name;
+                            addressInput.placeholder = "";
+                        } else {
+                            addressInput.placeholder = "No se pudo obtener la dirección";
+                        }
+                    } else {
+                        addressInput.placeholder = "Error al conectar con el servicio de mapas";
+                    }
+                } catch (error) {
+                    console.error("Error en geocoding inverso:", error);
+                    addressInput.placeholder = "Error al obtener la dirección";
+                }
+            },
+            (error) => {
+                console.warn("Error obteniendo ubicación:", error.message);
+                addressInput.placeholder = "No se pudo acceder a tu ubicación";
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    } else {
+        addressInput.placeholder = "Geolocalización no soportada por tu navegador";
+    }
+}
+
+// ==========================================
 // CHECKOUT
 // ==========================================
 export function renderCheckoutSummary() {
