@@ -101,12 +101,17 @@ async function handleCheckoutSubmit(e) {
         cantidad: quantity
     }));
 
-    // Preparar payload completo (con valores temporales hardcoded para restaurante y dirección)
+    // Obtener dinámicamente el restaurante_id a partir del primer producto del carrito
+    const firstItemProductId = Object.keys(cart)[0];
+    const firstProduct = state.getProductById(firstItemProductId);
+    const restauranteId = firstProduct ? firstProduct.restaurante_id : 1;
+
+    // Preparar payload completo (con valores temporales hardcoded para dirección)
     const orderPayload = {
         items: items,
         metodo_pago: paymentMethod,
-        // TODO: Implementar selección dinámica de dirección y restaurante
-        restaurante_id: 1,
+        restaurante_id: restauranteId,
+        // TODO: Implementar selección dinámica de dirección
         direccion_entrega_id: 1
     };
 
@@ -136,12 +141,17 @@ async function handleCheckoutSubmit(e) {
 // ==========================================
 window.app = {
     handleAddToCart: (productId) => {
-        if (state.addToCart(productId)) {
+        const result = state.addToCart(productId);
+        if (result.success) {
             ui.updateProductControls(productId);
             ui.updateCartUI();
             ui.showToast('Producto agregado al carrito');
         } else {
-            ui.showToast('Producto no disponible o agotado', 'warning');
+            if (result.error === 'DIFFERENT_RESTAURANT') {
+                ui.showToast('No puedes mezclar productos de diferentes restaurantes. Termina tu pedido actual primero.', 'warning');
+            } else {
+                ui.showToast('Producto no disponible o agotado', 'warning');
+            }
         }
     },
     handleRemoveFromCart: (productId) => {

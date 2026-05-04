@@ -31,10 +31,21 @@ export function addToCart(productId) {
     const product = getProductById(productId);
     // Verificar que el producto exista y esté disponible
     if (product && product.disponibilidad !== false) {
+        // Verificar si el carrito no está vacío y comparar el restaurante
+        const cartItemKeys = Object.keys(cart);
+        if (cartItemKeys.length > 0) {
+            const firstItemProductId = cartItemKeys[0];
+            const firstItemProduct = getProductById(firstItemProductId);
+
+            if (firstItemProduct && firstItemProduct.restaurante_id !== product.restaurante_id) {
+                return { success: false, error: 'DIFFERENT_RESTAURANT' };
+            }
+        }
+
         cart[productId] = (cart[productId] || 0) + 1;
-        return true;
+        return { success: true };
     }
-    return false;
+    return { success: false, error: 'UNAVAILABLE' };
 }
 
 export function removeFromCart(productId) {
