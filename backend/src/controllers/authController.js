@@ -4,7 +4,15 @@ const prisma = require('../config/db');
 
 exports.register = async (req, res) => {
     try {
-        const { nombre, email, password, rol, telefono } = req.body;
+        const { nombre, email, telefono, password, rol } = req.body;
+
+        if (!nombre || !email || !telefono || !password) {
+            return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
+        }
+
+        if (!/^\d{9}$/.test(telefono)) {
+            return res.status(400).json({ error: 'El teléfono debe tener exactamente 9 dígitos.' });
+        }
 
         // Verificar si el usuario ya existe
         const existingUser = await prisma.user.findUnique({ where: { email } });

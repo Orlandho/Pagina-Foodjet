@@ -128,11 +128,16 @@ async function handleRegister(e) {
         return;
     }
 
+    if (!/^\d{9}$/.test(telefono)) {
+        showToast('El teléfono debe tener exactamente 9 dígitos.', 'warning');
+        return;
+    }
+
     try {
         const response = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, email, password, telefono, rol: 'cliente' })
+            body: JSON.stringify({ nombre, email, telefono, password, rol: 'cliente' })
         });
 
         const data = await response.json();

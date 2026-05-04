@@ -12,7 +12,7 @@ model User {
   nombre                                              String
   email                                               String            @unique
   password                                            String
-  telefono                                            String?
+  telefono                                            String
   foto_perfil                                         String?
   rol                                                 String            @default("Cliente")
   createdAt                                           DateTime          @default(now())

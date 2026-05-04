@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS "User" (
     "nombre" TEXT NOT NULL,
     "email" TEXT NOT NULL UNIQUE,
     "password" TEXT NOT NULL,
-    "telefono" TEXT,
+    "telefono" TEXT NOT NULL,
     "foto_perfil" TEXT,
     "rol" TEXT NOT NULL DEFAULT 'Cliente', -- Roles: Cliente, Administrador, Soporte, Repartidor
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
