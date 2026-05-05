@@ -2,7 +2,16 @@ const prisma = require('../config/db');
 
 exports.getAllProducts = async (req, res) => {
     try {
-        const products = await prisma.product.findMany();
+        const products = await prisma.product.findMany({
+            include: {
+                restaurante: {
+                    select: {
+                        nombre: true,
+                        estado_afiliacion: true
+                    }
+                }
+            }
+        });
         res.json(products);
     } catch (error) {
         console.error(error);
@@ -12,15 +21,15 @@ exports.getAllProducts = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
     try {
-        const { nombre, descripcion, precio, imagen_url, categoria, disponibilidad } = req.body;
+        const { restaurante_id, nombre, descripcion, precio, imagen_url, disponibilidad } = req.body;
 
         const newProduct = await prisma.product.create({
             data: {
+                restaurante_id: parseInt(restaurante_id),
                 nombre,
                 descripcion,
                 precio: parseFloat(precio),
                 imagen_url,
-                categoria,
                 disponibilidad: disponibilidad !== undefined ? disponibilidad : true,
             }
         });

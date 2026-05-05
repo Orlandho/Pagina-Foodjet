@@ -267,23 +267,23 @@
                                         <label for="customerName" class="form-label">
                                             <i class="bi bi-person me-2"></i>Nombre completo
                                         </label>
-                                        <input type="text" class="form-control" id="customerName" placeholder="Juan Pérez" required>
+                                        <input type="text" class="form-control" id="customerName" placeholder="" required>
                                     </div>
                                     <div class="mb-3">
                                         <label for="customerPhone" class="form-label">
                                             <i class="bi bi-telephone me-2"></i>Teléfono
                                         </label>
-                                        <input type="tel" class="form-control" id="customerPhone" placeholder="999 888 777" required>
+                                        <input type="tel" class="form-control" id="customerPhone" placeholder="" required>
                                     </div>
                                     <div class="mb-3">
                                         <label for="customerAddress" class="form-label">
                                             <i class="bi bi-geo-alt me-2"></i>Dirección de entrega
                                         </label>
-                                        <input type="text" class="form-control" id="customerAddress" placeholder="Av. Principal 123, Lima" required>
+                                        <input type="text" class="form-control" id="customerAddress" placeholder="" required>
                                     </div>
                                     <div class="mb-3">
                                         <label for="customerReference" class="form-label">Referencia (opcional)</label>
-                                        <input type="text" class="form-control" id="customerReference" placeholder="Casa blanca con portón negro">
+                                        <input type="text" class="form-control" id="customerReference" placeholder="">
                                     </div>
                                 </div>
                             </div>
@@ -305,12 +305,23 @@
                                     </div>
 
                                     <div class="payment-option" data-payment="card">
-                                        <input type="radio" class="btn-check" name="paymentMethod" id="payCard" value="card">
-                                        <label class="btn btn-outline-primary w-100 text-start p-3" for="payCard">
+                                        <input type="radio" class="btn-check" name="paymentMethod" id="payCard" value="card" disabled>
+                                        <label class="btn btn-outline-primary w-100 text-start p-3 opacity-50" for="payCard">
                                             <i class="bi bi-credit-card fs-4 me-3"></i>
                                             <div class="d-inline-block">
                                                 <div class="fw-bold">Tarjeta de Crédito/Débito</div>
-                                                <small class="text-muted">Pago online seguro</small>
+                                                <small class="text-muted">Deshabilitado temporalmente</small>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <div class="payment-option mt-3" data-payment="wallet">
+                                        <input type="radio" class="btn-check" name="paymentMethod" id="payWallet" value="wallet">
+                                        <label class="btn btn-outline-primary w-100 text-start p-3" for="payWallet">
+                                            <i class="bi bi-phone fs-4 me-3"></i>
+                                            <div class="d-inline-block">
+                                                <div class="fw-bold">Billetera Digital (Yape/Plin)</div>
+                                                <small class="text-muted">Paga escaneando un código QR</small>
                                             </div>
                                         </label>
                                     </div>
@@ -333,6 +344,16 @@
                                             </div>
                                         </div>
                                     </div>
+
+                                    <!-- Detalles de QR -->
+                                    <div id="walletDetails" class="mt-3 text-center" style="display: none;">
+                                        <hr>
+                                        <div class="mb-3">
+                                            <p class="text-muted mb-2">Escanea el siguiente QR para pagar</p>
+                                            <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" alt="QR de Pago" width="200" height="200">
+                                            <p class="small text-muted mt-2">Luego de escanear, dale click a confirmar pedido.</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -344,13 +365,30 @@
                                     <h2 class="h4 mb-4">Resumen del Pedido</h2>
                                     <div id="checkoutItems" class="mb-4"></div>
                                     <hr>
+                                    <div class="mb-3">
+                                        <label for="couponCode" class="form-label text-muted">¿Tienes un código de cupón?</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="couponCode" placeholder="Ejem: PruebaCupon">
+                                            <button class="btn btn-outline-secondary" type="button" id="applyCouponBtn">Aplicar</button>
+                                        </div>
+                                        <div id="couponMessage" class="small mt-1"></div>
+                                    </div>
+
                                     <div class="d-flex justify-content-between mb-2">
                                         <span class="text-muted">Subtotal</span>
                                         <span id="checkoutSubtotal">S/ 0.00</span>
                                     </div>
+                                    <div class="d-flex justify-content-between mb-2" id="checkoutDiscountRow" style="display: none !important;">
+                                        <span class="text-success">Descuento</span>
+                                        <span class="text-success" id="checkoutDiscount">-S/ 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Impuestos (18%)</span>
+                                        <span id="checkoutTaxes">S/ 0.00</span>
+                                    </div>
                                     <div class="d-flex justify-content-between mb-3">
                                         <span class="text-muted">Delivery</span>
-                                        <span>S/ 5.00</span>
+                                        <span id="checkoutDelivery">S/ 5.00</span>
                                     </div>
                                     <hr>
                                     <div class="d-flex justify-content-between mb-4">
@@ -493,9 +531,26 @@
                                         <span class="text-muted">Método de pago:</span>
                                         <span class="fw-bold" id="orderPayment">-</span>
                                     </div>
-                                    <div class="d-flex justify-content-between">
+                                    <div class="d-flex justify-content-between mb-2">
                                         <span class="text-muted">Fecha:</span>
                                         <span class="fw-bold" id="orderDate">-</span>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Subtotal:</span>
+                                        <span class="fw-bold" id="orderSubtotal">-</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Impuestos:</span>
+                                        <span class="fw-bold" id="orderTaxes">-</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Envío:</span>
+                                        <span class="fw-bold" id="orderDelivery">-</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="fw-bold">Total Final:</span>
+                                        <span class="fw-bold fs-5" id="orderTotalFinal">-</span>
                                     </div>
                                 </div>
 
@@ -610,11 +665,17 @@
                             <label for="registerName" class="form-label">
                                 <i class="bi bi-person me-2"></i>Nombre completo
                             </label>
-                            <input type="text" class="form-control" id="registerName" placeholder="Juan Pérez" required>
+                            <input type="text" class="form-control" id="registerName" placeholder="" required>
                         </div>
                         <div class="mb-3">
                             <label for="registerEmail" class="form-label">Email</label>
                             <input type="email" class="form-control" id="registerEmail" placeholder="tu@email.com" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerPhone" class="form-label">
+                                <i class="bi bi-telephone me-2"></i>Teléfono
+                            </label>
+                            <input type="tel" class="form-control" id="registerPhone" placeholder="987654321" pattern="\d{9}" title="Debe contener exactamente 9 dígitos numéricos" required>
                         </div>
                         <div class="mb-3">
                             <label for="registerPassword" class="form-label">
@@ -639,6 +700,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Custom JavaScript -->
-    <script src="script.js"></script>
+    <script src="js/legacy.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>

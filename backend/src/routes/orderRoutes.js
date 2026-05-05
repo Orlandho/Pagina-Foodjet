@@ -7,4 +7,10 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 router.post('/', authMiddleware, orderController.createOrder);
 router.get('/my-orders', authMiddleware, orderController.getMyOrders);
 
+// Gestión de estados
+router.put('/:id/status', authMiddleware, orderController.updateOrderStatus);
+
+// Cancelación de orden
+router.put('/:id/cancel', authMiddleware, orderController.cancelOrder);
+
 module.exports = router;

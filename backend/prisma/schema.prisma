@@ -8,42 +8,154 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  nombre    String
-  email     String   @unique
-  password  String
-  rol       String   @default("cliente") // "cliente" o "admin"
-  createdAt DateTime @default(now())
-  orders    Order[]
+  id                                                  Int               @id @default(autoincrement())
+  nombre                                              String
+  email                                               String            @unique
+  password                                            String
+  telefono                                            String
+  foto_perfil                                         String?
+  rol                                                 String            @default("Cliente")
+  createdAt                                           DateTime          @default(now())
+  deliveryAddresses                                   DeliveryAddress[]
+  deliveredOrders                                     Order[]           @relation("RepartidorOrders")
+  orders                                              Order[]           @relation("UserOrders")
+  Review                                              Review[]
+  SupportMessage                                      SupportMessage[]
+  SupportTicket_SupportTicket_agente_soporte_idToUser SupportTicket[]   @relation("SupportTicket_agente_soporte_idToUser")
+  SupportTicket_SupportTicket_usuario_idToUser        SupportTicket[]   @relation("SupportTicket_usuario_idToUser")
+}
+
+model DeliveryAddress {
+  id                  Int     @id @default(autoincrement())
+  usuario_id          Int
+  direccion_detallada String
+  referencia          String?
+  latitud             Float?
+  longitud            Float?
+  es_predeterminada   Boolean @default(false)
+  usuario             User    @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  orders              Order[]
+}
+
+model Restaurant {
+  id                    Int       @id @default(autoincrement())
+  nombre                String
+  descripcion           String?
+  estado_afiliacion     String    @default("pendiente")
+  calificacion_promedio Float?    @default(0.0)
+  orders                Order[]
+  products              Product[]
+  Review                Review[]
 }
 
 model Product {
-  id            Int         @id @default(autoincrement())
-  nombre        String
-  descripcion   String?
-  precio        Float
-  imagen_url    String?
-  categoria     String
-  disponibilidad Boolean    @default(true)
-  orderItems    OrderItem[]
+  id             Int         @id @default(autoincrement())
+  restaurante_id Int
+  nombre         String
+  descripcion    String?
+  precio         Float
+  imagen_url     String?
+  disponibilidad Boolean     @default(true)
+  orderItems     OrderItem[]
+  restaurante    Restaurant  @relation(fields: [restaurante_id], references: [id], onDelete: Cascade)
+}
+
+model DiscountCoupon {
+  id                   Int      @id @default(autoincrement())
+  codigo               String   @unique
+  porcentaje_descuento Float
+  monto_maximo         Float?
+  fecha_expiracion     DateTime
+  estado               String   @default("Activo")
+  orders               Order[]
 }
 
 model Order {
-  id         Int         @id @default(autoincrement())
-  user_id    Int
-  user       User        @relation(fields: [user_id], references: [id])
-  total      Float
-  estado     String      @default("pendiente") // pendiente, en_preparacion, en_camino, entregado
-  fecha      DateTime    @default(now())
-  orderItems OrderItem[]
+  id                   Int             @id @default(autoincrement())
+  user_id              Int
+  restaurante_id       Int
+  direccion_entrega_id Int
+  repartidor_id        Int?
+  cupon_id             Int?
+  total                Float
+  impuestos            Float           @default(0.0)
+  costo_envio          Float           @default(0.0)
+  estado               String          @default("Pendiente")
+  fecha                DateTime        @default(now())
+  cupon                DiscountCoupon? @relation(fields: [cupon_id], references: [id])
+  direccion_entrega    DeliveryAddress @relation(fields: [direccion_entrega_id], references: [id])
+  repartidor           User?           @relation("RepartidorOrders", fields: [repartidor_id], references: [id])
+  restaurante          Restaurant      @relation(fields: [restaurante_id], references: [id])
+  user                 User            @relation("UserOrders", fields: [user_id], references: [id])
+  orderItems           OrderItem[]
+  Review               Review?
+  SupportTicket        SupportTicket[]
+  transactions         Transaction?
 }
 
 model OrderItem {
-  id               Int     @id @default(autoincrement())
-  order_id         Int
-  order            Order   @relation(fields: [order_id], references: [id])
-  product_id       Int
-  product          Product @relation(fields: [product_id], references: [id])
-  cantidad         Int
-  precio_unitario  Float
+  id              Int     @id @default(autoincrement())
+  order_id        Int
+  product_id      Int
+  cantidad        Int
+  precio_unitario Float
+  order           Order   @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product         Product @relation(fields: [product_id], references: [id])
+}
+
+model Transaction {
+  id                Int      @id @default(autoincrement())
+  pedido_id         Int      @unique
+  metodo_pago       String
+  monto             Float
+  estado_pago       String   @default("Pendiente")
+  fecha_transaccion DateTime @default(now())
+  pedido            Order    @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id          Int     @id @default(autoincrement())
+  nombre      String  @unique
+  descripcion String?
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model Review {
+  id                Int        @id @default(autoincrement())
+  usuario_id        Int
+  restaurante_id    Int
+  pedido_id         Int        @unique
+  puntuacion        Int
+  comentario        String?
+  fecha_publicacion DateTime   @default(now())
+  Order             Order      @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
+  Restaurant        Restaurant @relation(fields: [restaurante_id], references: [id], onDelete: Cascade)
+  User              User       @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+}
+
+model SupportMessage {
+  id                  Int           @id @default(autoincrement())
+  ticket_id           Int
+  emisor_id           Int
+  mensaje             String
+  archivo_adjunto_url String?
+  fecha_envio         DateTime      @default(now())
+  User                User          @relation(fields: [emisor_id], references: [id])
+  SupportTicket       SupportTicket @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+}
+
+model SupportTicket {
+  id                                         Int              @id @default(autoincrement())
+  usuario_id                                 Int
+  pedido_id                                  Int?
+  agente_soporte_id                          Int?
+  asunto                                     String
+  descripcion_problema                       String
+  estado                                     String           @default("Abierto")
+  fecha_apertura                             DateTime         @default(now())
+  fecha_cierre                               DateTime?
+  SupportMessage                             SupportMessage[]
+  User_SupportTicket_agente_soporte_idToUser User?            @relation("SupportTicket_agente_soporte_idToUser", fields: [agente_soporte_id], references: [id])
+  Order                                      Order?           @relation(fields: [pedido_id], references: [id])
+  User_SupportTicket_usuario_idToUser        User             @relation("SupportTicket_usuario_idToUser", fields: [usuario_id], references: [id], onDelete: Cascade)
 }
