@@ -7,7 +7,8 @@ exports.getAllProducts = async (req, res) => {
                 restaurante: {
                     select: {
                         nombre: true,
-                        estado_afiliacion: true
+                        estado_afiliacion: true,
+                        qr_pago: true
                     }
                 }
             }
