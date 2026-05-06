@@ -117,6 +117,61 @@ async function handleCheckoutSubmit(e) {
         direccion_entrega_id: 1
     };
 
+    if (paymentMethod === 'wallet') {
+        const restaurante = firstProduct ? firstProduct.restaurante : null;
+        if (!restaurante || !restaurante.qr_pago) {
+            ui.showToast('No se encontró el QR de pago para este restaurante', 'warning');
+            return;
+        }
+
+        const qrModalElement = document.getElementById('qrModal');
+        // eslint-disable-next-line no-undef
+        const qrModal = bootstrap.Modal.getOrCreateInstance(qrModalElement);
+
+        document.getElementById('qrRestaurantName').textContent = restaurante.nombre;
+        document.getElementById('qrPaymentImage').src = restaurante.qr_pago;
+
+        const timerText = document.getElementById('qrTimerText');
+        let secondsLeft = 5;
+        timerText.textContent = `Esperando confirmación de pago... (${secondsLeft}s)`;
+
+        const cancelBtn = document.getElementById('cancelQrPaymentBtn');
+        let timerInterval;
+
+        const finishPayment = async () => {
+            clearInterval(timerInterval);
+            qrModal.hide();
+            await submitOrder(orderPayload, paymentMethod);
+        };
+
+        const handleCancel = () => {
+            clearInterval(timerInterval);
+            qrModal.hide();
+        };
+
+        cancelBtn.addEventListener('click', handleCancel, { once: true });
+
+        qrModalElement.addEventListener('hidden.bs.modal', () => {
+            clearInterval(timerInterval);
+            cancelBtn.removeEventListener('click', handleCancel);
+        }, { once: true });
+
+        timerInterval = setInterval(() => {
+            secondsLeft--;
+            timerText.textContent = `Esperando confirmación de pago... (${secondsLeft}s)`;
+
+            if (secondsLeft <= 0) {
+                finishPayment();
+            }
+        }, 1000);
+
+        qrModal.show();
+    } else {
+        await submitOrder(orderPayload, paymentMethod);
+    }
+}
+
+async function submitOrder(orderPayload, paymentMethod) {
     try {
         const result = await api.createOrderAPI(orderPayload, window.authToken);
 

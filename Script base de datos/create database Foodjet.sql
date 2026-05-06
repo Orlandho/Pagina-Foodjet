@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS "Restaurant" (
     "nombre" TEXT NOT NULL,
     "descripcion" TEXT,
     "estado_afiliacion" TEXT NOT NULL DEFAULT 'pendiente', -- activo, inactivo, pendiente
-    "calificacion_promedio" DOUBLE PRECISION DEFAULT 0.0
+    "calificacion_promedio" DOUBLE PRECISION DEFAULT 0.0,
+    "qr_pago" TEXT
 );
 
 CREATE TABLE IF NOT EXISTS "Category" (
@@ -152,10 +153,10 @@ INSERT INTO "User" ("nombre", "email", "password", "rol", "telefono") VALUES
 ('Cliente 1', 'cliente1@mail.com', 'hashed_pwd_c1', 'Cliente', '987654321'),
 ('Cliente 2', 'cliente2@mail.com', 'hashed_pwd_c2', 'Cliente', '456123789');
 
-INSERT INTO "Restaurant" ("nombre", "descripcion", "estado_afiliacion", "calificacion_promedio") VALUES
-('Burger King', 'Las mejores hamburguesas a la parrilla', 'activo', 4.5),
-('Pizza Hut', 'Pizzas recién horneadas con los mejores ingredientes', 'activo', 4.2),
-('Sushi Club', 'El sushi más fresco y delicioso de la ciudad', 'activo', 4.8);
+INSERT INTO "Restaurant" ("nombre", "descripcion", "estado_afiliacion", "calificacion_promedio", "qr_pago") VALUES
+('Burger King', 'Las mejores hamburguesas a la parrilla', 'activo', 4.5, 'https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg'),
+('Pizza Hut', 'Pizzas recién horneadas con los mejores ingredientes', 'activo', 4.2, 'https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg'),
+('Sushi Club', 'El sushi más fresco y delicioso de la ciudad', 'activo', 4.8, 'https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg');
 
 INSERT INTO "Category" ("nombre", "descripcion") VALUES
 ('Hamburguesas', 'Comida rápida americana'),

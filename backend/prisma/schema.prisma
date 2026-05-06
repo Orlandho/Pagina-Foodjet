@@ -43,6 +43,7 @@ model Restaurant {
   descripcion           String?
   estado_afiliacion     String    @default("pendiente")
   calificacion_promedio Float?    @default(0.0)
+  qr_pago               String?
   orders                Order[]
   products              Product[]
   Review                Review[]
