@@ -17,7 +17,7 @@ exports.register = async (req, res) => {
         // Verificar si el usuario ya existe
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
-            return res.status(400).json({ error: 'El email ya está registrado.' });
+            return res.status(409).json({ error: 'El email ya está registrado.', code: 'EMAIL_ALREADY_EXISTS' });
         }
 
         // Encriptar la contraseña

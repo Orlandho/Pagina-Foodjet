@@ -118,6 +118,11 @@ async function handleLogin(e) {
 
 async function handleRegister(e) {
     e.preventDefault();
+
+    // Ocultar mensaje de error de email previo
+    const emailErrorElement = document.getElementById('registerEmailError');
+    if (emailErrorElement) emailErrorElement.style.display = 'none';
+
     const nombre = document.getElementById('registerName').value.trim();
     const email = document.getElementById('registerEmail').value.trim();
     const telefono = document.getElementById('registerPhone').value.trim();
@@ -154,6 +159,13 @@ async function handleRegister(e) {
             }, 500);
 
             document.getElementById('registerForm').reset();
+        } else if (response.status === 409 || data.code === 'EMAIL_ALREADY_EXISTS') {
+            const emailErrorElement = document.getElementById('registerEmailError');
+            if (emailErrorElement) {
+                emailErrorElement.style.display = 'block';
+            } else {
+                showToast(data.error || 'El email ya está registrado.', 'warning');
+            }
         } else {
             showToast(data.error || 'Error al registrar el usuario', 'warning');
         }
