@@ -7,22 +7,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                                                  Int               @id @default(autoincrement())
-  nombre                                              String
-  email                                               String            @unique
-  password                                            String
-  telefono                                            String
-  foto_perfil                                         String?
-  rol                                                 String            @default("Cliente")
-  createdAt                                           DateTime          @default(now())
-  deliveryAddresses                                   DeliveryAddress[]
-  deliveredOrders                                     Order[]           @relation("RepartidorOrders")
-  orders                                              Order[]           @relation("UserOrders")
-  Review                                              Review[]
-  SupportMessage                                      SupportMessage[]
-  SupportTicket_SupportTicket_agente_soporte_idToUser SupportTicket[]   @relation("SupportTicket_agente_soporte_idToUser")
-  SupportTicket_SupportTicket_usuario_idToUser        SupportTicket[]   @relation("SupportTicket_usuario_idToUser")
+model Category {
+  id          Int     @id @default(autoincrement())
+  nombre      String  @unique
+  descripcion String?
+}
+
+model DiscountCoupon {
+  id                   Int      @id @default(autoincrement())
+  codigo               String   @unique
+  porcentaje_descuento Float
+  monto_maximo         Float?
+  fecha_expiracion     DateTime
+  estado               String   @default("Activo")
+  Order                Order[]
+}
+
+model Product {
+  id                   Int         @id @default(autoincrement())
+  restaurante_id       Int
+  nombre               String
+  descripcion          String?
+  precio               Float
+  tipo_comida          String?     @default("General")
+  imagen_url           String?
+  descuento_estudiante Float?      @default(0.0)
+  disponibilidad       Boolean     @default(true)
+  OrderItem            OrderItem[]
+  Restaurant           Restaurant  @relation(fields: [restaurante_id], references: [id], onDelete: Cascade)
+  User                 User[]      @relation("UserFavoriteProducts")
+}
+
+model Restaurant {
+  id                    Int       @id @default(autoincrement())
+  nombre                String
+  descripcion           String?
+  estado_afiliacion     String    @default("pendiente")
+  tiempo_entrega        String?   @default("30 minutos")
+  calificacion_promedio Float?    @default(0.0)
+  qr_pago               String?
+  Order                 Order[]
+  Product               Product[]
+  Review                Review[]
 }
 
 model DeliveryAddress {
@@ -33,65 +59,31 @@ model DeliveryAddress {
   latitud             Float?
   longitud            Float?
   es_predeterminada   Boolean @default(false)
-  usuario             User    @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
-  orders              Order[]
-}
-
-model Restaurant {
-  id                    Int       @id @default(autoincrement())
-  nombre                String
-  descripcion           String?
-  estado_afiliacion     String    @default("pendiente")
-  calificacion_promedio Float?    @default(0.0)
-  qr_pago               String?
-  orders                Order[]
-  products              Product[]
-  Review                Review[]
-}
-
-model Product {
-  id             Int         @id @default(autoincrement())
-  restaurante_id Int
-  nombre         String
-  descripcion    String?
-  precio         Float
-  imagen_url     String?
-  disponibilidad Boolean     @default(true)
-  orderItems     OrderItem[]
-  restaurante    Restaurant  @relation(fields: [restaurante_id], references: [id], onDelete: Cascade)
-}
-
-model DiscountCoupon {
-  id                   Int      @id @default(autoincrement())
-  codigo               String   @unique
-  porcentaje_descuento Float
-  monto_maximo         Float?
-  fecha_expiracion     DateTime
-  estado               String   @default("Activo")
-  orders               Order[]
+  User                User    @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  Order               Order[]
 }
 
 model Order {
-  id                   Int             @id @default(autoincrement())
-  user_id              Int
-  restaurante_id       Int
-  direccion_entrega_id Int
-  repartidor_id        Int?
-  cupon_id             Int?
-  total                Float
-  impuestos            Float           @default(0.0)
-  costo_envio          Float           @default(0.0)
-  estado               String          @default("Pendiente")
-  fecha                DateTime        @default(now())
-  cupon                DiscountCoupon? @relation(fields: [cupon_id], references: [id])
-  direccion_entrega    DeliveryAddress @relation(fields: [direccion_entrega_id], references: [id])
-  repartidor           User?           @relation("RepartidorOrders", fields: [repartidor_id], references: [id])
-  restaurante          Restaurant      @relation(fields: [restaurante_id], references: [id])
-  user                 User            @relation("UserOrders", fields: [user_id], references: [id])
-  orderItems           OrderItem[]
-  Review               Review?
-  SupportTicket        SupportTicket[]
-  transactions         Transaction?
+  id                             Int             @id @default(autoincrement())
+  user_id                        Int
+  restaurante_id                 Int
+  direccion_entrega_id           Int
+  repartidor_id                  Int?
+  cupon_id                       Int?
+  total                          Float
+  impuestos                      Float           @default(0.0)
+  costo_envio                    Float           @default(0.0)
+  estado                         String          @default("Pendiente")
+  fecha                          DateTime        @default(now())
+  DiscountCoupon                 DiscountCoupon? @relation(fields: [cupon_id], references: [id])
+  DeliveryAddress                DeliveryAddress @relation(fields: [direccion_entrega_id], references: [id])
+  User_Order_repartidor_idToUser User?           @relation("Order_repartidor_idToUser", fields: [repartidor_id], references: [id])
+  Restaurant                     Restaurant      @relation(fields: [restaurante_id], references: [id])
+  User_Order_user_idToUser       User            @relation("Order_user_idToUser", fields: [user_id], references: [id])
+  OrderItem                      OrderItem[]
+  Review                         Review?
+  SupportTicket                  SupportTicket[]
+  Transaction                    Transaction?
 }
 
 model OrderItem {
@@ -100,24 +92,8 @@ model OrderItem {
   product_id      Int
   cantidad        Int
   precio_unitario Float
-  order           Order   @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  product         Product @relation(fields: [product_id], references: [id])
-}
-
-model Transaction {
-  id                Int      @id @default(autoincrement())
-  pedido_id         Int      @unique
-  metodo_pago       String
-  monto             Float
-  estado_pago       String   @default("Pendiente")
-  fecha_transaccion DateTime @default(now())
-  pedido            Order    @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
-}
-
-model Category {
-  id          Int     @id @default(autoincrement())
-  nombre      String  @unique
-  descripcion String?
+  Order           Order   @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  Product         Product @relation(fields: [product_id], references: [id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -159,4 +135,34 @@ model SupportTicket {
   User_SupportTicket_agente_soporte_idToUser User?            @relation("SupportTicket_agente_soporte_idToUser", fields: [agente_soporte_id], references: [id])
   Order                                      Order?           @relation(fields: [pedido_id], references: [id])
   User_SupportTicket_usuario_idToUser        User             @relation("SupportTicket_usuario_idToUser", fields: [usuario_id], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id                Int      @id @default(autoincrement())
+  pedido_id         Int      @unique
+  metodo_pago       String
+  monto             Float
+  estado_pago       String   @default("Pendiente")
+  fecha_transaccion DateTime @default(now())
+  Order             Order    @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id                                                  Int               @id @default(autoincrement())
+  nombre                                              String
+  email                                               String            @unique
+  password                                            String
+  telefono                                            String
+  foto_perfil                                         String?
+  rol                                                 String            @default("Cliente")
+  es_estudiante                                       Boolean           @default(false)
+  createdAt                                           DateTime          @default(now())
+  DeliveryAddress                                     DeliveryAddress[]
+  Order_Order_repartidor_idToUser                     Order[]           @relation("Order_repartidor_idToUser")
+  Order_Order_user_idToUser                           Order[]           @relation("Order_user_idToUser")
+  Review                                              Review[]
+  SupportMessage                                      SupportMessage[]
+  SupportTicket_SupportTicket_agente_soporte_idToUser SupportTicket[]   @relation("SupportTicket_agente_soporte_idToUser")
+  SupportTicket_SupportTicket_usuario_idToUser        SupportTicket[]   @relation("SupportTicket_usuario_idToUser")
+  Product                                             Product[]         @relation("UserFavoriteProducts")
 }

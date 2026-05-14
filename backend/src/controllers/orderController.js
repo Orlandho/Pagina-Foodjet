@@ -3,7 +3,8 @@ const prisma = require('../config/db');
 exports.createOrder = async (req, res) => {
     try {
         const userId = req.user.userId;
-        const { restaurante_id, direccion_entrega_id, cupon_id, metodo_pago, items } = req.body;
+
+        const user = await prisma.user.findUnique({ where: { id: userId } });        const { restaurante_id, direccion_entrega_id, cupon_id, metodo_pago, items } = req.body;
 
         if (!items || items.length === 0) {
             return res.status(400).json({ error: 'El pedido debe contener al menos un producto.' });
@@ -41,12 +42,15 @@ exports.createOrder = async (req, res) => {
                 return res.status(400).json({ error: `El producto ${product.nombre} no está disponible.` });
             }
 
-            subtotal += product.precio * item.cantidad;
+            let price = product.precio;
+            if (user.es_estudiante && product.descuento_estudiante > 0) {
+                price = price - (price * (product.descuento_estudiante / 100));
+            }
+            subtotal += price * item.cantidad;
             orderItemsData.push({
                 product_id: product.id,
                 cantidad: item.cantidad,
-                precio_unitario: product.precio
-            });
+                precio_unitario: price            });
         }
 
         // Aplicar descuentos
@@ -115,9 +119,19 @@ exports.getMyOrders = async (req, res) => {
     try {
         const userId = req.user.userId;
 
+        const user = await prisma.user.findUnique({ where: { id: userId } });
         const orders = await prisma.order.findMany({
             where: { user_id: userId },
             include: {
+
+                restaurante: {
+                    select: {
+                        id: true,
+                        nombre: true,
+                        calificacion_promedio: true
+                    }
+                },
+                Review: true,
                 orderItems: {
                     include: {
                         product: true
@@ -168,7 +182,8 @@ exports.updateOrderStatus = async (req, res) => {
 exports.cancelOrder = async (req, res) => {
     try {
         const userId = req.user.userId;
-        const orderId = parseInt(req.params.id);
+
+        const user = await prisma.user.findUnique({ where: { id: userId } });        const orderId = parseInt(req.params.id);
 
         const order = await prisma.order.findUnique({ where: { id: orderId } });
 

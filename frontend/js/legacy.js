@@ -123,6 +123,7 @@ async function handleRegister(e) {
     const emailErrorElement = document.getElementById('registerEmailError');
     if (emailErrorElement) emailErrorElement.style.display = 'none';
 
+
     const nombre = document.getElementById('registerName').value.trim();
     const email = document.getElementById('registerEmail').value.trim();
     const telefono = document.getElementById('registerPhone').value.trim();
@@ -165,10 +166,10 @@ async function handleRegister(e) {
                 emailErrorElement.style.display = 'block';
             } else {
                 showToast(data.error || 'El email ya está registrado.', 'warning');
-            }
+            }        } else {
+        } else {            showToast(data.error || 'Error al registrar el usuario', 'warning');
         } else {
-            showToast(data.error || 'Error al registrar el usuario', 'warning');
-        }
+            showToast(data.error || 'Error al registrar el usuario', 'warning');        }
     } catch (error) {
         console.error(error);
         showToast('Error de conexión con el servidor', 'warning');
@@ -186,8 +187,10 @@ function handleLogout(e) {
     const homeView = document.getElementById('homeView');
     if (homeView) {
         const allViews = ['homeView', 'checkoutView', 'trackingView', 'dashboardView'];
-        allViews.forEach(v => {
-            const el = document.getElementById(v);
+
+        const allViews = ['homeView', 'checkoutView', 'trackingView', 'dashboardView', 'orderHistoryView'];        allViews.forEach(v => {
+
+        allViews.forEach(v => {            const el = document.getElementById(v);
             if(el) el.style.display = 'none';
         });
         homeView.style.display = 'block';
@@ -196,6 +199,8 @@ function handleLogout(e) {
 }
 
 function updateUserUI(user) {
+
+
     const userMenu = document.getElementById('userMenu');
     const loginNav = document.getElementById('loginNav');
     const userNameDropdown = document.getElementById('userNameDropdown');
@@ -219,9 +224,51 @@ function updateUserUI(user) {
                 userIcon.classList.toggle('bi-person-circle', user.rol !== 'admin');
             }
         }
+
+    const loginNav = document.getElementById('loginNav');
+    const userMenu = document.getElementById('userMenu');
+    const userNameDropdown = document.getElementById('userNameDropdown');
+    const dashboardBtn = document.getElementById('dashboardBtn');
+    const favoritesNav = document.getElementById('favoritesNav');
+
+    if (user) {
+        loginNav.style.display = 'none';
+        userMenu.style.display = 'block';
+        userNameDropdown.textContent = user.nombre;
+
+        if (user.rol === 'Administrador' || user.rol === 'Soporte') {
+            dashboardBtn.style.display = 'block';
+        } else {
+            dashboardBtn.style.display = 'none';
+        }
+
+        if (favoritesNav) favoritesNav.style.display = 'block';
+
+        // Cargar favoritos al loguear
+        if (window.app && window.app.loadFavorites) {
+            window.app.loadFavorites();
+        }
     } else {
-        if(userMenu) userMenu.style.display = 'none';
-        if(loginNav) loginNav.style.display = 'block';
+        loginNav.style.display = 'block';
+        userMenu.style.display = 'none';
+        dashboardBtn.style.display = 'none';
+        if (favoritesNav) favoritesNav.style.display = 'none';
+
+        // Limpiar favoritos
+        if (window.state && window.state.setFavorites) {
+            window.state.setFavorites([]);
+            if (window.ui) {
+                window.ui.renderProducts();
+                window.ui.renderFavoritesOffcanvas();
+            }
+        }
+    }
+}
+
+        } else {
+    } else {        if(userMenu) userMenu.style.display = 'none';
+    } else {
+        if(userMenu) userMenu.style.display = 'none';        if(loginNav) loginNav.style.display = 'block';
         if(dashboardBtn) dashboardBtn.style.display = 'none';
     }
 }
@@ -229,8 +276,10 @@ function updateUserUI(user) {
 function displayDashboard() {
     const dashboardView = document.getElementById('dashboardView');
     const allViews = ['homeView', 'checkoutView', 'trackingView', 'dashboardView'];
-    allViews.forEach(v => {
-        const el = document.getElementById(v);
+
+    const allViews = ['homeView', 'checkoutView', 'trackingView', 'dashboardView', 'orderHistoryView'];    allViews.forEach(v => {
+
+    allViews.forEach(v => {        const el = document.getElementById(v);
         if(el) el.style.display = 'none';
     });
     if(dashboardView) dashboardView.style.display = 'block';

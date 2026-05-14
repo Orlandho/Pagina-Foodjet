@@ -19,7 +19,6 @@ exports.register = async (req, res) => {
         if (existingUser) {
             return res.status(409).json({ error: 'El email ya está registrado.', code: 'EMAIL_ALREADY_EXISTS' });
         }
-
         // Encriptar la contraseña
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
@@ -65,9 +64,22 @@ exports.login = async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        res.json({ message: 'Inicio de sesión exitoso', token, user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, telefono: user.telefono } });
-    } catch (error) {
+        res.json({ message: 'Inicio de sesión exitoso', token, user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, telefono: user.telefono, es_estudiante: user.es_estudiante } });    } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error en el servidor al iniciar sesión.' });
+    }
+};
+
+
+exports.me = async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+        if (!user) {
+            return res.status(404).json({ error: 'Usuario no encontrado.' });
+        }
+        res.json({ user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, telefono: user.telefono, es_estudiante: user.es_estudiante } });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error en el servidor al obtener el perfil.' });
     }
 };
