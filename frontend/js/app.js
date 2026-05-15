@@ -36,7 +36,7 @@ function initEventListeners() {
     const btnApplyFilters = document.getElementById('btn-apply-filters');
     if (btnApplyFilters) {
         btnApplyFilters.addEventListener('click', () => {
-            ui.renderFoodTypeFilters(); ui.renderProducts();
+            ui.renderProducts();
         });
     }
 
@@ -57,7 +57,7 @@ function initEventListeners() {
             document.querySelectorAll('.filter-delivery-time').forEach(rb => rb.checked = false);
 
             // Re-render
-            ui.renderFoodTypeFilters(); ui.renderProducts();
+            ui.renderProducts();
         });
     }
     document.getElementById('checkoutForm')?.addEventListener('submit', handleCheckoutSubmit);
