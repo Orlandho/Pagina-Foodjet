@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     await initCatalog();
     initEventListeners();
-    ui.updateCartUI();
+    ui.renderCartOffcanvas(); ui.renderCheckoutCart();;
 });
 
 async function initCatalog() {
@@ -36,8 +36,7 @@ function initEventListeners() {
     const btnApplyFilters = document.getElementById('btn-apply-filters');
     if (btnApplyFilters) {
         btnApplyFilters.addEventListener('click', () => {
-            ui.renderFoodTypeFilters();
-    ui.renderProducts();
+            ui.renderFoodTypeFilters(); ui.renderProducts();
         });
     }
 
@@ -45,7 +44,7 @@ function initEventListeners() {
     if (btnClearFilters) {
         btnClearFilters.addEventListener('click', () => {
             // Uncheck all checkboxes
-            document.querySelectorAll('.filter-food-type').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.filter-food-type, .filter-delivery-time').forEach(cb => cb.checked = false);
 
             // Clear price inputs
             const minPrice = document.getElementById('filter-price-min');
@@ -58,8 +57,7 @@ function initEventListeners() {
             document.querySelectorAll('.filter-delivery-time').forEach(rb => rb.checked = false);
 
             // Re-render
-            ui.renderFoodTypeFilters();
-    ui.renderProducts();
+            ui.renderFoodTypeFilters(); ui.renderProducts();
         });
     }
     document.getElementById('checkoutForm')?.addEventListener('submit', handleCheckoutSubmit);
@@ -235,7 +233,7 @@ async function submitOrder(orderPayload, paymentMethod) {
         if (result.ok) {
             // Limpiar carrito
             state.clearCart();
-            ui.updateCartUI();
+            ui.renderCartOffcanvas(); ui.renderCheckoutCart();;
 
             // Mostrar seguimiento
             ui.showView('trackingView');
@@ -257,7 +255,7 @@ async function submitOrder(orderPayload, paymentMethod) {
 // (Necesarios para onClick en HTML y compatibilidad)
 // ==========================================
 window.app = {
-    loadFavorites,
+
 
     handleToggleFavorite: async (productId) => {
         if (!window.currentUser) {
@@ -282,7 +280,7 @@ window.app = {
                     ui.showToast('Producto añadido a favoritos', 'success');
                 }
                 ui.updateFavoriteButtons(productId);
-                await loadFavorites();
+                await window.app.loadFavoritesData();
             } else {
                 ui.showToast(data.error || 'Error al actualizar favorito', 'warning');
             }
@@ -295,8 +293,8 @@ window.app = {
     handleAddToCart: (productId) => {
         const result = state.addToCart(productId);
         if (result.success) {
-            ui.updateProductControlsInAllViews(productId);
-            ui.updateCartUI();
+            ui.renderProducts();
+            ui.renderCartOffcanvas(); ui.renderCheckoutCart();;
             ui.showToast('Producto agregado al carrito');
         } else {
             if (result.error === 'DIFFERENT_RESTAURANT') {
@@ -308,13 +306,13 @@ window.app = {
     },
     handleRemoveFromCart: (productId) => {
         state.removeFromCart(productId);
-        ui.updateProductControlsInAllViews(productId);
-        ui.updateCartUI();
+        ui.renderProducts();
+        ui.renderCartOffcanvas(); ui.renderCheckoutCart();;
     },
     handleRemoveItemCompletely: (productId) => {
         state.removeItemCompletely(productId);
-        ui.updateProductControlsInAllViews(productId);
-        ui.updateCartUI();
+        ui.renderProducts();
+        ui.renderCartOffcanvas(); ui.renderCheckoutCart();;
     },
     showView: (viewId) => {
         ui.showView(viewId);
@@ -481,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Refrescar catálogo (precios tachados) y el checkout si está abierto
             ui.renderProducts();
-            ui.updateCartUI();
+            ui.renderCartOffcanvas(); ui.renderCheckoutCart();;
             if (document.getElementById('checkoutView').style.display !== 'none') {
                 ui.renderCheckoutSummary();
             }

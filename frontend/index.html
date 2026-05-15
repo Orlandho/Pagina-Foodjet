@@ -193,8 +193,6 @@
                         <p class="text-muted">Descubre nuestra deliciosa selección de platos preparados con ingredientes frescos y mucho amor</p>
                     </div>
                     
-                    <div class="row g-4" id="productsGrid">
-                        <!-- Products will be inserted here by JavaScript -->
                     <div class="row">
                         <!-- Sidebar de Filtros -->
                         <div class="col-lg-3 mb-4">
@@ -260,12 +258,10 @@
                             <div class="row g-4" id="productsGrid">
                                 <!-- Products will be inserted here by JavaScript -->
                             </div>
-                        </div>                    </div>
-
-                    </div>                </div>
-
+                        </div>
                     </div>
-                </div>            </section>
+                </div>
+            </section>
 
             <!-- Acerca de Seccion -->
             <section id="about" class="py-5 bg-white" aria-label="Sobre nosotros">
@@ -890,6 +886,19 @@
                         </form>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>    <!-- Favoritos offcanvas -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="favoritesOffcanvas" aria-labelledby="favoritesOffcanvasLabel">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title text-danger" id="favoritesOffcanvasLabel">
+                <i class="bi bi-heart-fill me-2"></i>Mis Favoritos
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column bg-light">
+            <div id="favoritesItemsContainer" class="flex-grow-1 overflow-auto">
+                <!-- Se inyectan con js -->
             </div>
         </div>
     </div>

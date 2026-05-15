@@ -69,7 +69,7 @@ export function getCartTotal() {
     Object.entries(cart).forEach(([productId, quantity]) => {
         const product = getProductById(productId);
         if (product) {
-            total += product.precio * quantity;
+
 
             let price = product.precio;
             if (window.currentUser && window.currentUser.es_estudiante && product.descuento_estudiante > 0) {
