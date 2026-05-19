@@ -2,7 +2,73 @@ const API_URL = 'http://localhost:3000/api';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Legacy app initialization if needed
+    checkExistingSession();
+    initializeLegacyEventListeners();
 });
+
+function checkExistingSession() {
+    const userStr = localStorage.getItem('user');
+    if (userStr && window.authToken) {
+        try {
+            window.currentUser = JSON.parse(userStr);
+            updateUserUI(window.currentUser);
+        } catch (e) {
+            handleLogout(new Event('click'));
+        }
+    }
+}
+
+function initializeLegacyEventListeners() {
+    // --- ELEMENTOS DEL DASHBOARD ---
+    const dashboardBtn = document.getElementById('dashboardBtn');
+    const backToMenuFromDashboard = document.getElementById('backToMenuFromDashboard');
+    const orderNowFromDashboard = document.getElementById('orderNowFromDashboard');
+    const logoutBtnDashboard = document.getElementById('logoutBtnDashboard');
+
+    // --- ELEMENTOS DE NAVEGACIÓN DE USUARIO ---
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // Login button
+    document.getElementById('loginBtn')?.addEventListener('click', () => {
+        const loginModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('loginModal'));
+        loginModal.show();
+    });
+
+    // Login form
+    document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
+
+    // Register form
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', handleRegister);
+    }
+
+    document.getElementById('backToMenuFromDashboard')?.addEventListener('click', () => {
+        if(window.app && window.app.showView) window.app.showView('homeView');
+    });
+
+    if (dashboardBtn) {
+        dashboardBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            displayDashboard();
+        });
+    }
+
+    if (orderNowFromDashboard) {
+        orderNowFromDashboard.addEventListener('click', (e) => {
+            e.preventDefault();
+            if(window.app && window.app.showView) window.app.showView('homeView');
+            setTimeout(() => document.getElementById('menu').scrollIntoView({ behavior: 'smooth' }), 100);
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
+    if (logoutBtnDashboard) {
+        logoutBtnDashboard.addEventListener('click', handleLogout);
+    }
+}
 
 async function handleLogin(e) {
     e.preventDefault();
