@@ -8,7 +8,7 @@ exports.getFavorites = async (req, res) => {
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: {
-                favoriteProducts: {
+                Product: {
                     include: {
                         restaurante: {
                             select: { nombre: true, id: true }
@@ -22,7 +22,7 @@ exports.getFavorites = async (req, res) => {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
-        res.json(user.favoriteProducts);
+        res.json(user.Product);
     } catch (error) {
         console.error('Error al obtener favoritos:', error);
         res.status(500).json({ error: 'Error al obtener favoritos' });
@@ -48,17 +48,17 @@ exports.toggleFavorite = async (req, res) => {
         // Verificar si ya es favorito
         const userWithFavorites = await prisma.user.findUnique({
             where: { id: userId },
-            include: { favoriteProducts: { where: { id: productId } } }
+            include: { Product: { where: { id: productId } } }
         });
 
-        const isFavorite = userWithFavorites.favoriteProducts.length > 0;
+        const isFavorite = userWithFavorites.Product && userWithFavorites.Product.length > 0;
 
         if (isFavorite) {
             // Remover
             await prisma.user.update({
                 where: { id: userId },
                 data: {
-                    favoriteProducts: {
+                    Product: {
                         disconnect: { id: productId }
                     }
                 }
@@ -69,7 +69,7 @@ exports.toggleFavorite = async (req, res) => {
             await prisma.user.update({
                 where: { id: userId },
                 data: {
-                    favoriteProducts: {
+                    Product: {
                         connect: { id: productId }
                     }
                 }
