@@ -29,8 +29,15 @@ async function initCatalog() {
 
 function initEventListeners() {
     // Carrito y Checkout listeners
-    document.getElementById('cartBtn')?.addEventListener('click', openCart);
-    document.getElementById('checkoutBtn')?.addEventListener('click', handleCheckoutNavigation);
+    const cartBtn = document.getElementById('cartBtn');
+    if (cartBtn) {
+        cartBtn.addEventListener('click', openCart);
+    }
+
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) {
+        checkoutBtn.addEventListener('click', handleCheckoutNavigation);
+    }
 
     // Filtros listeners
     const btnApplyFilters = document.getElementById('btn-apply-filters');
@@ -91,13 +98,17 @@ function initEventListeners() {
 
     // Payment method toggle
     document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
-        radio.addEventListener('change', ui.toggleCardDetails);
+        radio.addEventListener('change', () => {
+            if (typeof ui.toggleCardDetails === 'function') {
+                ui.toggleCardDetails();
+            }
+        });
     });
 }
 
 function openCart() {
     // eslint-disable-next-line no-undef
-    const cartOffcanvas = new bootstrap.Offcanvas(document.getElementById('cartOffcanvas'));
+    const cartOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('cartOffcanvas'));
     cartOffcanvas.show();
 }
 
@@ -125,14 +136,14 @@ function handleCheckoutNavigation() {
     ui.showView('checkoutView');
 
     // eslint-disable-next-line no-undef
-    const cartOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('cartOffcanvas'));
+    const cartOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('cartOffcanvas'));
     if (cartOffcanvas) {
         cartOffcanvas.hide();
     }
 
-    ui.renderCheckoutSummary();
-    ui.fillCheckoutUserData();
-    ui.requestUserLocation();
+    if (typeof ui.renderCheckoutSummary === 'function') ui.renderCheckoutSummary();
+    if (typeof ui.fillCheckoutUserData === 'function') ui.fillCheckoutUserData();
+    if (typeof ui.requestUserLocation === 'function') ui.requestUserLocation();
 }
 
 async function handleCheckoutSubmit(e) {
