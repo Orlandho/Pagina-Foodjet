@@ -308,6 +308,9 @@ export function renderCartOffcanvas() {
     const cartItemsContainer = document.getElementById('cartItems');
     const cartTotalElement = document.getElementById('cartTotal');
     const checkoutBtn = document.getElementById('checkoutBtn');
+    const cartFooter = document.getElementById('cartFooter');
+    const emptyCart = document.getElementById('emptyCart');
+    const cartCountBadge = document.getElementById('cartCount') || document.getElementById('cartItemCount');
 
     if (!cartItemsContainer || !cartTotalElement) return;
 
@@ -317,14 +320,19 @@ export function renderCartOffcanvas() {
         cartItemsContainer.innerHTML = '<div class="text-center p-4 text-muted"><i class="bi bi-cart-x fs-1 d-block mb-3"></i>Tu carrito está vacío</div>';
         cartTotalElement.textContent = 'S/ 0.00';
         if (checkoutBtn) checkoutBtn.disabled = true;
+        if (cartFooter) cartFooter.style.display = 'none';
+        if (emptyCart) emptyCart.style.display = 'block';
 
-        // Actualizar badge
-        const badge = document.querySelector('.badge.bg-danger');
-        if (badge) badge.textContent = '0';
+        if (cartCountBadge) {
+            cartCountBadge.textContent = '0';
+            cartCountBadge.style.display = 'none';
+        }
         return;
     }
 
     if (checkoutBtn) checkoutBtn.disabled = false;
+    if (cartFooter) cartFooter.style.display = 'block';
+    if (emptyCart) emptyCart.style.display = 'none';
 
     Object.entries(cart).forEach(([productId, quantity]) => {
         const product = state.getProductById(productId);
@@ -364,10 +372,11 @@ export function renderCartOffcanvas() {
     const total = state.getCartTotal();
     cartTotalElement.textContent = `S/ ${total.toFixed(2)}`;
 
-    // Actualizar badge
     const count = state.getCartItemCount();
-    const badge = document.querySelector('.badge.bg-danger');
-    if (badge) badge.textContent = count.toString();
+    if (cartCountBadge) {
+        cartCountBadge.textContent = count.toString();
+        cartCountBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
 
     // Event listeners
     document.querySelectorAll('.plus-btn').forEach(btn => {
@@ -390,23 +399,26 @@ export function renderCartOffcanvas() {
 // RENDERIZADO DEL CARRITO (VISTA CHECKOUT)
 export function renderCheckoutCart() {
     const cart = state.getCart();
-    const checkoutCartItems = document.getElementById('checkoutCartItems');
+    const checkoutCartItems = document.getElementById('checkoutCartItems') || document.getElementById('checkoutItems');
     const checkoutSubtotal = document.getElementById('checkoutSubtotal');
     const checkoutTotal = document.getElementById('checkoutTotal');
     const checkoutDiscount = document.getElementById('checkoutDiscount');
-    const checkoutTax = document.getElementById('checkoutTax');
-    const checkoutDeliveryFee = document.getElementById('checkoutDeliveryFee');
+    const checkoutDiscountRow = document.getElementById('checkoutDiscountRow');
+    const checkoutTax = document.getElementById('checkoutTax') || document.getElementById('checkoutTaxes');
+    const checkoutDeliveryFee = document.getElementById('checkoutDeliveryFee') || document.getElementById('checkoutDelivery');
 
     if (!checkoutCartItems) return;
 
     checkoutCartItems.innerHTML = '';
 
     if (state.isCartEmpty()) {
-        checkoutCartItems.innerHTML = '<li class="list-group-item text-center text-muted py-4">Tu carrito está vacío</li>';
+        checkoutCartItems.innerHTML = '<div class="text-center text-muted py-4">Tu carrito está vacío</div>';
         if (checkoutSubtotal) checkoutSubtotal.textContent = 'S/ 0.00';
         if (checkoutTotal) checkoutTotal.textContent = 'S/ 0.00';
         if (checkoutDiscount) checkoutDiscount.textContent = '-S/ 0.00';
         if (checkoutTax) checkoutTax.textContent = 'S/ 0.00';
+        if (checkoutDeliveryFee) checkoutDeliveryFee.textContent = 'S/ 5.00';
+        if (checkoutDiscountRow) checkoutDiscountRow.style.display = 'none';
         return;
     }
 
@@ -426,9 +438,9 @@ export function renderCheckoutCart() {
         const itemTotal = price * quantity;
         subtotal += itemTotal;
 
-        const li = document.createElement('li');
-        li.className = 'list-group-item d-flex justify-content-between lh-sm py-3';
-        li.innerHTML = `
+        const itemRow = document.createElement('div');
+        itemRow.className = 'd-flex justify-content-between align-items-start py-3 border-bottom';
+        itemRow.innerHTML = `
             <div class="d-flex w-100">
                 <img src="${product.imagen_url}" alt="${product.nombre}" class="rounded me-3 object-fit-cover" style="width: 50px; height: 50px;">
                 <div class="flex-grow-1">
@@ -439,7 +451,7 @@ export function renderCheckoutCart() {
                 <span class="text-muted fw-bold">S/ ${itemTotal.toFixed(2)}</span>
             </div>
         `;
-        checkoutCartItems.appendChild(li);
+        checkoutCartItems.appendChild(itemRow);
     });
 
     const activeCoupon = state.getActiveCoupon();
@@ -465,6 +477,10 @@ export function renderCheckoutCart() {
         checkoutCartItems.appendChild(liCoupon);
     }
 
+    if (checkoutDiscountRow) {
+        checkoutDiscountRow.style.display = discount > 0 ? 'flex' : 'none';
+    }
+
     // Cálculos financieros locales (solo para visualización, el backend calcula el real)
     const subtotalAfterDiscount = Math.max(0, subtotal - discount);
     const taxRate = 0.18; // 18% IGV (ejemplo Perú)
@@ -477,6 +493,44 @@ export function renderCheckoutCart() {
     if (checkoutTax) checkoutTax.textContent = `S/ ${tax.toFixed(2)}`;
     if (checkoutDeliveryFee) checkoutDeliveryFee.textContent = `S/ ${deliveryFee.toFixed(2)}`;
     if (checkoutTotal) checkoutTotal.textContent = `S/ ${total.toFixed(2)}`;
+}
+
+export function renderCheckoutSummary() {
+    renderCheckoutCart();
+}
+
+export function fillCheckoutUserData() {
+    const user = window.currentUser;
+    const customerName = document.getElementById('customerName');
+    const customerPhone = document.getElementById('customerPhone');
+
+    if (customerName && user?.nombre) {
+        customerName.value = user.nombre;
+    }
+
+    if (customerPhone && user?.telefono) {
+        customerPhone.value = user.telefono;
+    }
+}
+
+export function requestUserLocation() {
+    const addressInput = document.getElementById('customerAddress');
+    if (!addressInput || addressInput.value.trim()) return;
+
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+        () => {},
+        () => {}
+    );
+}
+
+export function toggleCardDetails() {
+    const cardDetails = document.getElementById('cardDetails');
+    if (!cardDetails) return;
+
+    const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+    cardDetails.style.display = selectedMethod === 'card' ? 'block' : 'none';
 }
 
 
