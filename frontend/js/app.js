@@ -268,39 +268,35 @@ async function submitOrder(orderPayload, paymentMethod) {
 window.app = {
 
 
+
+    loadFavorites: async () => {
+        if (!window.authToken) return;
+        const favorites = await api.fetchFavoritesAPI(window.authToken);
+        state.setFavorites(favorites);
+        ui.renderProducts();
+        ui.renderFavoritesOffcanvas();
+    },
+
     handleToggleFavorite: async (productId) => {
-        if (!window.currentUser) {
+        if (!window.currentUser || !window.authToken) {
             ui.showToast('Debes iniciar sesión para guardar favoritos', 'warning');
             return;
         }
 
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_URL}/favorites/${productId}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
+            const result = await api.toggleFavoriteAPI(productId, window.authToken);
 
-            if (res.ok) {
-                if (data.message.includes('eliminado')) {
-                    state.favorites = state.favorites.filter(id => id !== productId);
-                    ui.showToast('Producto eliminado de favoritos', 'info');
-                } else {
-                    state.favorites.push(productId);
-                    ui.showToast('Producto añadido a favoritos', 'success');
-                }
-                ui.updateFavoriteButtons(productId);
-                await window.app.loadFavoritesData();
+            if (result.ok) {
+                await window.app.loadFavorites();
+                ui.showToast(result.data.isFavorite ? 'Añadido a favoritos' : 'Eliminado de favoritos', 'success');
             } else {
-                ui.showToast(data.error || 'Error al actualizar favorito', 'warning');
+                ui.showToast(result.data.error || 'Error al actualizar favorito', 'warning');
             }
         } catch (error) {
             console.error('Error toggling favorite:', error);
             ui.showToast('Error de conexión', 'warning');
         }
     },
-
     handleAddToCart: (productId) => {
         const result = state.addToCart(productId);
         if (result.success) {

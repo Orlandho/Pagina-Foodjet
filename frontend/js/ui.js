@@ -206,8 +206,9 @@ export function renderProducts() {
                     window.app.loadFavorites();
                 }
             } else {
-                // Actualizar offcanvas
-                renderFavoritesOffcanvas();
+                if (window.app && window.app.loadFavorites) {
+                    window.app.loadFavorites();
+                }
                 if(result.data.isFavorite) {
                     showToast('Añadido a favoritos');
                 } else {
@@ -267,9 +268,9 @@ export function renderFavoritesOffcanvas() {
             const productId = parseInt(e.currentTarget.dataset.id);
             const result = await api.toggleFavoriteAPI(productId, window.authToken);
             if (result.ok) {
-                state.removeFavorite(productId);
-                renderFavoritesOffcanvas();
-                renderProducts(); // Actualizar íconos en la vista principal
+                if (window.app && window.app.loadFavorites) {
+                    window.app.loadFavorites();
+                }
                 showToast('Eliminado de favoritos');
             } else {
                 showToast('Error al eliminar favorito', 'warning');
