@@ -208,7 +208,7 @@ export function renderProducts() {
             } else {
                 // Actualizar offcanvas
                 renderFavoritesOffcanvas();
-                if(result.data.is_favorite) {
+                if(result.data.isFavorite) {
                     showToast('Añadido a favoritos');
                 } else {
                     showToast('Eliminado de favoritos');
