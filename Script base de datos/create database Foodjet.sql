@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS "User" (
     "password" TEXT NOT NULL,
     "telefono" TEXT NOT NULL,
     "foto_perfil" TEXT,
-    "rol" TEXT NOT NULL DEFAULT 'Cliente', -- Roles: Cliente, Administrador, Soporte, Repartidor
+    "rol" TEXT NOT NULL DEFAULT 'Cliente',
+    "es_estudiante" BOOLEAN NOT NULL DEFAULT false, -- Roles: Cliente, Administrador, Soporte, Repartidor
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -22,7 +23,8 @@ CREATE TABLE IF NOT EXISTS "Restaurant" (
     "id" SERIAL PRIMARY KEY,
     "nombre" TEXT NOT NULL,
     "descripcion" TEXT,
-    "estado_afiliacion" TEXT NOT NULL DEFAULT 'pendiente', -- activo, inactivo, pendiente
+    "estado_afiliacion" TEXT NOT NULL DEFAULT 'pendiente',
+    "tiempo_entrega" TEXT DEFAULT '30 minutos',
     "calificacion_promedio" DOUBLE PRECISION DEFAULT 0.0,
     "qr_pago" TEXT
 );
@@ -39,7 +41,9 @@ CREATE TABLE IF NOT EXISTS "Product" (
     "nombre" TEXT NOT NULL,
     "descripcion" TEXT,
     "precio" DOUBLE PRECISION NOT NULL,
+    "tipo_comida" TEXT DEFAULT 'General',
     "imagen_url" TEXT,
+    "descuento_estudiante" DOUBLE PRECISION DEFAULT 0.0,
     "disponibilidad" BOOLEAN NOT NULL DEFAULT true,
     CONSTRAINT "Product_restaurante_id_fkey" FOREIGN KEY ("restaurante_id") REFERENCES "Restaurant"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -145,6 +149,16 @@ CREATE TABLE IF NOT EXISTS "SupportMessage" (
 -- Nota: Las tablas intermedias para las relaciones muchos a muchos (Restaurantes Favoritos, Categorías por Producto)
 -- han sido omitidas intencionalmente de este script para que Prisma las gestione de forma implícita.
 
+CREATE TABLE IF NOT EXISTS "_UserFavoriteProducts" (
+    "A" INTEGER NOT NULL,
+    "B" INTEGER NOT NULL,
+    CONSTRAINT "_UserFavoriteProducts_AB_pkey" PRIMARY KEY ("A","B")
+);
+CREATE INDEX "_UserFavoriteProducts_B_index" ON "_UserFavoriteProducts"("B");
+ALTER TABLE "_UserFavoriteProducts" ADD CONSTRAINT "_UserFavoriteProducts_A_fkey" FOREIGN KEY ("A") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "_UserFavoriteProducts" ADD CONSTRAINT "_UserFavoriteProducts_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+
 -- 3. Insertar Datos de Prueba (Dummy Data)
 -- Para que el dummy data funcione con las nuevas dependencias (Restaurant, DeliveryAddress), necesitamos datos iniciales de esas tablas.
 
@@ -153,10 +167,10 @@ INSERT INTO "User" ("nombre", "email", "password", "rol", "telefono") VALUES
 ('Cliente 1', 'cliente1@mail.com', 'hashed_pwd_c1', 'Cliente', '987654321'),
 ('Cliente 2', 'cliente2@mail.com', 'hashed_pwd_c2', 'Cliente', '456123789');
 
-INSERT INTO "Restaurant" ("nombre", "descripcion", "estado_afiliacion", "calificacion_promedio", "qr_pago") VALUES
-('Burger King', 'Las mejores hamburguesas a la parrilla', 'activo', 4.5, 'https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg'),
-('Pizza Hut', 'Pizzas recién horneadas con los mejores ingredientes', 'activo', 4.2, 'https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg'),
-('Sushi Club', 'El sushi más fresco y delicioso de la ciudad', 'activo', 4.8, 'https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg');
+INSERT INTO "Restaurant" ("nombre", "descripcion", "estado_afiliacion", "calificacion_promedio", "qr_pago", "tiempo_entrega") VALUES
+('Burger King', 'Las mejores hamburguesas a la parrilla', 'activo', 4.5, 'https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg', '30 minutos'),
+('Pizza Hut', 'Pizzas recién horneadas con los mejores ingredientes', 'activo', 4.2, 'https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg', '1 hora'),
+('Sushi Club', 'El sushi más fresco y delicioso de la ciudad', 'activo', 4.8, 'https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg', 'Más de 1 hora');
 
 INSERT INTO "Category" ("nombre", "descripcion") VALUES
 ('Hamburguesas', 'Comida rápida americana'),
@@ -165,13 +179,13 @@ INSERT INTO "Category" ("nombre", "descripcion") VALUES
 ('Ensaladas', 'Opciones saludables'),
 ('Bebidas', 'Refrescos y jugos');
 
-INSERT INTO "Product" ("restaurante_id", "nombre", "descripcion", "precio", "imagen_url", "disponibilidad") VALUES
-(1, 'Hamburguesa Clásica', 'Doble carne, queso cheddar, lechuga, tomate y salsa especial', 8.50, 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', true),
-(2, 'Pizza Margarita', 'Salsa de tomate casera, mozzarella fresca y albahaca', 12.00, 'https://imag.bonviveur.com/pizza-margarita.jpg', true),
-(2, 'Pizza Pepperoni', 'Salsa de tomate, mozzarella y abundante pepperoni', 14.50, 'https://images.unsplash.com/photo-1628840042765-356cda07504e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', true),
-(3, 'Sushi Roll California', 'Cangrejo, aguacate, pepino y sésamo tostado', 9.00, 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', true),
-(1, 'Ensalada César', 'Lechuga romana, crutones, queso parmesano y aderezo César', 7.00, 'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', true),
-(1, 'Refresco de Cola', 'Lata de 330ml', 2.00, 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', true);
+INSERT INTO "Product" ("restaurante_id", "nombre", "descripcion", "precio", "imagen_url", "descuento_estudiante", "disponibilidad", "tipo_comida") VALUES
+(1, 'Hamburguesa Clásica', 'Doble carne, queso cheddar, lechuga, tomate y salsa especial', 8.50, 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', 10.0, true, 'Comida rápida'),
+(2, 'Pizza Margarita', 'Salsa de tomate casera, mozzarella fresca y albahaca', 12.00, 'https://imag.bonviveur.com/pizza-margarita.jpg', 0.0, true, 'Pizzas'),
+(2, 'Pizza Pepperoni', 'Salsa de tomate, mozzarella y abundante pepperoni', 14.50, 'https://images.unsplash.com/photo-1628840042765-356cda07504e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', 15.0, true, 'Pizzas'),
+(3, 'Sushi Roll California', 'Cangrejo, aguacate, pepino y sésamo tostado', 9.00, 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', 20.0, true, 'Cena'),
+(1, 'Ensalada César', 'Lechuga romana, crutones, queso parmesano y aderezo César', 7.00, 'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', 0.0, true, 'Cena'),
+(1, 'Refresco de Cola', 'Lata de 330ml', 2.00, 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', 5.0, true, 'Bebidas');
 
 INSERT INTO "DeliveryAddress" ("usuario_id", "direccion_detallada", "referencia", "es_predeterminada") VALUES
 (2, 'Av. Principal 123', 'Cerca al parque', true),

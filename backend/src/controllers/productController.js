@@ -4,11 +4,13 @@ exports.getAllProducts = async (req, res) => {
     try {
         const products = await prisma.product.findMany({
             include: {
-                restaurante: {
+                Restaurant: {
                     select: {
                         nombre: true,
                         estado_afiliacion: true,
-                        qr_pago: true
+                        qr_pago: true,
+                        tiempo_entrega: true,
+                        calificacion_promedio: true
                     }
                 }
             }

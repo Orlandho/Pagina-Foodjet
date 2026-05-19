@@ -1,11 +1,7 @@
-// Funciones globales para evitar que legacy y app colisionen de mala forma
-window.currentUser = null;
-window.authToken = localStorage.getItem('token') || null;
-
 const API_URL = 'http://localhost:3000/api';
-let charts = {};
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
+    // Legacy app initialization if needed
     checkExistingSession();
     initializeLegacyEventListeners();
 });
@@ -34,7 +30,7 @@ function initializeLegacyEventListeners() {
 
     // Login button
     document.getElementById('loginBtn')?.addEventListener('click', () => {
-        const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+        const loginModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('loginModal'));
         loginModal.show();
     });
 
@@ -76,13 +72,8 @@ function initializeLegacyEventListeners() {
 
 async function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
+    const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
-
-    if (!email || !password) {
-        showToast('Por favor, ingresa email y contraseña', 'warning');
-        return;
-    }
 
     try {
         const response = await fetch(`${API_URL}/auth/login`, {
@@ -94,8 +85,8 @@ async function handleLogin(e) {
         const data = await response.json();
 
         if (response.ok) {
-            window.currentUser = data.user;
             window.authToken = data.token;
+            window.currentUser = data.user;
 
             localStorage.setItem('token', window.authToken);
             localStorage.setItem('user', JSON.stringify(window.currentUser));
@@ -103,7 +94,7 @@ async function handleLogin(e) {
             updateUserUI(window.currentUser);
 
             const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-            loginModal.hide();
+            if (loginModal) loginModal.hide();
 
             showToast(`¡Bienvenido, ${window.currentUser.nombre}!`);
             document.getElementById('loginForm').reset();
@@ -118,20 +109,10 @@ async function handleLogin(e) {
 
 async function handleRegister(e) {
     e.preventDefault();
-    const nombre = document.getElementById('registerName').value.trim();
-    const email = document.getElementById('registerEmail').value.trim();
-    const telefono = document.getElementById('registerPhone').value.trim();
+    const nombre = document.getElementById('registerName').value;
+    const email = document.getElementById('registerEmail').value;
+    const telefono = document.getElementById('registerPhone').value;
     const password = document.getElementById('registerPassword').value;
-
-    if (!nombre || !email || !telefono || !password) {
-        showToast('Por favor, completa todos los campos', 'warning');
-        return;
-    }
-
-    if (!/^\d{9}$/.test(telefono)) {
-        showToast('El teléfono debe tener exactamente 9 dígitos.', 'warning');
-        return;
-    }
 
     try {
         const response = await fetch(`${API_URL}/auth/register`, {
@@ -154,6 +135,13 @@ async function handleRegister(e) {
             }, 500);
 
             document.getElementById('registerForm').reset();
+        } else if (response.status === 409 || data.code === 'EMAIL_ALREADY_EXISTS') {
+            const emailErrorElement = document.getElementById('registerEmailError');
+            if (emailErrorElement) {
+                emailErrorElement.style.display = 'block';
+            } else {
+                showToast(data.error || 'El email ya está registrado.', 'warning');
+            }
         } else {
             showToast(data.error || 'Error al registrar el usuario', 'warning');
         }
@@ -173,7 +161,7 @@ function handleLogout(e) {
 
     const homeView = document.getElementById('homeView');
     if (homeView) {
-        const allViews = ['homeView', 'checkoutView', 'trackingView', 'dashboardView'];
+        const allViews = ['homeView', 'checkoutView', 'trackingView', 'dashboardView', 'orderHistoryView'];
         allViews.forEach(v => {
             const el = document.getElementById(v);
             if(el) el.style.display = 'none';
@@ -189,8 +177,9 @@ function updateUserUI(user) {
     const userNameDropdown = document.getElementById('userNameDropdown');
     const dashboardUserName = document.getElementById('dashboardUserName');
     const dashboardUserEmail = document.getElementById('dashboardUserEmail');
-
     const dashboardBtn = document.getElementById('dashboardBtn');
+    const favoritesNav = document.getElementById('favoritesNav');
+
     if (user) {
         if(userNameDropdown) userNameDropdown.textContent = user.nombre;
         if(dashboardUserName) dashboardUserName.textContent = user.nombre;
@@ -207,20 +196,39 @@ function updateUserUI(user) {
                 userIcon.classList.toggle('bi-person-circle', user.rol !== 'admin');
             }
         }
+
+        if (favoritesNav) favoritesNav.style.display = 'block';
+
+        // Cargar favoritos al loguear
+        if (window.app && window.app.loadFavorites) {
+            window.app.loadFavorites();
+        }
     } else {
         if(userMenu) userMenu.style.display = 'none';
         if(loginNav) loginNav.style.display = 'block';
         if(dashboardBtn) dashboardBtn.style.display = 'none';
+        if(favoritesNav) favoritesNav.style.display = 'none';
+
+        // Limpiar favoritos
+        if (window.state && window.state.setFavorites) {
+            window.state.setFavorites([]);
+            if (window.ui) {
+                window.ui.renderProducts();
+                window.ui.renderFavoritesOffcanvas();
+            }
+        }
     }
 }
 
 function displayDashboard() {
     const dashboardView = document.getElementById('dashboardView');
-    const allViews = ['homeView', 'checkoutView', 'trackingView', 'dashboardView'];
+    const allViews = ['homeView', 'checkoutView', 'trackingView', 'dashboardView', 'orderHistoryView'];
+
     allViews.forEach(v => {
         const el = document.getElementById(v);
         if(el) el.style.display = 'none';
     });
+
     if(dashboardView) dashboardView.style.display = 'block';
     renderAdminCharts();
 }
@@ -241,8 +249,12 @@ async function fetchMyOrders() {
     }
 }
 
+let charts = {};
+
 async function renderAdminCharts() {
-    Object.values(charts).forEach(chart => chart.destroy());
+    Object.values(charts).forEach(chart => {
+        if(chart) chart.destroy();
+    });
 
     const orders = await fetchMyOrders();
 
@@ -291,13 +303,19 @@ async function renderAdminCharts() {
     };
 
     const salesCtx = document.getElementById('salesChart')?.getContext('2d');
-    if(salesCtx) charts.sales = new Chart(salesCtx, { type: 'line', data: salesData, options: { responsive: true, maintainAspectRatio: false }});
+    if(salesCtx) {
+        charts.sales = new Chart(salesCtx, { type: 'line', data: salesData, options: { responsive: true, maintainAspectRatio: false }});
+    }
 
     const productsCtx = document.getElementById('topProductsChart')?.getContext('2d');
-    if(productsCtx) charts.products = new Chart(productsCtx, { type: 'bar', data: topProductsData, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }});
+    if(productsCtx) {
+        charts.products = new Chart(productsCtx, { type: 'bar', data: topProductsData, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }});
+    }
 
     const categoryCtx = document.getElementById('categoryChart')?.getContext('2d');
-    if(categoryCtx) charts.categories = new Chart(categoryCtx, { type: 'doughnut', data: categoryData, options: { responsive: true, maintainAspectRatio: false }});
+    if(categoryCtx) {
+        charts.categories = new Chart(categoryCtx, { type: 'doughnut', data: categoryData, options: { responsive: true, maintainAspectRatio: false }});
+    }
 }
 
 function showToast(message, type = 'success') {
@@ -317,7 +335,7 @@ function showToast(message, type = 'success') {
     let toastContainer = document.querySelector('.toast-container');
     if (!toastContainer) {
         toastContainer = document.createElement('div');
-        toastContainer.className = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
         document.body.appendChild(toastContainer);
     }
 
@@ -343,3 +361,9 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         }
     });
 });
+
+window.handleLogin = handleLogin;
+window.handleRegister = handleRegister;
+window.handleLogout = handleLogout;
+window.displayDashboard = displayDashboard;
+window.showToast = showToast;

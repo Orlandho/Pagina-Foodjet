@@ -51,8 +51,13 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#contact" aria-label="Contacto">Contacto</a>
                     </li>
+                    <li class="nav-item ms-lg-3" id="favoritesNav" style="display: none;">
+                        <button class="btn position-relative me-2 text-danger" id="favoritesBtn" aria-label="Productos Favoritos" data-bs-toggle="offcanvas" data-bs-target="#favoritesOffcanvas">
+                            <i class="bi bi-heart-fill fs-5"></i>
+                        </button>
+                    </li>
                     <li class="nav-item ms-lg-3">
-                        <button class="btn position-relative me-2" id="cartBtn" aria-label="Carrito de compras">
+                        <button type="button" class="btn position-relative me-2" id="cartBtn" aria-label="Carrito de compras" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
                             <i class="bi bi-cart3 fs-5"></i>
                             <span class="cart-badge" id="cartCount" style="display: none;">0</span>
                         </button>
@@ -64,12 +69,15 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li><a class="dropdown-item" href="#" id="dashboardBtn" style="display: none;"><i class="bi bi-speedometer2 me-2"></i>Admin Dashboard</a></li>
+
+                            <li><a class="dropdown-item" href="#" id="historyBtn"><i class="bi bi-clock-history me-2"></i>Historial de Pedidos</a></li>                            <li><hr class="dropdown-divider"></li>
+
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
+                            <li><a class="dropdown-item" href="#" id="miCuentaBtn"><i class="bi bi-person-circle me-2"></i>Mi Cuenta</a></li>                            <li><a class="dropdown-item" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
                         </ul>
                     </li>
                     <li class="nav-item" id="loginNav">
-                        <button class="btn btn-primary" id="loginBtn">
+                        <button class="btn btn-primary" id="loginBtn" data-bs-toggle="modal" data-bs-target="#loginModal">
                             <i class="bi bi-person"></i>
                             <span id="userNameBtn">Ingresar</span>
                         </button>
@@ -183,8 +191,72 @@
                         <p class="text-muted">Descubre nuestra deliciosa selección de platos preparados con ingredientes frescos y mucho amor</p>
                     </div>
                     
-                    <div class="row g-4" id="productsGrid">
-                        <!-- Products will be inserted here by JavaScript -->
+                    <div class="row">
+                        <!-- Sidebar de Filtros -->
+                        <div class="col-lg-3 mb-4">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h4 class="card-title mb-4">Filtros</h4>
+
+                                    <!-- Filtro: Tipo de Comida -->
+                                    <div class="mb-4">
+                                        <h5 class="fs-6 fw-bold mb-3">Tipo de comida</h5>
+                                        <div id="filter-food-type-container">
+                                            <!-- Dynamically populated by UI.js -->
+                                        </div>
+                                    </div>
+
+                                    <hr>
+
+                                    <!-- Filtro: Rango de Precio -->
+                                    <div class="mb-4">
+                                        <h5 class="fs-6 fw-bold mb-3">Rango de precio</h5>
+                                        <div class="d-flex align-items-center mb-3">
+                                            <span class="me-2">$</span>
+                                            <input type="number" id="filter-price-min" class="form-control form-control-sm me-2" placeholder="Min" min="0">
+                                            <span class="me-2">-</span>
+                                            <span class="me-2">$</span>
+                                            <input type="number" id="filter-price-max" class="form-control form-control-sm" placeholder="Max" min="0">
+                                        </div>
+                                    </div>
+
+                                    <hr>
+
+                                    <!-- Filtro: Tiempo estimado de entrega -->
+                                    <div class="mb-4">
+                                        <h5 class="fs-6 fw-bold mb-3">Tiempo de entrega</h5>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input filter-delivery-time" type="radio" name="deliveryTimeFilter" id="time-30" value="30 minutos">
+                                            <label class="form-check-label text-muted" for="time-30">
+                                                30 minutos
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input filter-delivery-time" type="radio" name="deliveryTimeFilter" id="time-60" value="1 hora">
+                                            <label class="form-check-label text-muted" for="time-60">
+                                                1 hora
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input filter-delivery-time" type="radio" name="deliveryTimeFilter" id="time-more" value="Más de 1 hora">
+                                            <label class="form-check-label text-muted" for="time-more">
+                                                Más de 1 hora
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <button class="btn btn-primary w-100 mt-2" id="btn-apply-filters">Aplicar filtros</button>
+                                    <button class="btn btn-outline-secondary w-100 mt-2" id="btn-clear-filters">Limpiar filtros</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Productos Grid -->
+                        <div class="col-lg-9">
+                            <div class="row g-4" id="productsGrid">
+                                <!-- Products will be inserted here by JavaScript -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -217,6 +289,22 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- Vista de Historial de Pedidos -->
+            <section id="orderHistoryView" class="py-5" style="display: none;">
+                <div class="container">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="display-6">Mi Historial de Pedidos</h2>
+                        <button class="btn btn-outline-primary" id="backToMenuFromHistory">
+                            <i class="bi bi-arrow-left me-2"></i>Volver al Menú
+                        </button>
+                    </div>
+                    <div class="row" id="orderHistoryContainer">
+                        <!-- Las tarjetas de historial de pedidos se inyectarán aquí -->
                     </div>
                 </div>
             </section>
@@ -660,9 +748,11 @@
                         <div class="mb-3">
                             <label for="registerEmail" class="form-label">Email</label>
                             <input type="email" class="form-control" id="registerEmail" placeholder="tu@email.com" required>
+                            <div id="registerEmailError" class="text-danger mt-1" style="display: none; font-size: 0.875em;">Una cuenta con este correo ya existe</div>                        </div>
+
+                        </div>                        <div class="mb-3">
                         </div>
-                        <div class="mb-3">
-                            <label for="registerPhone" class="form-label">
+                        <div class="mb-3">                            <label for="registerPhone" class="form-label">
                                 <i class="bi bi-telephone me-2"></i>Teléfono
                             </label>
                             <input type="tel" class="form-control" id="registerPhone" placeholder="987654321" pattern="\d{9}" title="Debe contener exactamente 9 dígitos numéricos" required>
@@ -678,6 +768,49 @@
                     <div class="text-center mt-3">
                         <small class="text-muted">¿Ya tienes cuenta? <a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#loginModal">Inicia sesión aquí</a></small>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal de Reseña -->
+    <div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title w-100 text-center" id="reviewModalLabel">
+                        <i class="bi bi-star-fill text-warning me-2"></i>
+                        Calificar Pedido
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="mb-2" id="reviewRestaurantName">Restaurante</p>
+                    <p class="text-muted small mb-4" id="reviewOrderDate">Fecha</p>
+
+                    <form id="reviewForm">
+                        <input type="hidden" id="reviewOrderId">
+
+                        <div class="mb-4">
+                            <label class="form-label d-block">Tu Calificación</label>
+                            <div class="fs-2 text-warning" id="starRatingContainer" style="cursor: pointer;">
+                                <i class="bi bi-star" data-rating="1"></i>
+                                <i class="bi bi-star" data-rating="2"></i>
+                                <i class="bi bi-star" data-rating="3"></i>
+                                <i class="bi bi-star" data-rating="4"></i>
+                                <i class="bi bi-star" data-rating="5"></i>
+                            </div>
+                            <input type="hidden" id="reviewRating" required>
+                        </div>
+
+                        <div class="mb-3 text-start">
+                            <label for="reviewComment" class="form-label">Comentario (Opcional)</label>
+                            <textarea class="form-control" id="reviewComment" rows="3" placeholder="¿Qué te pareció tu pedido?"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" id="submitReviewBtn">Enviar Calificación</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -719,3 +852,51 @@
     <script type="module" src="js/app.js"></script>
 </body>
 </html>
+
+    <!-- Mi Cuenta Modal -->
+    <div class="modal fade" id="miCuentaModal" tabindex="-1" aria-labelledby="miCuentaModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="miCuentaModalLabel"><i class="bi bi-person-circle me-2"></i>Mi Cuenta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h6>Estado de Estudiante</h6>
+                        <div id="studentStatusContainer" class="alert alert-secondary" role="alert">
+                            Cargando...
+                        </div>
+                    </div>
+
+                    <div id="verifyStudentFormContainer" style="display: none;">
+                        <h6>Verificar Carnet Universitario</h6>
+                        <p class="text-muted small">Sube una foto de tu carnet para acceder a descuentos exclusivos.</p>
+                        <form id="verifyStudentForm">
+                            <div class="mb-3">
+                                <label for="carnetImage" class="form-label">Foto del Carnet</label>
+                                <input class="form-control" type="file" id="carnetImage" accept="image/*" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" id="verifyStudentSubmitBtn">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                Verificar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>    <!-- Favoritos offcanvas -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="favoritesOffcanvas" aria-labelledby="favoritesOffcanvasLabel">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title text-danger" id="favoritesOffcanvasLabel">
+                <i class="bi bi-heart-fill me-2"></i>Mis Favoritos
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column bg-light">
+            <div id="favoritesItemsContainer" class="flex-grow-1 overflow-auto">
+                <!-- Se inyectan con js -->
+            </div>
+        </div>
+    </div>

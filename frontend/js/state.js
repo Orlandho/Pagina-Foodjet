@@ -69,8 +69,13 @@ export function getCartTotal() {
     Object.entries(cart).forEach(([productId, quantity]) => {
         const product = getProductById(productId);
         if (product) {
-            total += product.precio * quantity;
-        }
+
+
+            let price = product.precio;
+            if (window.currentUser && window.currentUser.es_estudiante && product.descuento_estudiante > 0) {
+                price = price - (price * (product.descuento_estudiante / 100));
+            }
+            total += price * quantity;        }
     });
     return total;
 }
@@ -83,4 +88,30 @@ export function setActiveCoupon(coupon) {
 
 export function getActiveCoupon() {
     return activeCoupon;
+}
+
+
+// Estado de favoritos
+let favorites = []; // Array de IDs o objetos de producto completos devueltos por el backend
+
+export function getFavorites() {
+    return favorites;
+}
+
+export function setFavorites(newFavorites) {
+    favorites = newFavorites;
+}
+
+export function isFavorite(productId) {
+    return favorites.some(fav => fav.id == productId);
+}
+
+export function addFavorite(productObj) {
+    if (!isFavorite(productObj.id)) {
+        favorites.push(productObj);
+    }
+}
+
+export function removeFavorite(productId) {
+    favorites = favorites.filter(fav => fav.id != productId);
 }

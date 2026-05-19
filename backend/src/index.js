@@ -5,7 +5,11 @@ const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const favoriteRoutes = require('./routes/favoriteRoutes');
 
+const reviewRoutes = require('./routes/reviewRoutes');
+
+const userRoutes = require('./routes/userRoutes');
 const app = express();
 
 // Middlewares globales
@@ -16,7 +20,10 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/favorites', favoriteRoutes);
 
+app.use('/api/users', userRoutes);
 // Manejo de errores global
 app.use((err, req, res, next) => {
     console.error(err.stack);

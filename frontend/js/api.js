@@ -43,3 +43,124 @@ export async function createOrderAPI(payload, token) {
         return { ok: false, data: { error: 'Error de conexión con el servidor' } };
     }
 }
+
+/**
+ * Obtiene la lista de productos favoritos del usuario.
+ * @param {string} token Token de autorización del usuario
+ * @returns {Promise<Array>} Lista de productos favoritos
+ */
+export async function fetchFavoritesAPI(token) {
+    try {
+        const response = await fetch(`${API_URL}/favorites`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (response.ok) {
+            return await response.json();
+        } else {
+            console.error('Error al cargar favoritos');
+            return [];
+        }
+    } catch (error) {
+        console.error('Error de conexión:', error);
+        return [];
+    }
+}
+
+/**
+ * Obtiene el historial de pedidos del usuario.
+ * @param {string} token Token de autorización del usuario
+ * @returns {Promise<Array>} Lista de pedidos
+ */
+export async function fetchMyOrdersAPI(token) {
+    try {
+        const response = await fetch(`${API_URL}/orders/my-orders`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (response.ok) {
+            return await response.json();
+        } else {
+            console.error('Error al cargar historial de pedidos');
+            return [];
+        }
+    } catch (error) {
+        console.error('Error de conexión:', error);
+        return [];
+    }
+}
+
+/**
+ * Alterna el estado de favorito de un producto.
+ * @param {number} productId ID del producto
+ * @param {string} token Token de autorización del usuario
+ * @returns {Promise<Object>} Resultado de la operación {ok, data}
+ */
+export async function toggleFavoriteAPI(productId, token) {
+    try {
+        const response = await fetch(`${API_URL}/favorites/${productId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const data = await response.json();
+        return { ok: response.ok, data };
+    } catch (error) {
+        console.error('Error de conexión al alternar favorito:', error);
+        return { ok: false, data: { error: 'Error de conexión con el servidor' } };
+    }
+}
+
+/**
+ * Envía una reseña para un pedido.
+ * @param {Object} payload { pedido_id, puntuacion, comentario }
+ * @param {string} token Token de autorización
+ * @returns {Promise<Object>} Resultado
+ */
+export async function createReviewAPI(payload, token) {
+    try {
+        const response = await fetch(`${API_URL}/reviews`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        return { ok: response.ok, data };
+    } catch (error) {
+        console.error('Error de conexión al enviar la reseña:', error);
+        return { ok: false, data: { error: 'Error de conexión con el servidor' } };
+    }
+}
+
+/**
+ * Verifica el estado de estudiante enviando una imagen.
+ * @param {File} imageFile Imagen del carnet universitario
+ * @param {string} token Token de autorización del usuario
+ * @returns {Promise<Object>} Resultado de la verificación
+ */
+export async function verifyStudentAPI(imageFile, token) {
+    try {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+
+        const response = await fetch(`${API_URL}/users/verify-student`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+        return { ok: response.ok, data };
+    } catch (error) {
+        console.error('Error de conexión al verificar estudiante:', error);
+        return { ok: false, data: { error: 'Error de conexión con el servidor' } };
+    }
+}
