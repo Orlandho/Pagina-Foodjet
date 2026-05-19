@@ -10,7 +10,7 @@ exports.getFavorites = async (req, res) => {
             include: {
                 Product: {
                     include: {
-                        restaurante: {
+                        Restaurant: {
                             select: { nombre: true, id: true }
                         }
                     }
