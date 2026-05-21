@@ -29,23 +29,25 @@ export function getCartItemCount() {
 
 export function addToCart(productId) {
     const product = getProductById(productId);
-    // Verificar que el producto exista y esté disponible
-    if (product && product.disponibilidad !== false) {
-        // Verificar si el carrito no está vacío y comparar el restaurante
-        const cartItemKeys = Object.keys(cart);
-        if (cartItemKeys.length > 0) {
-            const firstItemProductId = cartItemKeys[0];
-            const firstItemProduct = getProductById(firstItemProductId);
 
-            if (firstItemProduct && firstItemProduct.restaurante_id !== product.restaurante_id) {
-                return { success: false, error: 'DIFFERENT_RESTAURANT' };
-            }
-        }
-
-        cart[productId] = (cart[productId] || 0) + 1;
-        return { success: true };
+    // Validación temprana: Si no existe o no está disponible, salimos rápido
+    if (!product || product.disponibilidad === false) {
+        return { success: false, error: 'UNAVAILABLE' };
     }
-    return { success: false, error: 'UNAVAILABLE' };
+
+    const cartItemKeys = Object.keys(cart);
+    
+    // Validación de restaurante: Solo verificamos si el carrito ya tiene items
+    if (cartItemKeys.length > 0) {
+        const firstItemProduct = getProductById(cartItemKeys[0]);
+        if (firstItemProduct && firstItemProduct.restaurante_id !== product.restaurante_id) {
+            return { success: false, error: 'DIFFERENT_RESTAURANT' };
+        }
+    }
+
+    // Si pasa todas las validaciones, agregamos al carrito
+    cart[productId] = (cart[productId] || 0) + 1;
+    return { success: true };
 }
 
 export function removeFromCart(productId) {
