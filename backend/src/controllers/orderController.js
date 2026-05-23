@@ -83,13 +83,9 @@ exports.createOrder = async (req, res) => {
                     impuestos,
                     costo_envio: COSTO_ENVIO,
                     estado: "pendiente",
-                    orderItems: {
-                        create: orderItemsData
-                    }
+                    OrderItem: { create: orderItemsData }
                 },
-                include: {
-                    orderItems: true
-                }
+                include: { OrderItem: true }
             });
 
             const newTransaction = await tx.transaction.create({
@@ -124,17 +120,16 @@ exports.getMyOrders = async (req, res) => {
             where: { user_id: userId },
             include: {
 
-                restaurante: {
-                    select: {
+                Restaurant: { select: {
                         id: true,
                         nombre: true,
                         calificacion_promedio: true
                     }
                 },
                 Review: true,
-                orderItems: {
+                OrderItem: {
                     include: {
-                        product: true
+                        Product: true
                     }
                 }
             },

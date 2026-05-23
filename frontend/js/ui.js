@@ -518,11 +518,32 @@ export function requestUserLocation() {
     const addressInput = document.getElementById('customerAddress');
     if (!addressInput || addressInput.value.trim()) return;
 
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+        showToast('Geolocalización no soportada por el navegador.', 'warning');
+        return;
+    }
 
     navigator.geolocation.getCurrentPosition(
-        () => {},
-        () => {}
+        async (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`);
+                const data = await response.json();
+
+                if (data && data.display_name) {
+                    addressInput.value = data.display_name;
+                } else {
+                    showToast('No se pudo determinar la dirección de la ubicación actual.', 'warning');
+                }
+            } catch (error) {
+                console.error("Error fetching address:", error);
+                showToast('Error al obtener la dirección.', 'warning');
+            }
+        },
+        (error) => {
+            console.error("Error getting location:", error);
+        }
     );
 }
 
