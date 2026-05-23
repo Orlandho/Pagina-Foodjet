@@ -278,9 +278,6 @@ async function submitOrder(orderPayload, paymentMethod) {
 // ==========================================
 window.app = {
 
-
-
-
     loadFavorites: async () => {
         if (!window.authToken) return;
         
