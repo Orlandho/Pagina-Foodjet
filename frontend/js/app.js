@@ -146,22 +146,32 @@ function handleCheckoutNavigation() {
     if (typeof ui.requestUserLocation === 'function') ui.requestUserLocation();
 }
 
+// ==========================================
+// CÓDIGO REFACTORIZADO
+// ==========================================
+
+
 // 1. Función Principal (Orquestador)
 async function handleCheckoutSubmit(e) {
     e.preventDefault();
+
 
     if (state.isCartEmpty()) {
         return ui.showToast('El carrito está vacío', 'warning');
     }
 
+
     const paymentMethodElement = document.querySelector('input[name="paymentMethod"]:checked');
     const paymentMethod = paymentMethodElement ? paymentMethodElement.value : 'cash';
+
 
     if (!window.authToken) {
         return ui.showToast('Debes iniciar sesión para completar la compra', 'warning');
     }
 
+
     const orderPayload = buildOrderPayload(paymentMethod);
+
 
     if (paymentMethod === 'wallet') {
         await processWalletPayment(orderPayload, paymentMethod);
@@ -169,6 +179,7 @@ async function handleCheckoutSubmit(e) {
         await submitOrder(orderPayload, paymentMethod);
     }
 }
+
 
 // 2. Función Auxiliar: Arma el cuerpo de la petición
 function buildOrderPayload(paymentMethod) {
@@ -178,8 +189,10 @@ function buildOrderPayload(paymentMethod) {
         cantidad: quantity
     }));
 
+
     const firstProduct = state.getProductById(Object.keys(cart)[0]);
     const restauranteId = firstProduct ? firstProduct.restaurante_id : 1;
+
 
     return {
         items,
@@ -189,17 +202,21 @@ function buildOrderPayload(paymentMethod) {
     };
 }
 
+
 // 3. Función Auxiliar: Maneja la lógica de la billetera y el QR
 async function processWalletPayment(orderPayload, paymentMethod) {
     const firstProduct = state.getProductById(Object.keys(state.getCart())[0]);
     const restaurante = firstProduct ? firstProduct.restaurante : null;
 
+
     if (!restaurante || !restaurante.qr_pago) {
         return ui.showToast('No se encontró el QR de pago para este restaurante', 'warning');
     }
 
+
     openQRModal(restaurante, orderPayload, paymentMethod);
 }
+
 
 // 4. Función Auxiliar: Aísla la interacción con el DOM y el temporizador
 function openQRModal(restaurante, orderPayload, paymentMethod) {
@@ -207,15 +224,19 @@ function openQRModal(restaurante, orderPayload, paymentMethod) {
     // eslint-disable-next-line no-undef
     const qrModal = bootstrap.Modal.getOrCreateInstance(qrModalElement);
 
+
     document.getElementById('qrRestaurantName').textContent = restaurante.nombre;
     document.getElementById('qrPaymentImage').src = restaurante.qr_pago;
+
 
     const timerText = document.getElementById('qrTimerText');
     let secondsLeft = 5;
     timerText.textContent = `Esperando confirmación de pago... (${secondsLeft}s)`;
 
+
     const cancelBtn = document.getElementById('cancelQrPaymentBtn');
     let timerInterval;
+
 
     // Función de limpieza para no repetir código
     const cleanupAndHide = () => {
@@ -223,12 +244,15 @@ function openQRModal(restaurante, orderPayload, paymentMethod) {
         qrModal.hide();
     };
 
+
     const finishPayment = async () => {
         cleanupAndHide();
         await submitOrder(orderPayload, paymentMethod);
     };
 
+
     const handleCancel = () => cleanupAndHide();
+
 
     cancelBtn.addEventListener('click', handleCancel, { once: true });
     qrModalElement.addEventListener('hidden.bs.modal', () => {
@@ -236,14 +260,17 @@ function openQRModal(restaurante, orderPayload, paymentMethod) {
         cancelBtn.removeEventListener('click', handleCancel);
     }, { once: true });
 
+
     timerInterval = setInterval(() => {
         secondsLeft--;
         timerText.textContent = `Esperando confirmación de pago... (${secondsLeft}s)`;
+
 
         if (secondsLeft <= 0) {
             finishPayment();
         }
     }, 1000);
+
 
     qrModal.show();
 }
@@ -278,19 +305,15 @@ async function submitOrder(orderPayload, paymentMethod) {
 // ==========================================
 window.app = {
 
+
+
     loadFavorites: async () => {
         if (!window.authToken) return;
-        
-        try {
-            const favorites = await api.fetchFavoritesAPI(window.authToken);
-            state.setFavorites(favorites);
-            ui.renderProducts();
-            ui.renderFavoritesOffcanvas();
-        } catch (error) {
-            console.error('Error al cargar los favoritos de la API', error);
-        }
+        const favorites = await api.fetchFavoritesAPI(window.authToken);
+        state.setFavorites(favorites);
+        ui.renderProducts();
+        ui.renderFavoritesOffcanvas();
     },
-
 
     handleToggleFavorite: async (productId) => {
         if (!window.currentUser || !window.authToken) {
