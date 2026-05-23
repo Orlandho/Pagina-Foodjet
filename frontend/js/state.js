@@ -36,17 +36,22 @@ export function addToCart(productId) {
     }
 
     const cartItemKeys = Object.keys(cart);
-    
+
     // Validación de restaurante: Solo verificamos si el carrito ya tiene items
     if (cartItemKeys.length > 0) {
         const firstItemProduct = getProductById(cartItemKeys[0]);
-        if (firstItemProduct && firstItemProduct.restaurante_id !== product.restaurante_id) {
+
+        if (
+            firstItemProduct &&
+            firstItemProduct.restaurante_id !== product.restaurante_id
+        ) {
             return { success: false, error: 'DIFFERENT_RESTAURANT' };
         }
     }
 
     // Si pasa todas las validaciones, agregamos al carrito
     cart[productId] = (cart[productId] || 0) + 1;
+
     return { success: true };
 }
 
