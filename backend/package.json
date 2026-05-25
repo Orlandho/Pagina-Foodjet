@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@cucumber/cucumber": "^12.9.0",
+    "chai": "^6.2.2",
     "nodemon": "^3.1.14",
     "prisma": "^6.19.3"
   }
