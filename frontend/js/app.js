@@ -146,95 +146,133 @@ function handleCheckoutNavigation() {
     if (typeof ui.requestUserLocation === 'function') ui.requestUserLocation();
 }
 
+// ==========================================
+// CÓDIGO REFACTORIZADO
+// ==========================================
+
+
+// 1. Función Principal (Orquestador)
 async function handleCheckoutSubmit(e) {
     e.preventDefault();
 
+
     if (state.isCartEmpty()) {
-        ui.showToast('El carrito está vacío', 'warning');
-        return;
+        return ui.showToast('El carrito está vacío', 'warning');
     }
+
 
     const paymentMethodElement = document.querySelector('input[name="paymentMethod"]:checked');
     const paymentMethod = paymentMethodElement ? paymentMethodElement.value : 'cash';
 
+
     if (!window.authToken) {
-        ui.showToast('Debes iniciar sesión para completar la compra', 'warning');
-        return;
+        return ui.showToast('Debes iniciar sesión para completar la compra', 'warning');
     }
 
-    // Preparar items para la API
+
+    const orderPayload = buildOrderPayload(paymentMethod);
+
+
+    if (paymentMethod === 'wallet') {
+        await processWalletPayment(orderPayload, paymentMethod);
+    } else {
+        await submitOrder(orderPayload, paymentMethod);
+    }
+}
+
+
+// 2. Función Auxiliar: Arma el cuerpo de la petición
+function buildOrderPayload(paymentMethod) {
     const cart = state.getCart();
     const items = Object.entries(cart).map(([productId, quantity]) => ({
         productId: parseInt(productId),
         cantidad: quantity
     }));
 
-    // Obtener dinámicamente el restaurante_id a partir del primer producto del carrito
-    const firstItemProductId = Object.keys(cart)[0];
-    const firstProduct = state.getProductById(firstItemProductId);
+
+    const firstProduct = state.getProductById(Object.keys(cart)[0]);
     const restauranteId = firstProduct ? firstProduct.restaurante_id : 1;
 
-    // Preparar payload completo (con valores temporales hardcoded para dirección)
-    const orderPayload = {
-        items: items,
+
+    return {
+        items,
         metodo_pago: paymentMethod,
         restaurante_id: restauranteId,
-        // TODO: Implementar selección dinámica de dirección
-        direccion_entrega_id: 1
+        direccion_entrega_id: 1 // TODO: Implementar selección dinámica de dirección
+    };
+}
+
+
+// 3. Función Auxiliar: Maneja la lógica de la billetera y el QR
+async function processWalletPayment(orderPayload, paymentMethod) {
+    const firstProduct = state.getProductById(Object.keys(state.getCart())[0]);
+    const restaurante = firstProduct ? firstProduct.restaurante : null;
+
+
+    if (!restaurante || !restaurante.qr_pago) {
+        return ui.showToast('No se encontró el QR de pago para este restaurante', 'warning');
+    }
+
+
+    openQRModal(restaurante, orderPayload, paymentMethod);
+}
+
+
+// 4. Función Auxiliar: Aísla la interacción con el DOM y el temporizador
+function openQRModal(restaurante, orderPayload, paymentMethod) {
+    const qrModalElement = document.getElementById('qrModal');
+    // eslint-disable-next-line no-undef
+    const qrModal = bootstrap.Modal.getOrCreateInstance(qrModalElement);
+
+
+    document.getElementById('qrRestaurantName').textContent = restaurante.nombre;
+    document.getElementById('qrPaymentImage').src = restaurante.qr_pago;
+
+
+    const timerText = document.getElementById('qrTimerText');
+    let secondsLeft = 5;
+    timerText.textContent = `Esperando confirmación de pago... (${secondsLeft}s)`;
+
+
+    const cancelBtn = document.getElementById('cancelQrPaymentBtn');
+    let timerInterval;
+
+
+    // Función de limpieza para no repetir código
+    const cleanupAndHide = () => {
+        clearInterval(timerInterval);
+        qrModal.hide();
     };
 
-    if (paymentMethod === 'wallet') {
-        const restaurante = firstProduct ? firstProduct.restaurante : null;
-        if (!restaurante || !restaurante.qr_pago) {
-            ui.showToast('No se encontró el QR de pago para este restaurante', 'warning');
-            return;
-        }
 
-        const qrModalElement = document.getElementById('qrModal');
-        // eslint-disable-next-line no-undef
-        const qrModal = bootstrap.Modal.getOrCreateInstance(qrModalElement);
+    const finishPayment = async () => {
+        cleanupAndHide();
+        await submitOrder(orderPayload, paymentMethod);
+    };
 
-        document.getElementById('qrRestaurantName').textContent = restaurante.nombre;
-        document.getElementById('qrPaymentImage').src = restaurante.qr_pago;
 
-        const timerText = document.getElementById('qrTimerText');
-        let secondsLeft = 5;
+    const handleCancel = () => cleanupAndHide();
+
+
+    cancelBtn.addEventListener('click', handleCancel, { once: true });
+    qrModalElement.addEventListener('hidden.bs.modal', () => {
+        clearInterval(timerInterval);
+        cancelBtn.removeEventListener('click', handleCancel);
+    }, { once: true });
+
+
+    timerInterval = setInterval(() => {
+        secondsLeft--;
         timerText.textContent = `Esperando confirmación de pago... (${secondsLeft}s)`;
 
-        const cancelBtn = document.getElementById('cancelQrPaymentBtn');
-        let timerInterval;
 
-        const finishPayment = async () => {
-            clearInterval(timerInterval);
-            qrModal.hide();
-            await submitOrder(orderPayload, paymentMethod);
-        };
+        if (secondsLeft <= 0) {
+            finishPayment();
+        }
+    }, 1000);
 
-        const handleCancel = () => {
-            clearInterval(timerInterval);
-            qrModal.hide();
-        };
 
-        cancelBtn.addEventListener('click', handleCancel, { once: true });
-
-        qrModalElement.addEventListener('hidden.bs.modal', () => {
-            clearInterval(timerInterval);
-            cancelBtn.removeEventListener('click', handleCancel);
-        }, { once: true });
-
-        timerInterval = setInterval(() => {
-            secondsLeft--;
-            timerText.textContent = `Esperando confirmación de pago... (${secondsLeft}s)`;
-
-            if (secondsLeft <= 0) {
-                finishPayment();
-            }
-        }, 1000);
-
-        qrModal.show();
-    } else {
-        await submitOrder(orderPayload, paymentMethod);
-    }
+    qrModal.show();
 }
 
 async function submitOrder(orderPayload, paymentMethod) {

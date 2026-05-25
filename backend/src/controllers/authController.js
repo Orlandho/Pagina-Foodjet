@@ -2,44 +2,56 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/db');
 
-exports.register = async (req, res) => {
-    try {
-        const { nombre, email, telefono, password, rol } = req.body;
+const validateRegistrationData = (data) => {
+    const { nombre, email, telefono, password } = data;
 
-        if (!nombre || !email || !telefono || !password) {
-            return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
-        }
-
-        if (!/^\d{9}$/.test(telefono)) {
-            return res.status(400).json({ error: 'El teléfono debe tener exactamente 9 dígitos.' });
-        }
-
-        // Verificar si el usuario ya existe
-        const existingUser = await prisma.user.findUnique({ where: { email } });
-        if (existingUser) {
-            return res.status(409).json({ error: 'El email ya está registrado.', code: 'EMAIL_ALREADY_EXISTS' });
-        }
-        // Encriptar la contraseña
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        // Crear el usuario
-        const newUser = await prisma.user.create({
-            data: {
-                nombre,
-                email,
-                telefono,
-                password: hashedPassword,
-                rol: rol === 'admin' ? 'admin' : 'cliente', // Por seguridad solo permitimos admin/cliente explícito, pero usualmente admin debería crearse con permisos especiales
-            }
-        });
-
-        res.status(201).json({ message: 'Usuario registrado exitosamente', userId: newUser.id });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Error en el servidor al registrar usuario.' });
+    if (!nombre || !email || !telefono || !password) {
+        return { isValid: false, status: 400, error: 'Todos los campos son obligatorios.' };
     }
+
+    if (!/^\d{9}$/.test(telefono)) {
+        return { isValid: false, status: 400, error: 'El teléfono debe tener exactamente 9 dígitos.' };
+    }
+
+    return { isValid: true };
 };
+
+exports.register= async (req, res) => {
+        try {
+            // 1. Validación de formato
+            const validation = validateRegistrationData(req.body);
+            if (!validation.isValid) {
+                return res.status(validation.status).json({ error: validation.error });
+            }
+
+            const { nombre, email, telefono, password, rol } = req.body;
+
+            // 2. Validación de reglas de negocio (Duplicidad)
+            const existingUser = await prisma.user.findUnique({ where: { email } });
+            if (existingUser) {
+                return res.status(409).json({ error: 'El email ya está registrado.', code: 'EMAIL_ALREADY_EXISTS' });
+            }
+
+            // 3. Procesamiento y guardado
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+
+            const newUser = await prisma.user.create({
+                data: {
+                    nombre,
+                    email,
+                    telefono,
+                    password: hashedPassword,
+                    rol: rol === 'admin' ? 'admin' : 'cliente',
+                }
+            });
+
+            return res.status(201).json({ message: 'Usuario registrado exitosamente', userId: newUser.id });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ error: 'Error en el servidor al registrar usuario.' });
+        }
+}
 
 exports.login = async (req, res) => {
     try {

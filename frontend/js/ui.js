@@ -1,6 +1,115 @@
 import * as state from './state.js';
 import * as api from './api.js';
 
+// ==========================================
+// HELPERS DE PRECIO Y DESCUENTO
+// ==========================================
+
+// Función pura de cálculo
+function calculateStudentPrice(product, user) {
+    let finalPrice = product.precio;
+    let hasDiscount = false;
+
+    if (
+        user &&
+        user.es_estudiante &&
+        product.descuento_estudiante > 0
+    ) {
+        finalPrice =
+            product.precio -
+            (product.precio * (product.descuento_estudiante / 100));
+
+        hasDiscount = true;
+    }
+
+    return {
+        originalPrice: product.precio,
+        finalPrice,
+        hasDiscount
+    };
+}
+
+// Función de presentación UI
+function renderProductPrice(product, user) {
+    const priceData = calculateStudentPrice(product, user);
+
+    if (priceData.hasDiscount) {
+        return `
+            <span class="text-decoration-line-through text-muted fs-6">
+                S/ ${priceData.originalPrice.toFixed(2)}
+            </span>
+            <span class="text-success fw-bold ms-2">
+                S/ ${priceData.finalPrice.toFixed(2)}
+            </span>
+        `;
+    }
+
+    return `S/ ${priceData.originalPrice.toFixed(2)}`;
+}
+
+
+// ==========================================
+// HELPERS DE FILTRADO
+// ==========================================
+
+// Función auxiliar para parsear tiempo de entrega
+function parseDeliveryTime(tiempoStr) {
+    if (!tiempoStr) return 999999;
+
+    if (tiempoStr.includes("30")) return 30;
+
+    if (
+        tiempoStr.includes("1 hora") &&
+        !tiempoStr.includes("Más")
+    ) {
+        return 60;
+    }
+
+    if (tiempoStr.includes("Más de 1 hora")) {
+        return 90;
+    }
+
+    return parseInt(tiempoStr) || 0;
+}
+
+
+// Función principal de filtrado
+function filterProducts(
+    products,
+    minPrice,
+    maxPrice,
+    maxTime,
+    selectedCategories
+) {
+    return products.filter(product => {
+
+        const matchesPrice =
+            product.precio >= minPrice &&
+            product.precio <= maxPrice;
+
+        const productTime = parseDeliveryTime(
+            product.Restaurant?.tiempo_entrega
+        );
+
+        const matchesTime = productTime <= maxTime;
+
+        const categoryName =
+            product.categoria?.nombre ||
+            product.tipo_comida;
+
+        const matchesCategory =
+            selectedCategories.length === 0 ||
+            selectedCategories.includes(categoryName);
+
+        return (
+            matchesPrice &&
+            matchesTime &&
+            matchesCategory
+        );
+    });
+}
+
+
 // UTILIDADES GENERALES DE UI
 export function showToast(message, type = 'success') {
     const toast = document.createElement('div');
@@ -83,21 +192,13 @@ export function renderProducts() {
 
     const selectedCategories = Array.from(foodTypeCheckboxes).map(cb => cb.value);
 
-    const filteredProducts = products.filter(product => {
-        const matchesPrice = product.precio >= minPrice && product.precio <= maxPrice;
-
-        let productTime = 999999;
-        if (product.Restaurant && product.Restaurant.tiempo_entrega) {
-            if (product.Restaurant.tiempo_entrega.includes("30")) productTime = 30;
-            else if (product.Restaurant.tiempo_entrega.includes("1 hora") && !product.Restaurant.tiempo_entrega.includes("Más")) productTime = 60;
-            else if (product.Restaurant.tiempo_entrega.includes("Más de 1 hora")) productTime = 90;
-            else productTime = parseInt(product.Restaurant.tiempo_entrega) || 0;
-        }
-
-        const matchesTime = productTime <= maxTime;
-        const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(product.categoria?.nombre || product.tipo_comida);
-        return matchesPrice && matchesTime && matchesCategory;
-    });
+    const filteredProducts = filterProducts(
+    products,
+    minPrice,
+    maxPrice,
+    maxTime,
+    selectedCategories
+    );
 
     if (filteredProducts.length === 0) {
         menuContainer.innerHTML = '<p class="col-12 text-center text-muted">No se encontraron productos con los filtros seleccionados.</p>';
@@ -108,13 +209,7 @@ export function renderProducts() {
         const isFav = state.isFavorite(product.id);
         const iconClass = isFav ? 'bi-heart-fill text-danger' : 'bi-heart text-muted';
 
-        // Calcular precio con descuento si el usuario es estudiante
-        let priceHtml = `S/ ${product.precio.toFixed(2)}`;
-        if (window.currentUser && window.currentUser.es_estudiante && product.descuento_estudiante > 0) {
-            const discountedPrice = product.precio - (product.precio * (product.descuento_estudiante / 100));
-            priceHtml = `<span class="text-decoration-line-through text-muted fs-6">S/ ${product.precio.toFixed(2)}</span>
-                         <span class="text-success fw-bold ms-2">S/ ${discountedPrice.toFixed(2)}</span>`;
-        }
+        const priceHtml = renderProductPrice(product, window.currentUser);
 
         const btnClass = product.disponibilidad ? 'btn-primary' : 'btn-secondary disabled';
         const btnText = product.disponibilidad ? 'Agregar' : 'Agotado';
