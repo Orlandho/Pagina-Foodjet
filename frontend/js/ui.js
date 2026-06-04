@@ -651,11 +651,11 @@ export function toggleCardDetails() {
 }
 
 
-// RENDERIZADO DEL HISTORIAL DE PEDIDOS
+// RENDERIZADO DEL HISTORIAL DE PEDIDOS (VERSIÓN SEGURA)
 export async function renderOrderHistory() {
     if (!window.authToken) return;
 
-    const container = document.getElementById('orderHistoryList');
+    const container = document.getElementById('orderHistoryContainer');
     if (!container) return;
 
     container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Cargando pedidos...</p></div>';
@@ -663,7 +663,14 @@ export async function renderOrderHistory() {
     try {
         const orders = await api.fetchMyOrdersAPI(window.authToken);
 
-        if (!orders || orders.length === 0) {
+        // 1. Verificamos si el backend nos mandó un Array válido
+        if (!Array.isArray(orders)) {
+            console.error("El backend no devolvió una lista, devolvió esto:", orders);
+            container.innerHTML = '<div class="alert alert-danger">Error: El formato de los datos del servidor es incorrecto. Revisa F12.</div>';
+            return;
+        }
+
+        if (orders.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-5 bg-light rounded shadow-sm">
                     <i class="bi bi-bag-x fs-1 text-muted mb-3 d-block"></i>
@@ -676,22 +683,24 @@ export async function renderOrderHistory() {
         container.innerHTML = '';
 
         orders.forEach(order => {
-            const date = new Date(order.fecha_creacion).toLocaleDateString('es-PE', {
+            const date = order.fecha_creacion ? new Date(order.fecha_creacion).toLocaleDateString('es-PE', {
                 year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit'
-            });
+            }) : 'Fecha desconocida';
 
-            // Determinar color y estado basado en la evaluación del negocio real
+            // Determinar color y estado de forma segura
             let statusColor = 'bg-secondary';
             let statusIcon = 'bi-clock';
-            if (order.estado === 'pendiente') { statusColor = 'bg-warning text-dark'; statusIcon = 'bi-hourglass-split'; }
-            if (order.estado === 'en_preparacion') { statusColor = 'bg-info text-dark'; statusIcon = 'bi-fire'; }
-            if (order.estado === 'en_camino') { statusColor = 'bg-primary'; statusIcon = 'bi-bicycle'; }
-            if (order.estado === 'entregado') { statusColor = 'bg-success'; statusIcon = 'bi-check-circle'; }
-            if (order.estado === 'cancelado') { statusColor = 'bg-danger'; statusIcon = 'bi-x-circle'; }
+            const estadoStr = order.estado ? order.estado.toLowerCase() : 'pendiente';
+            
+            if (estadoStr === 'pendiente') { statusColor = 'bg-warning text-dark'; statusIcon = 'bi-hourglass-split'; }
+            if (estadoStr === 'en_preparacion') { statusColor = 'bg-info text-dark'; statusIcon = 'bi-fire'; }
+            if (estadoStr === 'en_camino') { statusColor = 'bg-primary'; statusIcon = 'bi-bicycle'; }
+            if (estadoStr === 'entregado') { statusColor = 'bg-success'; statusIcon = 'bi-check-circle'; }
+            if (estadoStr === 'cancelado') { statusColor = 'bg-danger'; statusIcon = 'bi-x-circle'; }
 
-            // Si está entregado y no tiene reseña, mostrar botón
+            // Reseñas de forma segura
             let reviewHtml = '';
-            if (order.estado === 'entregado' && (!order.reviews || order.reviews.length === 0)) {
+            if (estadoStr === 'entregado' && (!order.reviews || order.reviews.length === 0)) {
                 reviewHtml = `
                     <button class="btn btn-sm btn-outline-warning mt-3 btn-leave-review"
                         data-bs-toggle="modal" data-bs-target="#reviewModal"
@@ -716,47 +725,57 @@ export async function renderOrderHistory() {
                 `;
             }
 
+            // 2. Extraer los items de forma súper segura
+            const itemsArray = order.items || [];
+            const itemsHtml = itemsArray.map(item => {
+                // Prisma a veces envía la relación con mayúscula o minúscula
+                const nombreProd = item.producto?.nombre || item.Product?.nombre || item.Producto?.nombre || 'Producto Desconocido';
+                const precioStr = item.precio_unitario || item.precio || 0;
+                
+                return `
+                    <li class="d-flex justify-content-between align-items-center mb-2">
+                        <span>
+                            <span class="badge bg-light text-dark border me-2">${item.cantidad || 1}x</span>
+                            ${nombreProd}
+                        </span>
+                        <span class="text-muted">S/ ${precioStr}</span>
+                    </li>
+                `;
+            }).join('');
+
             const card = document.createElement('div');
             card.className = 'card mb-4 shadow-sm border-0';
             card.innerHTML = `
                 <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="fw-bold text-primary">Pedido #${String(order.id).substring(0,8)}...</span>
+                        <span class="fw-bold text-primary">Pedido #${String(order.id || '000').substring(0,8)}...</span>
                         <small class="text-muted d-block mt-1"><i class="bi bi-calendar3 me-1"></i>${date}</small>
                     </div>
-                    <span class="badge rounded-pill ${statusColor} px-3 py-2"><i class="bi ${statusIcon} me-1"></i>${order.estado.toUpperCase()}</span>
+                    <span class="badge rounded-pill ${statusColor} px-3 py-2"><i class="bi ${statusIcon} me-1"></i>${(order.estado || 'Pendiente').toUpperCase()}</span>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-8">
                             <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">Artículos</h6>
                             <ul class="list-unstyled mb-0">
-                                ${order.items.map(item => `
-                                    <li class="d-flex justify-content-between align-items-center mb-2">
-                                        <span>
-                                            <span class="badge bg-light text-dark border me-2">${item.cantidad}x</span>
-                                            ${item.producto.nombre}
-                                        </span>
-                                        <span class="text-muted">S/ ${item.precio_unitario}</span>
-                                    </li>
-                                `).join('')}
+                                ${itemsHtml || '<li class="text-muted">No hay detalles de artículos</li>'}
                             </ul>
                         </div>
                         <div class="col-md-4 mt-3 mt-md-0 border-start ps-md-4">
                             <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">Resumen</h6>
                             <div class="d-flex justify-content-between small text-muted mb-1">
                                 <span>Subtotal</span>
-                                <span>S/ ${order.subtotal}</span>
+                                <span>S/ ${order.subtotal || '0.00'}</span>
                             </div>
                             <div class="d-flex justify-content-between small text-muted mb-1">
                                 <span>IGV (18%)</span>
-                                <span>S/ ${order.impuestos}</span>
+                                <span>S/ ${order.impuestos || '0.00'}</span>
                             </div>
                             <div class="d-flex justify-content-between small text-muted mb-1">
                                 <span>Envío</span>
-                                <span>S/ ${order.costo_envio}</span>
+                                <span>S/ ${order.costo_envio || '0.00'}</span>
                             </div>
-                            ${parseFloat(order.descuento) > 0 ? `
+                            ${(parseFloat(order.descuento) > 0) ? `
                                 <div class="d-flex justify-content-between small text-success mb-1">
                                     <span>Descuento</span>
                                     <span>-S/ ${order.descuento}</span>
@@ -765,7 +784,7 @@ export async function renderOrderHistory() {
                             <hr class="my-2">
                             <div class="d-flex justify-content-between fw-bold fs-5 text-dark">
                                 <span>Total</span>
-                                <span>S/ ${order.total}</span>
+                                <span>S/ ${order.total || '0.00'}</span>
                             </div>
                         </div>
                     </div>
@@ -775,15 +794,14 @@ export async function renderOrderHistory() {
             container.appendChild(card);
         });
 
-        // Asignar order ID al modal cuando se hace click
+        // Asignar order ID al modal
         document.querySelectorAll('.btn-leave-review').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const orderId = e.currentTarget.dataset.orderId;
                 const form = document.getElementById('reviewForm');
                 if(form) form.dataset.orderId = orderId;
 
-                // Reset estrellas UI
-                document.querySelectorAll('.star-rating i').forEach((s, idx) => {
+                document.querySelectorAll('.star-rating i').forEach((s) => {
                     s.classList.replace('bi-star-fill', 'bi-star');
                 });
                 form.reset();
@@ -791,10 +809,12 @@ export async function renderOrderHistory() {
         });
 
     } catch (error) {
-        container.innerHTML = '<div class="alert alert-danger">Error al cargar el historial de pedidos.</div>';
+        // 3. ¡Si falla, ahora nos gritará el error en la consola!
+        console.error("================ ERROR AL DIBUJAR HISTORIAL ================");
+        console.error(error);
+        container.innerHTML = '<div class="alert alert-danger">Error al cargar el historial de pedidos. Por favor presiona F12 y revisa la pestaña Consola.</div>';
     }
 }
-
 export function renderFoodTypeFilters() {
     const products = state.getProducts();
     const categories = [...new Set(products.map(p => p.categoria?.nombre || p.tipo_comida).filter(Boolean))];
@@ -815,27 +835,21 @@ export function renderFoodTypeFilters() {
 }
 
 // ==========================================
-// SEGUIMIENTO DE PEDIDOS (NUEVO)
+// SEGUIMIENTO DE PEDIDOS (VERSIÓN DEFINITIVA)
 // ==========================================
 export function startOrderTracking(paymentMethod, orderData) {
-    // Buscar los elementos HTML en tu vista de seguimiento (basado en nombres comunes)
-    // Deberás asegurarte de que tu index.html tenga elementos con estos IDs u organizarlos según tu diseño.
+    // 1. Rellenar los detalles del pedido usando los IDs de tu HTML
     const orderElements = {
-        orderNumber: document.querySelector('#trackingOrderNumber') || document.querySelector('.order-number-display'),
-        paymentMethod: document.querySelector('#trackingPaymentMethod') || document.querySelector('.payment-method-display'),
-        date: document.querySelector('#trackingDate') || document.querySelector('.order-date-display'),
-        subtotal: document.querySelector('#trackingSubtotal') || document.querySelector('.subtotal-display'),
-        taxes: document.querySelector('#trackingTaxes') || document.querySelector('.taxes-display'),
-        delivery: document.querySelector('#trackingDelivery') || document.querySelector('.delivery-display'),
-        total: document.querySelector('#trackingTotal') || document.querySelector('.total-display')
+        orderNumber: document.getElementById('orderNumber'),
+        paymentMethod: document.getElementById('orderPayment'),
+        date: document.getElementById('orderDate'),
+        subtotal: document.getElementById('orderSubtotal'),
+        taxes: document.getElementById('orderTaxes'),
+        delivery: document.getElementById('orderDelivery'),
+        total: document.getElementById('orderTotalFinal')
     };
 
-    // Rellenar Número de Orden
-    if (orderElements.orderNumber) {
-        orderElements.orderNumber.textContent = `#FJ${String(orderData?.id || '0000').padStart(4, '0')}`;
-    }
-
-    // Rellenar Método de Pago
+    if (orderElements.orderNumber) orderElements.orderNumber.textContent = `#FJ${String(orderData?.id || '0000').padStart(4, '0')}`;
     if (orderElements.paymentMethod) {
         let methodText = paymentMethod || '-';
         if (paymentMethod === 'card') methodText = 'Tarjeta';
@@ -843,16 +857,70 @@ export function startOrderTracking(paymentMethod, orderData) {
         if (paymentMethod === 'wallet') methodText = 'Billetera Digital';
         orderElements.paymentMethod.textContent = methodText;
     }
-
-    // Rellenar Fecha
     if (orderElements.date) {
         const date = orderData?.fecha_creacion ? new Date(orderData.fecha_creacion) : new Date();
         orderElements.date.textContent = date.toLocaleDateString('es-PE');
     }
-
-    // Rellenar Totales
     if (orderElements.subtotal) orderElements.subtotal.textContent = `S/ ${(orderData?.subtotal || 0).toFixed(2)}`;
     if (orderElements.taxes) orderElements.taxes.textContent = `S/ ${(orderData?.impuestos || 0).toFixed(2)}`;
     if (orderElements.delivery) orderElements.delivery.textContent = `S/ ${(orderData?.costo_envio || 0).toFixed(2)}`;
     if (orderElements.total) orderElements.total.textContent = `S/ ${(orderData?.total || 0).toFixed(2)}`;
+
+    // 2. Elementos visuales de progreso (Icono, Título, Bolitas, Líneas)
+    const statusIcon = document.getElementById('statusIcon');
+    const statusTitle = document.getElementById('statusTitle');
+    const statusDesc = document.getElementById('statusDescription');
+    const estimatedTime = document.getElementById('estimatedTime');
+    
+    const step1 = document.getElementById('step1'); // Preparando
+    const step2 = document.getElementById('step2'); // En camino
+    const step3 = document.getElementById('step3'); // Entregado
+    const line1 = document.getElementById('line1'); // Línea 1-2
+    const line2 = document.getElementById('line2'); // Línea 2-3
+
+    // Estado inicial: "Preparando"
+    if (statusIcon) statusIcon.innerHTML = '<i class="bi bi-box-seam fs-1 text-primary"></i>';
+    if (statusTitle) statusTitle.textContent = 'Preparando tu pedido';
+    if (statusDesc) statusDesc.textContent = 'Tu pedido está siendo preparado con mucho cuidado';
+    if (estimatedTime) estimatedTime.innerHTML = '<i class="bi bi-clock me-2"></i>Tiempo estimado: 30 minutos';
+    
+    // 3. SIMULACIÓN DE AVANCE (Temporizadores)
+    const tiempoPorPaso = 10000; // 10000 ms = 10 segundos
+
+    // Paso 1: Cambiar a "En camino" después de 10 segundos
+    setTimeout(() => {
+        showToast('🛵 Tu pedido ya está en camino', 'info');
+        
+        // Actualizar Cabecera
+        if (statusIcon) statusIcon.innerHTML = '<i class="bi bi-bicycle fs-1 text-primary"></i>';
+        if (statusTitle) statusTitle.textContent = 'Pedido en camino';
+        if (statusDesc) statusDesc.textContent = 'El repartidor está cerca. Mantente atento.';
+        if (estimatedTime) estimatedTime.innerHTML = '<i class="bi bi-clock me-2"></i>Llega en aprox. 10 minutos';
+
+        // Actualizar Bolitas de Progreso
+        if (step1) step1.classList.remove('active');
+        if (step1) step1.classList.add('completed'); // Si tienes clase css para completado, o se queda normal
+        
+        if (line1) line1.classList.add('bg-primary'); // Pintar la línea
+        if (step2) step2.classList.add('active'); // Activar el segundo paso
+        
+    }, tiempoPorPaso);
+
+    // Paso 2: Cambiar a "Entregado" después de 20 segundos
+    setTimeout(() => {
+        showToast('✅ ¡Tu pedido ha sido entregado! Buen provecho.', 'success');
+        
+        // Actualizar Cabecera
+        if (statusIcon) statusIcon.innerHTML = '<i class="bi bi-check-circle fs-1 text-success"></i>';
+        if (statusTitle) statusTitle.textContent = '¡Pedido Entregado!';
+        if (statusDesc) statusDesc.textContent = 'Esperamos que disfrutes tu comida.';
+        if (estimatedTime) estimatedTime.style.display = 'none'; // Ocultar el tiempo
+
+        // Actualizar Bolitas de Progreso
+        if (step2) step2.classList.remove('active');
+        
+        if (line2) line2.classList.add('bg-primary'); // Pintar la segunda línea
+        if (step3) step3.classList.add('active'); // Activar el paso final
+
+    }, tiempoPorPaso * 2);
 }

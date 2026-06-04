@@ -27,7 +27,14 @@ async function initCatalog() {
 }
 
 function initEventListeners() {
-    // Carrito y Checkout listeners
+    // NUEVO: Hacer que los botones del menú superior siempre muestren la vista principal
+    document.querySelectorAll('.navbar-nav .nav-link, .navbar-brand').forEach(link => {
+        link.addEventListener('click', () => {
+            ui.showView('homeView');
+        });
+    });
+
+    // Carrito y Checkout listeners (Esto es lo que ya tenías)
     const cartBtn = document.getElementById('cartBtn');
     if (cartBtn) {
         cartBtn.addEventListener('click', openCart);
