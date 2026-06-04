@@ -721,7 +721,7 @@ export async function renderOrderHistory() {
             card.innerHTML = `
                 <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="fw-bold text-primary">Pedido #${order.id.substring(0,8)}...</span>
+                        <span class="fw-bold text-primary">Pedido #${String(order.id).substring(0,8)}...</span>
                         <small class="text-muted d-block mt-1"><i class="bi bi-calendar3 me-1"></i>${date}</small>
                     </div>
                     <span class="badge rounded-pill ${statusColor} px-3 py-2"><i class="bi ${statusIcon} me-1"></i>${order.estado.toUpperCase()}</span>
@@ -812,4 +812,47 @@ export function renderFoodTypeFilters() {
             </div>
         `;
     });
+}
+
+// ==========================================
+// SEGUIMIENTO DE PEDIDOS (NUEVO)
+// ==========================================
+export function startOrderTracking(paymentMethod, orderData) {
+    // Buscar los elementos HTML en tu vista de seguimiento (basado en nombres comunes)
+    // Deberás asegurarte de que tu index.html tenga elementos con estos IDs u organizarlos según tu diseño.
+    const orderElements = {
+        orderNumber: document.querySelector('#trackingOrderNumber') || document.querySelector('.order-number-display'),
+        paymentMethod: document.querySelector('#trackingPaymentMethod') || document.querySelector('.payment-method-display'),
+        date: document.querySelector('#trackingDate') || document.querySelector('.order-date-display'),
+        subtotal: document.querySelector('#trackingSubtotal') || document.querySelector('.subtotal-display'),
+        taxes: document.querySelector('#trackingTaxes') || document.querySelector('.taxes-display'),
+        delivery: document.querySelector('#trackingDelivery') || document.querySelector('.delivery-display'),
+        total: document.querySelector('#trackingTotal') || document.querySelector('.total-display')
+    };
+
+    // Rellenar Número de Orden
+    if (orderElements.orderNumber) {
+        orderElements.orderNumber.textContent = `#FJ${String(orderData?.id || '0000').padStart(4, '0')}`;
+    }
+
+    // Rellenar Método de Pago
+    if (orderElements.paymentMethod) {
+        let methodText = paymentMethod || '-';
+        if (paymentMethod === 'card') methodText = 'Tarjeta';
+        if (paymentMethod === 'cash') methodText = 'Efectivo';
+        if (paymentMethod === 'wallet') methodText = 'Billetera Digital';
+        orderElements.paymentMethod.textContent = methodText;
+    }
+
+    // Rellenar Fecha
+    if (orderElements.date) {
+        const date = orderData?.fecha_creacion ? new Date(orderData.fecha_creacion) : new Date();
+        orderElements.date.textContent = date.toLocaleDateString('es-PE');
+    }
+
+    // Rellenar Totales
+    if (orderElements.subtotal) orderElements.subtotal.textContent = `S/ ${(orderData?.subtotal || 0).toFixed(2)}`;
+    if (orderElements.taxes) orderElements.taxes.textContent = `S/ ${(orderData?.impuestos || 0).toFixed(2)}`;
+    if (orderElements.delivery) orderElements.delivery.textContent = `S/ ${(orderData?.costo_envio || 0).toFixed(2)}`;
+    if (orderElements.total) orderElements.total.textContent = `S/ ${(orderData?.total || 0).toFixed(2)}`;
 }

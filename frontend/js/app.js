@@ -10,7 +10,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     await initCatalog();
     initEventListeners();
-    ui.renderCartOffcanvas(); ui.renderCheckoutCart();;
+    ui.renderCartOffcanvas(); 
+    ui.renderCheckoutCart();
 });
 
 async function initCatalog() {
@@ -22,8 +23,6 @@ async function initCatalog() {
 
     state.setProducts(products);
     ui.renderFoodTypeFilters();
-
-
     ui.renderProducts();
 }
 
@@ -72,7 +71,6 @@ function initEventListeners() {
     // Botones de "Volver"
     document.getElementById('backToMenuBtn')?.addEventListener('click', () => ui.showView('homeView'));
     document.getElementById('backToMenuFromTracking')?.addEventListener('click', () => ui.showView('homeView'));
-
 
     // Historial y Reseñas
     document.getElementById('historyBtn')?.addEventListener('click', handleHistoryClick);
@@ -150,28 +148,22 @@ function handleCheckoutNavigation() {
 // CÓDIGO REFACTORIZADO
 // ==========================================
 
-
 // 1. Función Principal (Orquestador)
 async function handleCheckoutSubmit(e) {
     e.preventDefault();
-
 
     if (state.isCartEmpty()) {
         return ui.showToast('El carrito está vacío', 'warning');
     }
 
-
     const paymentMethodElement = document.querySelector('input[name="paymentMethod"]:checked');
     const paymentMethod = paymentMethodElement ? paymentMethodElement.value : 'cash';
-
 
     if (!window.authToken) {
         return ui.showToast('Debes iniciar sesión para completar la compra', 'warning');
     }
 
-
     const orderPayload = buildOrderPayload(paymentMethod);
-
 
     if (paymentMethod === 'wallet') {
         await processWalletPayment(orderPayload, paymentMethod);
@@ -179,7 +171,6 @@ async function handleCheckoutSubmit(e) {
         await submitOrder(orderPayload, paymentMethod);
     }
 }
-
 
 // 2. Función Auxiliar: Arma el cuerpo de la petición
 function buildOrderPayload(paymentMethod) {
@@ -189,10 +180,8 @@ function buildOrderPayload(paymentMethod) {
         cantidad: quantity
     }));
 
-
     const firstProduct = state.getProductById(Object.keys(cart)[0]);
     const restauranteId = firstProduct ? firstProduct.restaurante_id : 1;
-
 
     return {
         items,
@@ -202,21 +191,17 @@ function buildOrderPayload(paymentMethod) {
     };
 }
 
-
 // 3. Función Auxiliar: Maneja la lógica de la billetera y el QR
 async function processWalletPayment(orderPayload, paymentMethod) {
     const firstProduct = state.getProductById(Object.keys(state.getCart())[0]);
     const restaurante = firstProduct ? firstProduct.restaurante : null;
 
-
     if (!restaurante || !restaurante.qr_pago) {
         return ui.showToast('No se encontró el QR de pago para este restaurante', 'warning');
     }
 
-
     openQRModal(restaurante, orderPayload, paymentMethod);
 }
-
 
 // 4. Función Auxiliar: Aísla la interacción con el DOM y el temporizador
 function openQRModal(restaurante, orderPayload, paymentMethod) {
@@ -224,19 +209,15 @@ function openQRModal(restaurante, orderPayload, paymentMethod) {
     // eslint-disable-next-line no-undef
     const qrModal = bootstrap.Modal.getOrCreateInstance(qrModalElement);
 
-
     document.getElementById('qrRestaurantName').textContent = restaurante.nombre;
     document.getElementById('qrPaymentImage').src = restaurante.qr_pago;
-
 
     const timerText = document.getElementById('qrTimerText');
     let secondsLeft = 5;
     timerText.textContent = `Esperando confirmación de pago... (${secondsLeft}s)`;
 
-
     const cancelBtn = document.getElementById('cancelQrPaymentBtn');
     let timerInterval;
-
 
     // Función de limpieza para no repetir código
     const cleanupAndHide = () => {
@@ -244,15 +225,12 @@ function openQRModal(restaurante, orderPayload, paymentMethod) {
         qrModal.hide();
     };
 
-
     const finishPayment = async () => {
         cleanupAndHide();
         await submitOrder(orderPayload, paymentMethod);
     };
 
-
     const handleCancel = () => cleanupAndHide();
-
 
     cancelBtn.addEventListener('click', handleCancel, { once: true });
     qrModalElement.addEventListener('hidden.bs.modal', () => {
@@ -260,17 +238,14 @@ function openQRModal(restaurante, orderPayload, paymentMethod) {
         cancelBtn.removeEventListener('click', handleCancel);
     }, { once: true });
 
-
     timerInterval = setInterval(() => {
         secondsLeft--;
         timerText.textContent = `Esperando confirmación de pago... (${secondsLeft}s)`;
-
 
         if (secondsLeft <= 0) {
             finishPayment();
         }
     }, 1000);
-
 
     qrModal.show();
 }
@@ -282,7 +257,8 @@ async function submitOrder(orderPayload, paymentMethod) {
         if (result.ok) {
             // Limpiar carrito
             state.clearCart();
-            ui.renderCartOffcanvas(); ui.renderCheckoutCart();;
+            ui.renderCartOffcanvas(); 
+            ui.renderCheckoutCart();
 
             // Mostrar seguimiento
             ui.showView('trackingView');
@@ -296,16 +272,11 @@ async function submitOrder(orderPayload, paymentMethod) {
     }
 }
 
-// ===================================// MÉTODOS PÚBLICOS GLOBALES
-// (Necesarios para onClick en HTML y compatibilidad)
-
 // ==========================================
 // MÉTODOS PÚBLICOS GLOBALES
 // (Necesarios para onClick en HTML y compatibilidad)
 // ==========================================
 window.app = {
-
-
 
     loadFavorites: async () => {
         if (!window.authToken) return;
@@ -339,7 +310,8 @@ window.app = {
         const result = state.addToCart(productId);
         if (result.success) {
             ui.renderProducts();
-            ui.renderCartOffcanvas(); ui.renderCheckoutCart();;
+            ui.renderCartOffcanvas(); 
+            ui.renderCheckoutCart();
             ui.showToast('Producto agregado al carrito');
         } else {
             if (result.error === 'DIFFERENT_RESTAURANT') {
@@ -352,18 +324,19 @@ window.app = {
     handleRemoveFromCart: (productId) => {
         state.removeFromCart(productId);
         ui.renderProducts();
-        ui.renderCartOffcanvas(); ui.renderCheckoutCart();;
+        ui.renderCartOffcanvas(); 
+        ui.renderCheckoutCart();
     },
     handleRemoveItemCompletely: (productId) => {
         state.removeItemCompletely(productId);
         ui.renderProducts();
-        ui.renderCartOffcanvas(); ui.renderCheckoutCart();;
+        ui.renderCartOffcanvas(); 
+        ui.renderCheckoutCart();
     },
     showView: (viewId) => {
         ui.showView(viewId);
     }
 };
-
 
 // --- Historial y Reseñas ---
 
@@ -524,7 +497,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Refrescar catálogo (precios tachados) y el checkout si está abierto
             ui.renderProducts();
-            ui.renderCartOffcanvas(); ui.renderCheckoutCart();;
+            ui.renderCartOffcanvas(); 
+            ui.renderCheckoutCart();
             if (document.getElementById('checkoutView').style.display !== 'none') {
                 ui.renderCheckoutSummary();
             }
