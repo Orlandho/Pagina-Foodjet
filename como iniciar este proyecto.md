@@ -27,7 +27,7 @@ Abre otra ventana o pestaña nueva en tu terminal (para no detener el backend).
 Navega hasta la carpeta del frontend:
 cd frontend
 Ejecuta el servidor estático:
-npx http-server -p 8080
+npx http-server -c-1 -p 8080
 (Si te pregunta Ok to proceed? (y), presiona Enter o escribe y y presiona Enter).
 Abre tu navegador web y visita: http://localhost:8080
 ✅ Resultado esperado: La página web debería cargar en tu navegador y consumir exitosamente los productos desde la API del backend.

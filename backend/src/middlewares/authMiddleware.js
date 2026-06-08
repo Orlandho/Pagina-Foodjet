@@ -1,7 +1,12 @@
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
-    // Obtener el token del header (formato: "Bearer [token]")
+    // 1. SOLUCIÓN: Dejar pasar las peticiones previas de seguridad (CORS Preflight)
+    if (req.method === 'OPTIONS') {
+        return next();
+    }
+
+    // 2. Obtener el token del header (formato: "Bearer [token]")
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Acceso denegado. Token no proporcionado.' });
@@ -19,6 +24,11 @@ const authMiddleware = (req, res, next) => {
 };
 
 const adminMiddleware = (req, res, next) => {
+    // Dejar pasar OPTIONS también para rutas de administrador
+    if (req.method === 'OPTIONS') {
+        return next();
+    }
+
     if (!req.user || req.user.rol !== 'admin') {
         return res.status(403).json({ error: 'Acceso denegado. Se requieren permisos de administrador.' });
     }
