@@ -1,1 +1,0 @@
-I've updated `frontend/js/ui.js`'s `requestUserLocation` to use Nominatim API to get a human readable address from the GPS coordinates.
