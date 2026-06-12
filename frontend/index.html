@@ -27,7 +27,7 @@
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menú de navegación">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
@@ -47,18 +47,18 @@
                     </li>
                     <li class="nav-item ms-lg-3" id="favoritesNav" style="display: none;">
                         <button class="btn position-relative me-2 text-danger" id="favoritesBtn" aria-label="Productos Favoritos" data-bs-toggle="offcanvas" data-bs-target="#favoritesOffcanvas">
-                            <i class="bi bi-heart-fill fs-5"></i>
+                            <i class="bi bi-heart-fill fs-5" aria-hidden="true"></i>
                         </button>
                     </li>
                     <li class="nav-item ms-lg-3">
                         <button type="button" class="btn position-relative me-2" id="cartBtn" aria-label="Carrito de compras" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
-                            <i class="bi bi-cart3 fs-5"></i>
+                            <i class="bi bi-cart3 fs-5" aria-hidden="true"></i>
                             <span class="cart-badge" id="cartCount" style="display: none;">0</span>
                         </button>
                     </li>
                     <li class="nav-item dropdown" id="userMenu" style="display: none;">
                         <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle me-2"></i>
+                            <i class="bi bi-person-circle me-2" aria-hidden="true"></i>
                             <span id="userNameDropdown"></span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
@@ -71,7 +71,7 @@
                     </li>
                     <li class="nav-item" id="loginNav">
                         <button class="btn btn-primary" id="loginBtn" data-bs-toggle="modal" data-bs-target="#loginModal">
-                            <i class="bi bi-person"></i>
+                            <i class="bi bi-person" aria-hidden="true"></i>
                             <span id="userNameBtn">Ingresar</span>
                         </button>
                     </li>
@@ -91,7 +91,7 @@
                     </div>
                     <div class="carousel-inner">
                         <div class="carousel-item active">
-                            <img src="https://elcomercio.pe/resizer/v2/55QLUH7SV5E53AFZHMYNTJ4TTE.jpg?auth=bdffd2a0f4da7a109fb83ad9b94fcf63e5ca1c345be580dc898152c14dac10a0&width=1200&height=675&quality=75&smart=true" class="d-block w-100" alt="Comida deliciosa">
+                            <img src="https://elcomercio.pe/resizer/v2/55QLUH7SV5E53AFZHMYNTJ4TTE.jpg?auth=bdffd2a0f4da7a109fb83ad9b94fcf63e5ca1c345be580dc898152c14dac10a0&width=1200&height=675&quality=75&smart=true" class="d-block w-100" alt="Plato de comida peruana servido a domicilio por FoodJet">
                             <div class="carousel-overlay"></div>
                             <div class="carousel-caption">
                                 <h1 class="display-4 fw-bold mb-3">¡Comida deliciosa a tu puerta!</h1>
@@ -100,7 +100,7 @@
                             </div>
                         </div>
                         <div class="carousel-item">
-                            <img src="https://images.unsplash.com/photo-1651843465180-5965076f7368?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1920" class="d-block w-100" alt="Hamburguesas">
+                            <img src="https://images.unsplash.com/photo-1651843465180-5965076f7368?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1920" class="d-block w-100" alt="Hamburguesas jugosas con ingredientes frescos preparadas para delivery">
                             <div class="carousel-overlay"></div>
                             <div class="carousel-caption">
                                 <h1 class="display-4 fw-bold mb-3">Las mejores hamburguesas</h1>
@@ -109,7 +109,7 @@
                             </div>
                         </div>
                         <div class="carousel-item">
-                            <img src="https://images.unsplash.com/photo-1678443238947-e58d71bf2e23?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1920" class="d-block w-100" alt="Pizza">
+                            <img src="https://images.unsplash.com/photo-1678443238947-e58d71bf2e23?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1920" class="d-block w-100" alt="Pizza caliente recién horneada lista para entrega a domicilio">
                             <div class="carousel-overlay"></div>
                             <div class="carousel-caption">
                                 <h1 class="display-4 fw-bold mb-3">Pizza caliente, directo a ti</h1>
@@ -135,7 +135,7 @@
                         <div class="col-md-3 col-6">
                             <div class="text-center p-3">
                                 <div class="feature-icon mx-auto mb-3">
-                                    <i class="bi bi-truck fs-1"></i>
+                                    <i class="bi bi-truck fs-1" aria-hidden="true"></i>
                                 </div>
                                 <h3 class="h5 mb-2">Entrega Rápida</h3>
                                 <p class="text-muted small">En 30 minutos o menos</p>
@@ -144,7 +144,7 @@
                         <div class="col-md-3 col-6">
                             <div class="text-center p-3">
                                 <div class="feature-icon mx-auto mb-3">
-                                    <i class="bi bi-star-fill fs-1"></i>
+                                    <i class="bi bi-star-fill fs-1" aria-hidden="true"></i>
                                 </div>
                                 <h3 class="h5 mb-2">Calidad Premium</h3>
                                 <p class="text-muted small">Los mejores restaurantes</p>
@@ -153,7 +153,7 @@
                         <div class="col-md-3 col-6">
                             <div class="text-center p-3">
                                 <div class="feature-icon mx-auto mb-3">
-                                    <i class="bi bi-clock-fill fs-1"></i>
+                                    <i class="bi bi-clock-fill fs-1" aria-hidden="true"></i>
                                 </div>
                                 <h3 class="h5 mb-2">24/7 Disponible</h3>
                                 <p class="text-muted small">Ordenar cuando quieras</p>
@@ -162,7 +162,7 @@
                         <div class="col-md-3 col-6">
                             <div class="text-center p-3">
                                 <div class="feature-icon mx-auto mb-3">
-                                    <i class="bi bi-shield-check fs-1"></i>
+                                    <i class="bi bi-shield-check fs-1" aria-hidden="true"></i>
                                 </div>
                                 <h3 class="h5 mb-2">Pago Seguro</h3>
                                 <p class="text-muted small">Protección garantizada</p>
@@ -197,10 +197,10 @@
                                         <h5 class="fs-6 fw-bold mb-3">Rango de precio</h5>
                                         <div class="d-flex align-items-center mb-3">
                                             <span class="me-2">$</span>
-                                            <input type="number" id="filter-price-min" class="form-control form-control-sm me-2" placeholder="Min" min="0">
+                                            <input type="number" id="filter-price-min" class="form-control form-control-sm me-2" placeholder="Min" min="0" aria-label="Precio mínimo">
                                             <span class="me-2">-</span>
                                             <span class="me-2">$</span>
-                                            <input type="number" id="filter-price-max" class="form-control form-control-sm" placeholder="Max" min="0">
+                                            <input type="number" id="filter-price-max" class="form-control form-control-sm" placeholder="Max" min="0" aria-label="Precio máximo">
                                         </div>
                                     </div>
 
@@ -282,13 +282,13 @@
                                 <p class="text-muted mb-4">¿Tienes alguna pregunta o sugerencia? Estamos aquí para ayudarte</p>
                                 <div class="d-flex flex-column gap-3">
                                     <p class="mb-0">
-                                        📧 Email: <a href="mailto:hola@foodjet.com" class="text-primary text-decoration-none">hola@foodjet.com</a>
+                                        <span role="img" aria-label="Correo electrónico">📧</span> Email: <a href="mailto:hola@foodjet.com" class="text-primary text-decoration-none">hola@foodjet.com</a>
                                     </p>
                                     <p class="mb-0">
-                                        📞 Teléfono: <a href="tel:012345678" class="text-primary text-decoration-none">01 234 5678</a>
+                                        <span role="img" aria-label="Teléfono">📞</span> Teléfono: <a href="tel:012345678" class="text-primary text-decoration-none">01 234 5678</a>
                                     </p>
                                     <p class="mb-0">
-                                        📍 Dirección: Av. Principal 123, Lima, Perú
+                                        <span role="img" aria-label="Ubicación">📍</span> Dirección: Av. Principal 123, Lima, Perú
                                     </p>
                                 </div>
                             </div>
@@ -309,7 +309,7 @@
             </div>
         </section>
 
-        <div id="checkoutView" style="display: none;">
+        <section id="checkoutView" style="display: none;" aria-label="Finalizar pedido">
             <div class="container py-5">
                 <button class="btn btn-link text-decoration-none mb-4" id="backToMenuBtn">
                     <i class="bi bi-arrow-left"></i> Volver al carrito
@@ -448,9 +448,9 @@
                     </div>
                 </form>
             </div>
-        </div>
+        </section>
 
-        <div id="dashboardView" style="display: none;">
+        <section id="dashboardView" style="display: none;" aria-label="Panel de administración">
             <div class="container py-5">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1 class="mb-0">Panel de Administración</h1>
@@ -516,9 +516,9 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <div id="trackingView" style="display: none;">
+        <section id="trackingView" style="display: none;" aria-label="Seguimiento de pedido">
             <div class="container py-5">
                 <div class="row justify-content-center">
                     <div class="col-lg-6">
@@ -594,7 +594,7 @@
                                 </div>
 
                                 <div class="alert alert-info mb-4">
-                                    📞 ¿Tienes alguna pregunta? Llámanos al <strong>01 234 5678</strong>
+                                    <span role="img" aria-label="Teléfono">📞</span> ¿Tienes alguna pregunta? Llámanos al <strong>01 234 5678</strong>
                                 </div>
 
                                 <div class="d-grid gap-2">
@@ -606,7 +606,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     </main>
 
     <footer class="bg-dark text-white py-4 mt-5">
@@ -744,12 +744,12 @@
 
                         <div class="mb-4">
                             <label class="form-label d-block">Tu Calificación</label>
-                            <div class="fs-2 text-warning" id="starRatingContainer" style="cursor: pointer;">
-                                <i class="bi bi-star" data-rating="1"></i>
-                                <i class="bi bi-star" data-rating="2"></i>
-                                <i class="bi bi-star" data-rating="3"></i>
-                                <i class="bi bi-star" data-rating="4"></i>
-                                <i class="bi bi-star" data-rating="5"></i>
+                            <div class="fs-2 text-warning" id="starRatingContainer" role="radiogroup" aria-label="Calificación de 1 a 5 estrellas" style="cursor: pointer;">
+                                <i class="bi bi-star" data-rating="1" role="radio" aria-checked="false" aria-label="1 estrella" tabindex="0"></i>
+                                <i class="bi bi-star" data-rating="2" role="radio" aria-checked="false" aria-label="2 estrellas" tabindex="0"></i>
+                                <i class="bi bi-star" data-rating="3" role="radio" aria-checked="false" aria-label="3 estrellas" tabindex="0"></i>
+                                <i class="bi bi-star" data-rating="4" role="radio" aria-checked="false" aria-label="4 estrellas" tabindex="0"></i>
+                                <i class="bi bi-star" data-rating="5" role="radio" aria-checked="false" aria-label="5 estrellas" tabindex="0"></i>
                             </div>
                             <input type="hidden" id="reviewRating" required>
                         </div>
@@ -774,11 +774,11 @@
                 </div>
                 <div class="modal-body text-center">
                     <p class="mb-3">Escanea el código QR de <strong id="qrRestaurantName"></strong> para pagar.</p>
-                    <img id="qrPaymentImage" src="" alt="Código QR" class="img-fluid rounded border p-2 mb-3" style="max-width: 250px;">
+                    <img id="qrPaymentImage" src="" alt="Código QR para pago con billetera digital" class="img-fluid rounded border p-2 mb-3" style="max-width: 250px;">
 
                     <div class="d-flex align-items-center justify-content-center mb-2">
                         <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                            <span class="visually-hidden">Cargando...</span>
                         </div>
                         <p class="mb-0 text-muted" id="qrTimerText">Esperando confirmación de pago... (5s)</p>
                     </div>
@@ -843,5 +843,15 @@
 
     <script src="js/legacy.js"></script>
     <script type="module" src="js/app.js"></script>
+
+    <!-- Widget de Accesibilidad UserWay -->
+    <script>
+      (function(d){
+        var s = d.createElement("script");
+        s.setAttribute("data-account", "REPLACE_WITH_YOUR_ACCOUNT_ID");
+        s.setAttribute("src", "https://cdn.userway.org/widget.js");
+        (d.body || d.head).appendChild(s);
+      })(document);
+    </script>
 </body>
 </html>
