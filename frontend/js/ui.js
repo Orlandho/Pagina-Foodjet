@@ -956,8 +956,11 @@ export function startOrderTracking(paymentMethod, orderData) {
         if (estimatedTime) estimatedTime.innerHTML = '<i class="bi bi-clock me-2"></i>Llega en aprox. 10 minutos';
 
         // Actualizar Bolitas de Progreso
-        if (step1) step1.classList.remove('active');
-        if (step1) step1.classList.add('completed'); // Si tienes clase css para completado, o se queda normal
+        if (step1) {
+            step1.classList.remove('active');
+            step1.classList.add('completed');
+            step1.innerHTML = '<i class="bi bi-check-circle-fill"></i>'; // Cambiar a check
+        }
         
         if (line1) line1.classList.add('completed'); // Pintar la línea
         if (step2) step2.classList.add('active'); // Activar el segundo paso
@@ -975,8 +978,11 @@ export function startOrderTracking(paymentMethod, orderData) {
         if (estimatedTime) estimatedTime.style.display = 'none'; // Ocultar el tiempo
 
         // Actualizar Bolitas de Progreso
-        if (step2) step2.classList.remove('active');
-        if (step2) step2.classList.add('completed'); // Marcar "En camino" como completado con check ✅
+        if (step2) {
+            step2.classList.remove('active');
+            step2.classList.add('completed'); // Marcar "En camino" como completado con check ✅
+            step2.innerHTML = '<i class="bi bi-check-circle-fill"></i>'; // Cambiar ícono a check
+        }
         
         if (line2) line2.classList.add('completed'); // Pintar la segunda línea
         if (step3) step3.classList.add('active'); // Activar el paso final
