@@ -959,7 +959,7 @@ export function startOrderTracking(paymentMethod, orderData) {
         if (step1) step1.classList.remove('active');
         if (step1) step1.classList.add('completed'); // Si tienes clase css para completado, o se queda normal
         
-        if (line1) line1.classList.add('bg-primary'); // Pintar la línea
+        if (line1) line1.classList.add('completed'); // Pintar la línea
         if (step2) step2.classList.add('active'); // Activar el segundo paso
         
     }, tiempoPorPaso);
@@ -976,8 +976,9 @@ export function startOrderTracking(paymentMethod, orderData) {
 
         // Actualizar Bolitas de Progreso
         if (step2) step2.classList.remove('active');
+        if (step2) step2.classList.add('completed'); // Marcar "En camino" como completado con check ✅
         
-        if (line2) line2.classList.add('bg-primary'); // Pintar la segunda línea
+        if (line2) line2.classList.add('completed'); // Pintar la segunda línea
         if (step3) step3.classList.add('active'); // Activar el paso final
 
     }, tiempoPorPaso * 2);

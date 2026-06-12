@@ -674,6 +674,14 @@ footer .text-muted {
     /* --- Utilidades de Bootstrap: texto --- */
     .text-dark { color: #e8e8e8 !important; }
 
+    /* Excepciones: text-dark sobre fondos brillantes debe mantenerse oscuro */
+    .bg-warning .text-dark,
+    .bg-warning.text-dark,
+    .bg-info .text-dark,
+    .bg-info.text-dark {
+        color: #1a1a1a !important;
+    }
+
     /* --- Encabezados globales (con !important para ganar a Bootstrap) --- */
     h1, h2, h3, h4, h5, h6,
     .h1, .h2, .h3, .h4, .h5, .h6,
@@ -1042,8 +1050,27 @@ footer .text-muted {
         color: #888 !important;
     }
 
+    .progress-step.active {
+        background-color: var(--primary-color) !important;
+        color: #000 !important;
+        transform: scale(1.1);
+    }
+
+    .progress-step.completed {
+        background-color: #28a745 !important;
+        color: #fff !important;
+    }
+
     .progress-line {
         background-color: #333 !important;
+    }
+
+    .progress-line.active {
+        background-color: var(--primary-color) !important;
+    }
+
+    .progress-line.completed {
+        background-color: #28a745 !important;
     }
 
     /* --- Filtros sidebar labels y texto --- */
