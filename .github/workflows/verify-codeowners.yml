@@ -1,0 +1,17 @@
+name: Verificar CODEOWNERS
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validar-codeowners:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Validar contenido
+        run: |
+          grep -E "^\* @orlandho" .github/CODEOWNERS || exit 1
