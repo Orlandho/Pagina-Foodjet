@@ -539,6 +539,9 @@ export function requestUserLocation() {
 
                 if (data && data.display_name) {
                     addressInput.value = data.display_name;
+                    // Se conservan para guardarlas junto con la dirección.
+                    addressInput.dataset.lat = lat;
+                    addressInput.dataset.lon = lon;
                 } else {
                     showToast('No se pudo determinar la dirección de la ubicación actual.', 'warning');
                 }

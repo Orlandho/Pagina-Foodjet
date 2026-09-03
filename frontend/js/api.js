@@ -188,3 +188,41 @@ export async function verifyStudentAPI(imageFile, token) {
         return { ok: false, data: { error: 'Error de conexión con el servidor' } };
     }
 }
+
+/**
+ * Direcciones de entrega del usuario.
+ * @returns {Promise<Array>} Lista de direcciones (vacía si falla)
+ */
+export async function fetchMyAddressesAPI(token) {
+    try {
+        const response = await fetch(`${API_URL}/addresses`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return response.ok ? await response.json() : [];
+    } catch (error) {
+        console.error('Error al cargar direcciones:', error);
+        return [];
+    }
+}
+
+/**
+ * Guarda una nueva dirección de entrega.
+ * @returns {Promise<Object>} {ok, data}
+ */
+export async function createAddressAPI(direccion, token) {
+    try {
+        const response = await fetch(`${API_URL}/addresses`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(direccion)
+        });
+        const data = await response.json();
+        return { ok: response.ok, data };
+    } catch (error) {
+        console.error('Error al guardar la dirección:', error);
+        return { ok: false, data: null };
+    }
+}

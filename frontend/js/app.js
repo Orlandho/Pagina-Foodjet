@@ -175,7 +175,10 @@ async function handleCheckoutSubmit(e) {
         return ui.showToast('Debes iniciar sesión para completar la compra', 'warning');
     }
 
-    const orderPayload = buildOrderPayload(state.getCart(), state.getProductById, paymentMethod);
+    const direccionId = await resolveDeliveryAddressId();
+    if (!direccionId) return;
+
+    const orderPayload = buildOrderPayload(state.getCart(), state.getProductById, paymentMethod, direccionId);
 
     if (paymentMethod === 'wallet') {
         await processWalletPayment(orderPayload, paymentMethod);
@@ -184,6 +187,48 @@ async function handleCheckoutSubmit(e) {
     } else {
         await submitOrder(orderPayload, paymentMethod);
     }
+}
+
+/**
+ * Resuelve la dirección de entrega del pedido.
+ *
+ * Antes se enviaba `direccion_entrega_id: 1` fijo, que apunta a la dirección
+ * de otro usuario: cualquier pedido se entregaba allí. Ahora se reutiliza la
+ * dirección guardada si coincide con lo escrito, y si no se crea.
+ */
+async function resolveDeliveryAddressId() {
+    const input = document.getElementById('customerAddress');
+    const texto = input?.value.trim();
+
+    if (!texto) {
+        ui.showToast('Indica la dirección de entrega', 'warning');
+        input?.focus();
+        return null;
+    }
+
+    const referencia = document.getElementById('customerReference')?.value.trim() || null;
+
+    const guardadas = await api.fetchMyAddressesAPI(window.authToken);
+    const existente = guardadas.find(
+        (d) => d.direccion_detallada.trim().toLowerCase() === texto.toLowerCase()
+    );
+
+    if (existente) return existente.id;
+
+    const resultado = await api.createAddressAPI({
+        direccion_detallada: texto,
+        referencia,
+        latitud: input.dataset.lat ? Number(input.dataset.lat) : null,
+        longitud: input.dataset.lon ? Number(input.dataset.lon) : null,
+        es_predeterminada: guardadas.length === 0
+    }, window.authToken);
+
+    if (!resultado.ok) {
+        ui.showToast(resultado.data?.error || 'No se pudo guardar la dirección', 'warning');
+        return null;
+    }
+
+    return resultado.data.id;
 }
 
 // ==========================================

@@ -32,6 +32,17 @@ exports.createOrder = async (req, res) => {
             });
         }
 
+        // La dirección debe ser del propio usuario. Antes se aceptaba cualquier
+        // id: el frontend enviaba un 1 fijo, que apunta a la dirección de otro
+        // usuario, así que todo pedido ajeno se entregaba a esa dirección.
+        const direccion = await prisma.deliveryAddress.findUnique({
+            where: { id: Number(direccion_entrega_id) }
+        });
+
+        if (!direccion || direccion.usuario_id !== userId) {
+            return res.status(403).json({ error: 'La dirección de entrega no te pertenece.' });
+        }
+
         let subtotal = 0;
         const orderItemsData = [];
 
