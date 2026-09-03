@@ -35,6 +35,22 @@
 	root * /srv
 	file_server
 
+	# El HTML, el JS y el CSS cambian con cada despliegue. Sin esto Cloudflare
+	# les pone 4 horas de caché de navegador por defecto, y quien ya hubiera
+	# visitado el sitio seguía ejecutando la versión anterior sin saberlo.
+	# "no-cache" no impide cachear: obliga a revalidar, y como Caddy manda
+	# ETag la respuesta habitual es un 304 vacío.
+	@volatil {
+		path *.html *.js *.css /
+	}
+	header @volatil Cache-Control "no-cache"
+
+	# Las imágenes y los QR sí pueden cachearse largo: cambian rara vez.
+	@estatico {
+		path *.svg *.png *.jpg *.jpeg *.webp *.ico *.woff2
+	}
+	header @estatico Cache-Control "public, max-age=604800"
+
 	header {
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY

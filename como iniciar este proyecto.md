@@ -170,6 +170,26 @@ resto del stack funciona igual.
   publica los puertos saltándose firewalld, así que esa línea es el control
   real.
 
+### Un ajuste necesario en el panel: caché del navegador
+
+Por defecto Cloudflare impone **4 horas** de caché de navegador a los estáticos
+e **ignora la cabecera del origen**. Con eso, quien ya haya visitado el sitio
+sigue ejecutando el JavaScript anterior después de cada despliegue, sin saberlo.
+
+El Caddyfile ya envía `Cache-Control: no-cache` para HTML, JS y CSS (revalidar
+en cada visita; con `ETag` la respuesta habitual es un 304 vacío, así que no
+pesa). Para que Cloudflare lo respete hay que cambiar una opción:
+
+**Caching → Configuration → Browser Cache TTL → `Respect Existing Headers`**
+
+Sin ese cambio, el `no-cache` del origen no llega al navegador. Compruébalo con:
+
+```bash
+curl -sI https://foodjet.asen.pe/js/app.js | grep -i cache-control
+```
+
+Debe decir `no-cache`, no `max-age=14400`.
+
 ### Antes de dejarlo publicado
 
 Ten presente qué estás exponiendo: el registro es abierto, los pagos son
