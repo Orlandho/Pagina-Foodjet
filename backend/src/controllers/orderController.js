@@ -183,6 +183,35 @@ exports.getMyOrders = async (req, res) => {
 };
 
 /**
+ * Todos los pedidos. Lo usa el panel de operaciones para mover los estados.
+ * La ruta ya está restringida a admin y repartidor.
+ */
+exports.getAllOrders = async (req, res) => {
+    try {
+        const orders = await prisma.order.findMany({
+            include: {
+                User_Order_user_idToUser: { select: { id: true, nombre: true, email: true } },
+                Restaurant: { select: { id: true, nombre: true } }
+            },
+            orderBy: { fecha: 'desc' },
+            take: 50
+        });
+
+        res.json(orders.map((o) => ({
+            id: o.id,
+            estado: normalizeEstado(o.estado),
+            total: o.total,
+            fecha: o.fecha,
+            cliente: o.User_Order_user_idToUser?.nombre || 'Desconocido',
+            restaurante: o.Restaurant?.nombre || '-'
+        })));
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al obtener los pedidos.' });
+    }
+};
+
+/**
  * Devuelve un pedido concreto. Es el endpoint que consulta la vista de
  * seguimiento cada pocos segundos para saber por dónde va la entrega.
  */

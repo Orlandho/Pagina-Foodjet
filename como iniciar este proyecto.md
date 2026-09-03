@@ -37,7 +37,36 @@ de demostración automáticamente al arrancar.
 
 Cupones de prueba: `PruebaCupon` (10 %) y `FOODJET20` (20 %).
 
-## 4. Día a día
+## 4. Ver el seguimiento en tiempo real
+
+La forma más clara de comprobar el monitoreo del pedido, y la mejor captura
+para el informe, es con dos ventanas del navegador:
+
+1. En una, inicia sesión como `cliente1@mail.com` y haz un pedido. Al
+   confirmarlo aparece la línea de tiempo, que consulta el estado real cada
+   4 segundos (se ve en la pestaña Red del navegador).
+2. En otra ventana, inicia sesión como `admin@foodjet.com` y abre el **Panel
+   de Operaciones**. Pulsa "Avanzar estado" sobre ese pedido.
+3. La línea de tiempo del cliente avanza sola, sin recargar.
+
+Como alternativa sin intervención manual, pon `ENABLE_JOBS=true` en el `.env`
+y reinicia: los pedidos avanzan solos un estado cada 15 segundos.
+
+## 5. Ejecutar las pruebas
+
+```bash
+npm ci                 # una sola vez
+cd backend && npm ci && npx prisma generate && cd ..
+
+npm test               # los dos perfiles
+npm run test:frontend
+npm run test:backend
+```
+
+Genera `reports/cucumber.html`, que es el informe adjuntable como evidencia.
+El mismo flujo corre en GitHub Actions (`.github/workflows/ci.yml`).
+
+## 6. Día a día
 
 ```bash
 docker compose logs -f backend     # ver logs de la API
@@ -50,7 +79,7 @@ El código está montado dentro del contenedor, así que **editar un archivo del
 backend reinicia el servidor solo** (nodemon) y editar el frontend solo
 requiere recargar el navegador.
 
-## 5. Variables de entorno
+## 7. Variables de entorno
 
 | Variable | Para qué sirve |
 |---|---|
@@ -61,7 +90,7 @@ requiere recargar el navegador.
 | `ORDER_SIMULATION_STEP_MS` | Milisegundos entre cada avance de estado (15000 por defecto) |
 | `AUTO_CANCEL_MINUTES` | Minutos antes de cancelar un pedido sin confirmar |
 
-## 6. Tareas puntuales
+## 8. Tareas puntuales
 
 ```bash
 # Volver a sembrar los datos
@@ -74,7 +103,7 @@ docker compose run --rm --entrypoint sh backend -c "npx prisma migrate dev --nam
 docker compose exec db psql -U foodjet_user -d FoodjetBackend
 ```
 
-## 7. El script SQL
+## 9. El script SQL
 
 `Script base de datos/create database Foodjet.sql` se conserva como **anexo
 documental** del modelo de datos. No se usa para levantar el entorno: el

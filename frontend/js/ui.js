@@ -63,6 +63,11 @@ export function showView(viewToShowId) {
     const viewToShow = document.getElementById(viewToShowId);
     if (viewToShow) {
         viewToShow.style.display = 'block';
+
+        // El foco viaja al encabezado de la vista: sin esto, quien navega con
+        // teclado o lector de pantalla se queda donde estaba y no percibe que
+        // la página cambió (WCAG 2.4.3, orden del foco).
+        viewToShow.querySelector('h1')?.focus();
     }
 
     // Sin esto el sondeo del pedido seguiría corriendo para siempre en

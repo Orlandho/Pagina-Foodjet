@@ -7,6 +7,9 @@ const { authMiddleware, requireRole } = require('../middlewares/authMiddleware')
 router.post('/', authMiddleware, orderController.createOrder);
 router.get('/my-orders', authMiddleware, orderController.getMyOrders);
 
+// Listado completo para el panel de operaciones
+router.get('/', authMiddleware, requireRole('admin', 'repartidor'), orderController.getAllOrders);
+
 // OJO: '/:id' debe declararse DESPUÉS de '/my-orders'. Al revés, Express
 // trataría "my-orders" como un identificador y esa ruta dejaría de existir.
 router.get('/:id', authMiddleware, orderController.getOrderById);
