@@ -1,6 +1,10 @@
 import * as api from './api.js';
 import * as state from './state.js';
 import * as ui from './ui.js';
+import { validateCard, formatCardNumber, formatExpiry } from './domain/payment.js';
+import { buildOrderPayload } from './domain/checkout.js';
+import { getProductRestaurant } from './domain/catalog.js';
+import { loadFavorites } from './favorites.js';
 
 // Inicializar aplicación (Punto de entrada)
 document.addEventListener('DOMContentLoaded', async function() {
@@ -102,6 +106,8 @@ function initEventListeners() {
     });
 
     // Payment method toggle
+    setupCardInputs();
+
     document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
         radio.addEventListener('change', () => {
             if (typeof ui.toggleCardDetails === 'function') {
@@ -170,38 +176,115 @@ async function handleCheckoutSubmit(e) {
         return ui.showToast('Debes iniciar sesión para completar la compra', 'warning');
     }
 
-    const orderPayload = buildOrderPayload(paymentMethod);
+    const direccionId = await resolveDeliveryAddressId();
+    if (!direccionId) return;
+
+    const orderPayload = buildOrderPayload(state.getCart(), state.getProductById, paymentMethod, direccionId);
 
     if (paymentMethod === 'wallet') {
         await processWalletPayment(orderPayload, paymentMethod);
+    } else if (paymentMethod === 'card') {
+        await processCardPayment(orderPayload, paymentMethod);
     } else {
         await submitOrder(orderPayload, paymentMethod);
     }
 }
 
-// 2. Función Auxiliar: Arma el cuerpo de la petición
-function buildOrderPayload(paymentMethod) {
-    const cart = state.getCart();
-    const items = Object.entries(cart).map(([productId, quantity]) => ({
-        productId: parseInt(productId),
-        cantidad: quantity
-    }));
+/**
+ * Resuelve la dirección de entrega del pedido.
+ *
+ * Antes se enviaba `direccion_entrega_id: 1` fijo, que apunta a la dirección
+ * de otro usuario: cualquier pedido se entregaba allí. Ahora se reutiliza la
+ * dirección guardada si coincide con lo escrito, y si no se crea.
+ */
+async function resolveDeliveryAddressId() {
+    const input = document.getElementById('customerAddress');
+    const texto = input?.value.trim();
 
-    const firstProduct = state.getProductById(Object.keys(cart)[0]);
-    const restauranteId = firstProduct ? firstProduct.restaurante_id : 1;
+    if (!texto) {
+        ui.showToast('Indica la dirección de entrega', 'warning');
+        input?.focus();
+        return null;
+    }
 
+    const referencia = document.getElementById('customerReference')?.value.trim() || null;
+
+    const guardadas = await api.fetchMyAddressesAPI(window.authToken);
+    const existente = guardadas.find(
+        (d) => d.direccion_detallada.trim().toLowerCase() === texto.toLowerCase()
+    );
+
+    if (existente) return existente.id;
+
+    const resultado = await api.createAddressAPI({
+        direccion_detallada: texto,
+        referencia,
+        latitud: input.dataset.lat ? Number(input.dataset.lat) : null,
+        longitud: input.dataset.lon ? Number(input.dataset.lon) : null,
+        es_predeterminada: guardadas.length === 0
+    }, window.authToken);
+
+    if (!resultado.ok) {
+        ui.showToast(resultado.data?.error || 'No se pudo guardar la dirección', 'warning');
+        return null;
+    }
+
+    return resultado.data.id;
+}
+
+// ==========================================
+// PAGO CON TARJETA
+// ==========================================
+
+/** Formatea el número y la fecha mientras se escriben. */
+function setupCardInputs() {
+    const numero = document.getElementById('cardNumber');
+    const expiracion = document.getElementById('cardExpiry');
+    const cvc = document.getElementById('cardCvc');
+
+    numero?.addEventListener('input', (e) => { e.target.value = formatCardNumber(e.target.value); });
+    expiracion?.addEventListener('input', (e) => { e.target.value = formatExpiry(e.target.value); });
+    cvc?.addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, ''); });
+
+    // Al corregir un campo desaparece su error, sin esperar a reenviar.
+    [numero, expiracion, cvc].forEach((campo) => {
+        campo?.addEventListener('input', () => ui.clearFieldError(campo.id));
+    });
+}
+
+function readCardForm() {
     return {
-        items,
-        metodo_pago: paymentMethod,
-        restaurante_id: restauranteId,
-        direccion_entrega_id: 1 // TODO: Implementar selección dinámica de dirección
+        numero: document.getElementById('cardNumber')?.value || '',
+        expiracion: document.getElementById('cardExpiry')?.value || '',
+        cvc: document.getElementById('cardCvc')?.value || ''
     };
 }
+
+/**
+ * Valida la tarjeta y simula la autorización bancaria.
+ *
+ * Los datos de la tarjeta no salen de aquí: el pedido viaja al backend solo
+ * con metodo_pago = 'card'.
+ */
+async function processCardPayment(orderPayload, paymentMethod) {
+    const datos = readCardForm();
+    const { valid, errors, marca } = validateCard(datos);
+
+    if (!valid) {
+        ui.showCardErrors(errors);
+        return ui.showToast('Revisa los datos de tu tarjeta', 'warning');
+    }
+
+    ui.showCardErrors({});
+    await ui.runCardAuthorization(marca);
+    await submitOrder(orderPayload, paymentMethod);
+}
+
 
 // 3. Función Auxiliar: Maneja la lógica de la billetera y el QR
 async function processWalletPayment(orderPayload, paymentMethod) {
     const firstProduct = state.getProductById(Object.keys(state.getCart())[0]);
-    const restaurante = firstProduct ? firstProduct.restaurante : null;
+    const restaurante = getProductRestaurant(firstProduct);
 
     if (!restaurante || !restaurante.qr_pago) {
         return ui.showToast('No se encontró el QR de pago para este restaurante', 'warning');
@@ -285,13 +368,7 @@ async function submitOrder(orderPayload, paymentMethod) {
 // ==========================================
 window.app = {
 
-    loadFavorites: async () => {
-        if (!window.authToken) return;
-        const favorites = await api.fetchFavoritesAPI(window.authToken);
-        state.setFavorites(favorites);
-        ui.renderProducts();
-        ui.renderFavoritesOffcanvas();
-    },
+    loadFavorites: () => loadFavorites(),
 
     handleToggleFavorite: async (productId) => {
         if (!window.currentUser || !window.authToken) {

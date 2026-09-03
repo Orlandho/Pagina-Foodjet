@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:3000/api';
+// El fallback permite importar este módulo desde Node (las pruebas), donde
+// no existe window, y cubre el caso de que config.js no llegue a cargar.
+const API_URL = (typeof window !== 'undefined' && window.FOODJET_API_URL) || 'http://localhost:3000/api';
 
 /**
  * Obtiene la lista de productos desde el backend.
@@ -93,6 +95,28 @@ export async function fetchMyOrdersAPI(token) {
 }
 
 /**
+ * Consulta un pedido concreto. La vista de seguimiento la llama cada pocos
+ * segundos para saber en qué etapa va la entrega.
+ * @param {number} orderId ID del pedido
+ * @param {string} token Token de autorización del usuario
+ * @returns {Promise<Object>} {ok, data}
+ */
+export async function fetchOrderByIdAPI(orderId, token) {
+    try {
+        const response = await fetch(`${API_URL}/orders/${orderId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const data = await response.json();
+        return { ok: response.ok, status: response.status, data };
+    } catch (error) {
+        console.error('Error de conexión al consultar el pedido:', error);
+        return { ok: false, status: 0, data: null };
+    }
+}
+
+/**
  * Alterna el estado de favorito de un producto.
  * @param {number} productId ID del producto
  * @param {string} token Token de autorización del usuario
@@ -162,5 +186,43 @@ export async function verifyStudentAPI(imageFile, token) {
     } catch (error) {
         console.error('Error de conexión al verificar estudiante:', error);
         return { ok: false, data: { error: 'Error de conexión con el servidor' } };
+    }
+}
+
+/**
+ * Direcciones de entrega del usuario.
+ * @returns {Promise<Array>} Lista de direcciones (vacía si falla)
+ */
+export async function fetchMyAddressesAPI(token) {
+    try {
+        const response = await fetch(`${API_URL}/addresses`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return response.ok ? await response.json() : [];
+    } catch (error) {
+        console.error('Error al cargar direcciones:', error);
+        return [];
+    }
+}
+
+/**
+ * Guarda una nueva dirección de entrega.
+ * @returns {Promise<Object>} {ok, data}
+ */
+export async function createAddressAPI(direccion, token) {
+    try {
+        const response = await fetch(`${API_URL}/addresses`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(direccion)
+        });
+        const data = await response.json();
+        return { ok: response.ok, data };
+    } catch (error) {
+        console.error('Error al guardar la dirección:', error);
+        return { ok: false, data: null };
     }
 }

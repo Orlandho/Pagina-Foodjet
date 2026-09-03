@@ -25,3 +25,11 @@ Feature: Registro de Usuarios (Backend)
     When se ejecuta el controlador de registro
     Then el sistema devuelve un codigo de estado HTTP 409
     And el JSON de respuesta contiene el error con codigo "EMAIL_ALREADY_EXISTS"
+
+  Scenario: AUT-004 El registro publico no puede otorgar el rol de administrador
+    Given los datos de entrada son validos con nombre "Intruso", email "intruso@test.com", telefono "987654321", password "123" y rol "admin"
+    And el correo no existe previamente en la base de datos
+    When se ejecuta el controlador de registro
+    Then el sistema devuelve un codigo de estado HTTP 201
+    And el usuario se crea con el rol "cliente"
+    And la contrasena se guarda cifrada

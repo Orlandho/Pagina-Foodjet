@@ -1,4 +1,16 @@
 const prisma = require('../config/db');
+const {
+    normalizeEstado,
+    isEstadoValido,
+    isCancelable,
+    isValidTransition
+} = require('../domain/orderStatus');
+const {
+    METODOS_VALIDOS,
+    isMetodoValido,
+    resolvePaymentStatus,
+    resolveInitialOrderStatus
+} = require('../domain/payment');
 
 exports.createOrder = async (req, res) => {
     try {
@@ -12,6 +24,23 @@ exports.createOrder = async (req, res) => {
 
         if (!restaurante_id || !direccion_entrega_id || !metodo_pago) {
             return res.status(400).json({ error: 'Faltan datos requeridos (restaurante_id, direccion_entrega_id, metodo_pago).' });
+        }
+
+        if (!isMetodoValido(metodo_pago)) {
+            return res.status(400).json({
+                error: `Método de pago no soportado. Debe ser uno de: ${METODOS_VALIDOS.join(', ')}.`
+            });
+        }
+
+        // La dirección debe ser del propio usuario. Antes se aceptaba cualquier
+        // id: el frontend enviaba un 1 fijo, que apunta a la dirección de otro
+        // usuario, así que todo pedido ajeno se entregaba a esa dirección.
+        const direccion = await prisma.deliveryAddress.findUnique({
+            where: { id: Number(direccion_entrega_id) }
+        });
+
+        if (!direccion || direccion.usuario_id !== userId) {
+            return res.status(403).json({ error: 'La dirección de entrega no te pertenece.' });
         }
 
         let subtotal = 0;
@@ -71,6 +100,12 @@ exports.createOrder = async (req, res) => {
         const impuestos = subtotalConDescuento * IMPUESTO_PORCENTAJE;
         const total = subtotalConDescuento + impuestos + COSTO_ENVIO;
 
+        // El efectivo se cobra en la puerta: ese pedido nace pendiente y queda
+        // bajo la vigilancia de la auto-cancelación. Tarjeta y billetera se
+        // autorizan antes, así que el pedido entra ya confirmado.
+        const estadoPago = resolvePaymentStatus(metodo_pago);
+        const estadoInicial = resolveInitialOrderStatus(estadoPago);
+
         // Crear la orden, los items y la transacción de manera atómica
         const result = await prisma.$transaction(async (tx) => {
             const newOrder = await tx.order.create({
@@ -82,7 +117,7 @@ exports.createOrder = async (req, res) => {
                     total,
                     impuestos,
                     costo_envio: COSTO_ENVIO,
-                    estado: "pendiente",
+                    estado: estadoInicial,
                     OrderItem: { create: orderItemsData }
                 },
                 include: { OrderItem: true }
@@ -93,7 +128,7 @@ exports.createOrder = async (req, res) => {
                     pedido_id: newOrder.id,
                     metodo_pago,
                     monto: total,
-                    estado_pago: "completado" // Simulando que el pago se aprueba instantáneamente
+                    estado_pago: estadoPago
                 }
             });
 
@@ -138,21 +173,98 @@ exports.getMyOrders = async (req, res) => {
             }
         });
 
-        res.json(orders);
+        // Se normaliza el estado para que el frontend no tenga que lidiar con
+        // los valores heredados ('En preparación') que aún viven en la base.
+        res.json(orders.map((o) => ({ ...o, estado: normalizeEstado(o.estado) })));
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error al obtener el historial de pedidos.' });
     }
 };
 
+/**
+ * Todos los pedidos. Lo usa el panel de operaciones para mover los estados.
+ * La ruta ya está restringida a admin y repartidor.
+ */
+exports.getAllOrders = async (req, res) => {
+    try {
+        const orders = await prisma.order.findMany({
+            include: {
+                User_Order_user_idToUser: { select: { id: true, nombre: true, email: true } },
+                Restaurant: { select: { id: true, nombre: true } }
+            },
+            orderBy: { fecha: 'desc' },
+            take: 50
+        });
+
+        res.json(orders.map((o) => ({
+            id: o.id,
+            estado: normalizeEstado(o.estado),
+            total: o.total,
+            fecha: o.fecha,
+            cliente: o.User_Order_user_idToUser?.nombre || 'Desconocido',
+            restaurante: o.Restaurant?.nombre || '-'
+        })));
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al obtener los pedidos.' });
+    }
+};
+
+/**
+ * Devuelve un pedido concreto. Es el endpoint que consulta la vista de
+ * seguimiento cada pocos segundos para saber por dónde va la entrega.
+ */
+exports.getOrderById = async (req, res) => {
+    try {
+        const orderId = parseInt(req.params.id, 10);
+
+        if (Number.isNaN(orderId)) {
+            return res.status(400).json({ error: 'Identificador de pedido inválido.' });
+        }
+
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: {
+                Restaurant: {
+                    select: { id: true, nombre: true, tiempo_entrega: true, calificacion_promedio: true }
+                },
+                OrderItem: { include: { Product: true } },
+                DeliveryAddress: true,
+                Transaction: true,
+                Review: true
+            }
+        });
+
+        if (!order) {
+            return res.status(404).json({ error: 'Pedido no encontrado.' });
+        }
+
+        const rol = String(req.user.rol || '').toLowerCase();
+        const esPropietario = order.user_id === req.user.userId;
+
+        if (!esPropietario && !['admin', 'repartidor'].includes(rol)) {
+            return res.status(403).json({ error: 'No tienes permiso para ver este pedido.' });
+        }
+
+        res.json({ ...order, estado: normalizeEstado(order.estado) });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al obtener el pedido.' });
+    }
+};
+
 exports.updateOrderStatus = async (req, res) => {
     try {
-        const orderId = parseInt(req.params.id);
-        const { nuevo_estado } = req.body;
+        const orderId = parseInt(req.params.id, 10);
 
-        const estadosValidos = ["pendiente", "confirmado", "en_preparacion", "en_camino", "entregado", "cancelado"];
+        if (Number.isNaN(orderId)) {
+            return res.status(400).json({ error: 'Identificador de pedido inválido.' });
+        }
 
-        if (!estadosValidos.includes(nuevo_estado)) {
+        const nuevoEstado = normalizeEstado(req.body.nuevo_estado);
+
+        if (!isEstadoValido(nuevoEstado)) {
             return res.status(400).json({ error: 'Estado no válido.' });
         }
 
@@ -162,9 +274,21 @@ exports.updateOrderStatus = async (req, res) => {
             return res.status(404).json({ error: 'Pedido no encontrado.' });
         }
 
+        const estadoActual = normalizeEstado(order.estado);
+
+        // El estado solo avanza un paso, o salta a cancelado si todavía se
+        // puede. Antes se aceptaba cualquier valor, incluido retroceder un
+        // pedido ya entregado.
+        if (!isValidTransition(estadoActual, nuevoEstado)) {
+            return res.status(409).json({
+                error: `No se puede pasar de "${estadoActual}" a "${nuevoEstado}".`,
+                estado_actual: estadoActual
+            });
+        }
+
         const updatedOrder = await prisma.order.update({
             where: { id: orderId },
-            data: { estado: nuevo_estado }
+            data: { estado: nuevoEstado }
         });
 
         res.json({ message: 'Estado del pedido actualizado', order: updatedOrder });
@@ -191,9 +315,7 @@ exports.cancelOrder = async (req, res) => {
         }
 
         // REGLA DE NEGOCIO CRÍTICA: Solo se puede cancelar antes de "en_preparacion"
-        const estadosCancelables = ["pendiente", "confirmado"];
-
-        if (!estadosCancelables.includes(order.estado)) {
+        if (!isCancelable(order.estado)) {
             return res.status(400).json({ error: 'El pedido no puede ser cancelado en su estado actual.' });
         }
 
@@ -210,15 +332,13 @@ exports.cancelOrder = async (req, res) => {
 };
 
 /**
- * TODO: CronJob - Cancelación Automática de Órdenes
- * Esta función está estructurada para ser llamada por un CronJob cada minuto o cada cierto intervalo.
- * Se encarga de buscar todas las órdenes que sigan en estado "pendiente" y cuya fecha de creación
- * sea anterior a hace 30 minutos, y las actualiza a "cancelado".
+ * Cancela los pedidos que llevan demasiado tiempo sin confirmarse.
+ * La invoca el job de src/jobs/orderJobs.js cuando ENABLE_JOBS está activo.
  */
-exports.autoCancelUnconfirmedOrders = async () => {
+exports.autoCancelUnconfirmedOrders = async (minutos = Number(process.env.AUTO_CANCEL_MINUTES) || 30) => {
     try {
         const timeLimit = new Date();
-        timeLimit.setMinutes(timeLimit.getMinutes() - 30);
+        timeLimit.setMinutes(timeLimit.getMinutes() - minutos);
 
         const result = await prisma.order.updateMany({
             where: {

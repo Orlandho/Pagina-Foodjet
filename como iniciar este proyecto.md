@@ -1,36 +1,206 @@
-# 🚀 Guía de Ejecución Local - Proyecto Foodjet
+# 🚀 Guía de ejecución local — FoodJet
 
-Este documento contiene los comandos necesarios para ejecutar correctamente el entorno de desarrollo local, compuesto por un backend (Node.js/Express) y un frontend (HTML/CSS/JS).
+Todo el entorno (PostgreSQL + API + web) se levanta con Docker Compose. No hace
+falta instalar Node ni PostgreSQL en la máquina.
 
----
+## 1. Requisitos
 
-## 1️⃣ Iniciar el Backend (API)
-El backend requiere conectarse a la base de datos y servir los endpoints en el puerto `3000`.
+- Docker con el plugin `compose` (`docker compose version`).
 
-1. Abre una nueva terminal.
-2. Navega hasta la carpeta del backend:
-   ```bash
-   cd backend
-(Opcional) Si hiciste cambios en la base de datos o clonaste el repositorio recientemente, recompila y genera el cliente de Prisma:
-npm install
+## 2. Primer arranque
 
-npx prisma generate
+```bash
+cp .env.example .env          # ajusta JWT_SECRET si quieres
+docker compose build
+docker compose up -d
+```
 
-Inicia el servidor:
-npm start
-✅ Resultado esperado: Verás en consola el mensaje: 🚀 Servidor ejecutándose en http://localhost:3000
+El contenedor del backend aplica las migraciones de Prisma y siembra los datos
+de demostración automáticamente al arrancar.
 
-2️⃣ Iniciar el Frontend (Web)
-El frontend se sirve utilizando un servidor estático ligero llamado http-server en el puerto 8080.
+| Servicio | URL | Contenedor |
+|---|---|---|
+| Sitio completo (web + API) | http://localhost:8081 | `foodjet-web` (Caddy) |
+| API directa, solo para depurar | http://localhost:3000/api | `foodjet-api` |
+| Base de datos | `localhost:5433` | `foodjet-db` |
 
-Abre otra ventana o pestaña nueva en tu terminal (para no detener el backend).
-Navega hasta la carpeta del frontend:
-cd frontend
-Ejecuta el servidor estático:
-npx http-server -c-1 -p 8080
-(Si te pregunta Ok to proceed? (y), presiona Enter o escribe y y presiona Enter).
-Abre tu navegador web y visita: http://localhost:8080
-✅ Resultado esperado: La página web debería cargar en tu navegador y consumir exitosamente los productos desde la API del backend.
+> El puerto de la web es **8081**, no 8080, porque en la máquina de desarrollo
+> el 8080 ya está ocupado por otro proyecto.
 
+**Todo pasa por el proxy.** Caddy sirve el frontend y reenvía `/api` al
+backend en el mismo origen. Por eso el frontend llama a `/api` con una ruta
+relativa: así funciona igual en `localhost:8081` que publicado en un dominio,
+sin depender de que el visitante tenga un backend en su propia máquina.
 
-De esta manera cualquier persona (o tú en el futuro) que tome tu proyecto sabrá exactamente cómo levantar ambas partes de manera independiente y sin conflictos.
+## 3. Credenciales de prueba
+
+| Usuario | Contraseña | Rol |
+|---|---|---|
+| `admin@foodjet.com` | `Admin123!` | admin |
+| `cliente1@mail.com` | `Cliente123!` | cliente (estudiante, con descuento) |
+| `cliente2@mail.com` | `Cliente123!` | cliente |
+
+Cupones de prueba: `PruebaCupon` (10 %) y `FOODJET20` (20 %).
+
+## 4. Ver el seguimiento en tiempo real
+
+La forma más clara de comprobar el monitoreo del pedido, y la mejor captura
+para el informe, es con dos ventanas del navegador:
+
+1. En una, inicia sesión como `cliente1@mail.com` y haz un pedido. Al
+   confirmarlo aparece la línea de tiempo, que consulta el estado real cada
+   4 segundos (se ve en la pestaña Red del navegador).
+2. En otra ventana, inicia sesión como `admin@foodjet.com` y abre el **Panel
+   de Operaciones**. Pulsa "Avanzar estado" sobre ese pedido.
+3. La línea de tiempo del cliente avanza sola, sin recargar.
+
+Como alternativa sin intervención manual, pon `ENABLE_JOBS=true` en el `.env`
+y reinicia: los pedidos avanzan solos un estado cada 15 segundos.
+
+## 5. Ejecutar las pruebas
+
+```bash
+npm ci                 # una sola vez
+cd backend && npm ci && npx prisma generate && cd ..
+
+npm test               # los dos perfiles
+npm run test:frontend
+npm run test:backend
+```
+
+Genera `reports/cucumber.html`, que es el informe adjuntable como evidencia.
+El mismo flujo corre en GitHub Actions (`.github/workflows/ci.yml`).
+
+## 6. Día a día
+
+```bash
+docker compose logs -f backend     # ver logs de la API
+docker compose restart backend     # reiniciar la API
+docker compose down                # parar todo (conserva los datos)
+docker compose down -v             # parar y BORRAR la base de datos
+```
+
+El código está montado dentro del contenedor, así que **editar un archivo del
+backend reinicia el servidor solo** (nodemon) y editar el frontend solo
+requiere recargar el navegador.
+
+## 7. Variables de entorno
+
+| Variable | Para qué sirve |
+|---|---|
+| `DATABASE_URL` | Conexión a Postgres. Dentro de Compose el host es `db`, no `localhost` |
+| `JWT_SECRET` | Firma de los tokens de sesión |
+| `RUN_SEED` | `true` siembra los datos de demo al arrancar (es idempotente) |
+| `ENABLE_JOBS` | `true` activa el simulador de avance de pedidos |
+| `ORDER_SIMULATION_STEP_MS` | Milisegundos entre cada avance de estado (15000 por defecto) |
+| `AUTO_CANCEL_MINUTES` | Minutos antes de cancelar un pedido sin confirmar |
+| `DOMINIO` | Qué escucha Caddy. `:80` detrás del túnel; un dominio real haría que pidiera certificado por su cuenta |
+| `HTTP_BIND` | Quién alcanza el proxy. `127.0.0.1` deja a Cloudflare como única entrada; `0.0.0.0` lo abre a la red local |
+| `HTTP_PORT` | Puerto del proxy en el host (8081) |
+| `TUNNEL_TOKEN` | Credencial del túnel de Cloudflare. Vacío = el sitio no sale a internet |
+
+## 8. Tareas puntuales
+
+```bash
+# Volver a sembrar los datos
+docker compose exec backend npx prisma db seed
+
+# Crear una migración después de cambiar prisma/schema.prisma
+docker compose run --rm --entrypoint sh backend -c "npx prisma migrate dev --name mi_cambio"
+
+# Inspeccionar la base de datos
+docker compose exec db psql -U foodjet_user -d FoodjetBackend
+
+# Restablecer la contraseña de un usuario
+docker compose exec backend node src/scripts/reset-password.js <email> [nueva]
+```
+
+Sobre el restablecimiento de contraseñas: **no las cambies con un UPDATE por
+SQL**. Se guardan cifradas con bcrypt, así que escribir el texto plano en la
+columna deja al usuario sin poder entrar (es lo que le pasaba a los usuarios
+del script SQL original). El script aplica el mismo cifrado que el registro.
+
+Sin el segundo argumento genera una contraseña aleatoria y la muestra. Cambiar
+la contraseña **no cierra las sesiones abiertas**: el JWT no la contiene, así
+que los tokens ya emitidos valen hasta caducar (24 h). Para invalidarlos todos
+de golpe hay que rotar `JWT_SECRET` y reiniciar el backend.
+
+## 9. Publicar en internet (túnel de Cloudflare)
+
+El sitio sale a internet por un **túnel de Cloudflare**: es el contenedor el
+que abre la conexión hacia fuera, así que no hace falta abrir puertos en el
+router ni tener IP fija (la de esta máquina es dinámica). Cloudflare pone el
+HTTPS y entrega en claro por la red interna de Docker.
+
+### Una sola vez, en el panel de Cloudflare
+
+1. **Zero Trust → Networks → Tunnels → Create a tunnel**, tipo *Cloudflared*.
+   Ponle un nombre, por ejemplo `foodjet`.
+2. Copia el **token** que muestra y pégalo en `.env`:
+   ```
+   TUNNEL_TOKEN=<el token>
+   ```
+   Es una credencial: el `.env` no se versiona.
+3. En la pestaña **Public Hostnames** del túnel, añade:
+
+   | Campo | Valor |
+   |---|---|
+   | Subdomain | `foodjet` |
+   | Domain | `asen.pe` |
+   | Service | `HTTP` → `proxy:80` |
+
+   `proxy` es el nombre del servicio en la red de Docker; cloudflared lo
+   resuelve solo. El registro DNS lo crea Cloudflare por ti.
+
+### Arrancar y parar
+
+```bash
+docker compose --profile tunel up -d      # publica el sitio
+docker compose stop tunel                 # lo retira de internet
+```
+
+Sin `--profile tunel` el túnel no arranca y el sitio queda solo en local: el
+resto del stack funciona igual.
+
+### Comprobaciones
+
+- `docker compose logs -f tunel` debe mostrar cuatro conexiones registradas.
+- `HTTP_BIND=127.0.0.1` en `.env` hace que **la única entrada sea Cloudflare**.
+  Ponlo en `0.0.0.0` solo si quieres además acceso desde tu red local. Docker
+  publica los puertos saltándose firewalld, así que esa línea es el control
+  real.
+
+### Un ajuste necesario en el panel: caché del navegador
+
+Por defecto Cloudflare impone **4 horas** de caché de navegador a los estáticos
+e **ignora la cabecera del origen**. Con eso, quien ya haya visitado el sitio
+sigue ejecutando el JavaScript anterior después de cada despliegue, sin saberlo.
+
+El Caddyfile ya envía `Cache-Control: no-cache` para HTML, JS y CSS (revalidar
+en cada visita; con `ETag` la respuesta habitual es un 304 vacío, así que no
+pesa). Para que Cloudflare lo respete hay que cambiar una opción:
+
+**Caching → Configuration → Browser Cache TTL → `Respect Existing Headers`**
+
+Sin ese cambio, el `no-cache` del origen no llega al navegador. Compruébalo con:
+
+```bash
+curl -sI https://foodjet.asen.pe/js/app.js | grep -i cache-control
+```
+
+Debe decir `no-cache`, no `max-age=14400`.
+
+### Antes de dejarlo publicado
+
+Ten presente qué estás exponiendo: el registro es abierto, los pagos son
+simulados y la verificación de estudiante concede el descuento a cualquiera
+que envíe la petición. Es una aplicación de curso, no un sistema en
+producción. Si quieres que solo entre gente concreta, añade una política de
+**Cloudflare Access** sobre `foodjet.asen.pe` y quedará detrás de un login.
+
+## 10. El script SQL
+
+`Script base de datos/create database Foodjet.sql` se conserva como **anexo
+documental** del modelo de datos. No se usa para levantar el entorno: el
+esquema lo gestiona Prisma Migrate y los datos los siembra
+`backend/prisma/seed.js`.

@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api';
+const API_URL = window.FOODJET_API_URL;
 
 document.addEventListener('DOMContentLoaded', () => {
     // Legacy app initialization if needed
@@ -8,6 +8,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function checkExistingSession() {
     const userStr = localStorage.getItem('user');
+
+    // handleLogin guardaba el token en localStorage pero nadie volvía a
+    // leerlo, así que window.authToken era undefined en un arranque en frío y
+    // la sesión se perdía al recargar la página.
+    const token = localStorage.getItem('token');
+    if (token) window.authToken = token;
+
     if (userStr && window.authToken) {
         try {
             window.currentUser = JSON.parse(userStr);
@@ -24,6 +31,11 @@ function initializeLegacyEventListeners() {
     const backToMenuFromDashboard = document.getElementById('backToMenuFromDashboard');
     const orderNowFromDashboard = document.getElementById('orderNowFromDashboard');
     const logoutBtnDashboard = document.getElementById('logoutBtnDashboard');
+
+    const refreshOperationsBtn = document.getElementById('refreshOperationsBtn');
+    if (refreshOperationsBtn) {
+        refreshOperationsBtn.addEventListener('click', () => renderOperationsPanel());
+    }
 
     // --- ELEMENTOS DE NAVEGACIÓN DE USUARIO ---
     const logoutBtn = document.getElementById('logoutBtn');
@@ -230,92 +242,98 @@ function displayDashboard() {
     });
 
     if(dashboardView) dashboardView.style.display = 'block';
-    renderAdminCharts();
+    renderOperationsPanel();
 }
 
-async function fetchMyOrders() {
-    if (!window.authToken) return [];
-    try {
-        const response = await fetch(`${API_URL}/orders/my-orders`, {
-            headers: { 'Authorization': `Bearer ${window.authToken}` }
-        });
-        if (response.ok) {
-            return await response.json();
-        }
-        return [];
-    } catch (err) {
-        console.error(err);
-        return [];
-    }
-}
+/**
+ * Panel de operaciones.
+ *
+ * Sustituye a los tres gráficos anteriores, cuyos datos estaban escritos a
+ * mano en el propio archivo: pedían los pedidos reales y descartaban la
+ * respuesta. Además, el informe deja fuera de alcance la gestión
+ * administrativa, así que aquí solo queda lo que permite demostrar el
+ * seguimiento: mover el estado de un pedido y ver cómo avanza en la vista del
+ * cliente.
+ */
+const SIGUIENTE_ESTADO = {
+    pendiente: 'confirmado',
+    confirmado: 'en_preparacion',
+    en_preparacion: 'en_camino',
+    en_camino: 'entregado'
+};
 
-let charts = {};
+const ETIQUETA_ESTADO = {
+    pendiente: 'Pendiente',
+    confirmado: 'Confirmado',
+    en_preparacion: 'En preparación',
+    en_camino: 'En camino',
+    entregado: 'Entregado',
+    cancelado: 'Cancelado'
+};
 
-async function renderAdminCharts() {
-    Object.values(charts).forEach(chart => {
-        if(chart) chart.destroy();
+async function renderOperationsPanel() {
+    const tbody = document.getElementById('operationsTableBody');
+    const notice = document.getElementById('operationsNotice');
+    if (!tbody) return;
+
+    const response = await fetch(`${API_URL}/orders`, {
+        headers: { 'Authorization': `Bearer ${window.authToken}` }
     });
 
-    const orders = await fetchMyOrders();
-
-    const salesData = {
-        labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
-        datasets: [{
-            label: 'Ventas (S/)',
-            data: [120, 190, 300, 500, 210, 350, 450],
-            fill: false,
-            borderColor: 'rgb(245, 175, 105)',
-            tension: 0.1
-        }]
-    };
-
-    const topProductsData = {
-        labels: ['Hamburguesa', 'Pizza', 'Sushi', 'Tacos', 'Alitas BBQ'],
-        datasets: [{
-            label: 'Unidades Vendidas',
-            data: [65, 59, 80, 81, 56],
-            backgroundColor: [
-                'rgba(243, 157, 74, 0.5)',
-                'rgba(245, 175, 105, 0.5)',
-                'rgba(254, 243, 232, 0.8)',
-                'rgba(108, 117, 125, 0.5)',
-                'rgba(26, 26, 26, 0.5)',
-            ],
-            borderColor: [
-                'rgb(243, 157, 74)',
-                'rgb(245, 175, 105)',
-                'rgb(254, 243, 232)',
-                'rgb(108, 117, 125)',
-                'rgb(26, 26, 26)',
-            ],
-            borderWidth: 1
-        }]
-    };
-
-    const categoryData = {
-        labels: ['Hamburguesas', 'Pizzas', 'Asiática', 'Mexicana', 'Postres'],
-        datasets: [{
-            label: 'Ventas por Categoría',
-            data: [300, 500, 400, 200, 150],
-            backgroundColor: ['#f5af69', '#f39d4a', '#6c757d', '#fef3e8', '#1a1a1a'],
-            hoverOffset: 4
-        }]
-    };
-
-    const salesCtx = document.getElementById('salesChart')?.getContext('2d');
-    if(salesCtx) {
-        charts.sales = new Chart(salesCtx, { type: 'line', data: salesData, options: { responsive: true, maintainAspectRatio: false }});
+    if (!response.ok) {
+        tbody.innerHTML = '';
+        if (notice) notice.textContent = 'No se pudieron cargar los pedidos.';
+        return;
     }
 
-    const productsCtx = document.getElementById('topProductsChart')?.getContext('2d');
-    if(productsCtx) {
-        charts.products = new Chart(productsCtx, { type: 'bar', data: topProductsData, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }});
+    const orders = await response.json();
+    if (notice) notice.textContent = `${orders.length} pedidos cargados.`;
+
+    tbody.innerHTML = orders.map(order => {
+        const siguiente = SIGUIENTE_ESTADO[order.estado];
+        const accion = siguiente
+            ? `<button class="btn btn-sm btn-primary btn-advance-order" data-order-id="${order.id}" data-next="${siguiente}">
+                   Avanzar a ${ETIQUETA_ESTADO[siguiente]}
+               </button>`
+            : '<span class="text-muted small">Sin acciones</span>';
+
+        return `
+            <tr>
+                <th scope="row">#FJ${String(order.id).padStart(4, '0')}</th>
+                <td>${order.cliente}</td>
+                <td>S/ ${Number(order.total).toFixed(2)}</td>
+                <td>${ETIQUETA_ESTADO[order.estado] || order.estado}</td>
+                <td>${accion}</td>
+            </tr>
+        `;
+    }).join('');
+
+    tbody.querySelectorAll('.btn-advance-order').forEach(btn => {
+        btn.addEventListener('click', () => advanceOrder(btn.dataset.orderId, btn.dataset.next));
+    });
+}
+
+async function advanceOrder(orderId, nuevoEstado) {
+    const notice = document.getElementById('operationsNotice');
+
+    const response = await fetch(`${API_URL}/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${window.authToken}`
+        },
+        body: JSON.stringify({ nuevo_estado: nuevoEstado })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        if (notice) notice.textContent = data.error || 'No se pudo actualizar el pedido.';
+        return;
     }
 
-    const categoryCtx = document.getElementById('categoryChart')?.getContext('2d');
-    if(categoryCtx) {
-        charts.categories = new Chart(categoryCtx, { type: 'doughnut', data: categoryData, options: { responsive: true, maintainAspectRatio: false }});
-    }
+    if (notice) notice.textContent = `Pedido #${orderId} actualizado a ${ETIQUETA_ESTADO[nuevoEstado]}.`;
+    await renderOperationsPanel();
 }
 
 function showToast(message, type = 'success') {

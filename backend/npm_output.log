@@ -1,6 +1,0 @@
-
-> backend@1.0.0 start
-> node src/index.js
-
-◇ injected env (3) from .env // tip: ⌘ enable debugging { debug: true }
-🚀 Servidor ejecutándose en http://localhost:3000
