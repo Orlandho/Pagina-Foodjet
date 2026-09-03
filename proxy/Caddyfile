@@ -1,0 +1,52 @@
+# Única puerta de entrada a FoodJet.
+#
+# Sirve el frontend estático y hace de proxy hacia la API en el MISMO origen,
+# bajo /api. Esto es lo que permite publicar el sitio en un dominio real: antes
+# el navegador llamaba a http://localhost:3000/api, que en el equipo de un
+# visitante apunta a su propia máquina, no al servidor.
+#
+# DOMINIO se define en .env:
+#   - ":80"              -> escucha sin TLS (uso local y detrás del túnel)
+#   - "foodjet.asen.pe"  -> Caddy pediría certificado por sí mismo
+# Detrás del túnel de Cloudflare el HTTPS lo pone Cloudflare y el túnel entrega
+# en claro por la red interna de Docker, así que aquí basta con ":80".
+# Ojo: la variable tiene que llevar valor siempre; vacía, Caddy lee la línea
+# como bloque global y no arranca.
+
+{
+	# Detrás del túnel, todas las visitas llegan desde el contenedor de
+	# cloudflared. Sin esto, la IP real del visitante se pierde.
+	servers {
+		trusted_proxies static private_ranges
+		client_ip_headers CF-Connecting-IP X-Forwarded-For
+	}
+}
+
+{$DOMINIO} {
+	encode zstd gzip
+
+	# La API, en el mismo origen. Se conserva el prefijo /api porque es donde
+	# Express monta las rutas.
+	reverse_proxy /api/* backend:3000 {
+		header_up X-Real-IP {client_ip}
+	}
+
+	# El resto es el frontend estático.
+	root * /srv
+	file_server
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		# HSTS se deja fuera a propósito: con DOMINIO=":80" el sitio se sirve
+		# por http en local y activarlo dejaría el navegador atascado
+		# intentando https. Cloudflare ya lo aplica en el borde.
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

@@ -39,17 +39,45 @@ services:
       - ./backend/src:/app/src
       - ./backend/prisma:/app/prisma
 
-  frontend:
-    image: nginx:alpine
+  # Única puerta de entrada: sirve el frontend y hace de proxy hacia la API en
+  # el mismo origen. Sustituye al nginx anterior, que solo servía estáticos y
+  # obligaba al navegador a llamar a la API por su cuenta a localhost:3000.
+  proxy:
+    image: caddy:2-alpine
     container_name: foodjet-web
     restart: unless-stopped
+    env_file:
+      - .env
     depends_on:
       - backend
     ports:
+      # HTTP_BIND decide quién alcanza el proxy directamente. Con el túnel en
+      # marcha se deja en 127.0.0.1 y entonces la única entrada es Cloudflare;
+      # 0.0.0.0 lo abre a la red local. Docker publica los puertos saltándose
+      # firewalld, así que esta línea es el control real.
       # El 8080 está ocupado por otro proyecto en esta máquina.
-      - "127.0.0.1:8081:80"
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8081}:80"
     volumes:
-      - ./frontend:/usr/share/nginx/html:ro
+      - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend:/srv:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # Salida hacia Cloudflare. No publica ningún puerto: es el contenedor el que
+  # abre la conexión hacia fuera, así que no hace falta IP fija ni abrir nada
+  # en el router. Se arranca con:  docker compose --profile tunel up -d
+  tunel:
+    image: cloudflare/cloudflared:latest
+    container_name: foodjet-tunel
+    restart: unless-stopped
+    profiles: ["tunel"]
+    env_file:
+      - .env
+    command: tunnel --no-autoupdate run
+    depends_on:
+      - proxy
 
 volumes:
   foodjet_pgdata:
+  caddy_data:
+  caddy_config:
