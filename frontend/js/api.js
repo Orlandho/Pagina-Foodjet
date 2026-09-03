@@ -93,6 +93,28 @@ export async function fetchMyOrdersAPI(token) {
 }
 
 /**
+ * Consulta un pedido concreto. La vista de seguimiento la llama cada pocos
+ * segundos para saber en qué etapa va la entrega.
+ * @param {number} orderId ID del pedido
+ * @param {string} token Token de autorización del usuario
+ * @returns {Promise<Object>} {ok, data}
+ */
+export async function fetchOrderByIdAPI(orderId, token) {
+    try {
+        const response = await fetch(`${API_URL}/orders/${orderId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const data = await response.json();
+        return { ok: response.ok, status: response.status, data };
+    } catch (error) {
+        console.error('Error de conexión al consultar el pedido:', error);
+        return { ok: false, status: 0, data: null };
+    }
+}
+
+/**
  * Alterna el estado de favorito de un producto.
  * @param {number} productId ID del producto
  * @param {string} token Token de autorización del usuario
