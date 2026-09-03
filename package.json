@@ -2,5 +2,12 @@
   "devDependencies": {
     "@cucumber/cucumber": "^12.9.0",
     "chai": "^6.2.2"
+  },
+  "name": "pagina-foodjet",
+  "private": true,
+  "scripts": {
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "cucumber-js --profile frontend",
+    "test:backend": "cucumber-js --profile backend"
   }
 }

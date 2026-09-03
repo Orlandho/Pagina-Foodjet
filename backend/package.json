@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "cd .. && npm run test:backend"
   },
   "keywords": [],
   "author": "",
@@ -22,8 +22,6 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "^12.9.0",
-    "chai": "^6.2.2",
     "nodemon": "^3.1.14",
     "prisma": "^6.19.3"
   },

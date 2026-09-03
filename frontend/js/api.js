@@ -1,4 +1,6 @@
-const API_URL = window.FOODJET_API_URL;
+// El fallback permite importar este módulo desde Node (las pruebas), donde
+// no existe window, y cubre el caso de que config.js no llegue a cargar.
+const API_URL = (typeof window !== 'undefined' && window.FOODJET_API_URL) || 'http://localhost:3000/api';
 
 /**
  * Obtiene la lista de productos desde el backend.

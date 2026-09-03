@@ -33,10 +33,11 @@ services:
       - "127.0.0.1:3000:3000"
     user: "1000:1000"
     volumes:
-      - ./backend:/app
-      # Volumen anónimo: evita que el bind mount de arriba tape las
-      # dependencias instaladas dentro de la imagen.
-      - /app/node_modules
+      # Solo el código, no el directorio completo: montar ./backend entero
+      # taparía el node_modules de la imagen y obligaría a un volumen anónimo,
+      # que Docker materializa en el host como un directorio de root.
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
 
   frontend:
     image: nginx:alpine

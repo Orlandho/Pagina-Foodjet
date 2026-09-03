@@ -2,6 +2,8 @@ import * as api from './api.js';
 import * as state from './state.js';
 import * as ui from './ui.js';
 import { validateCard, formatCardNumber, formatExpiry } from './domain/payment.js';
+import { buildOrderPayload } from './domain/checkout.js';
+import { loadFavorites } from './favorites.js';
 
 // Inicializar aplicación (Punto de entrada)
 document.addEventListener('DOMContentLoaded', async function() {
@@ -173,7 +175,7 @@ async function handleCheckoutSubmit(e) {
         return ui.showToast('Debes iniciar sesión para completar la compra', 'warning');
     }
 
-    const orderPayload = buildOrderPayload(paymentMethod);
+    const orderPayload = buildOrderPayload(state.getCart(), state.getProductById, paymentMethod);
 
     if (paymentMethod === 'wallet') {
         await processWalletPayment(orderPayload, paymentMethod);
@@ -232,24 +234,6 @@ async function processCardPayment(orderPayload, paymentMethod) {
     await submitOrder(orderPayload, paymentMethod);
 }
 
-// 2. Función Auxiliar: Arma el cuerpo de la petición
-function buildOrderPayload(paymentMethod) {
-    const cart = state.getCart();
-    const items = Object.entries(cart).map(([productId, quantity]) => ({
-        productId: parseInt(productId),
-        cantidad: quantity
-    }));
-
-    const firstProduct = state.getProductById(Object.keys(cart)[0]);
-    const restauranteId = firstProduct ? firstProduct.restaurante_id : 1;
-
-    return {
-        items,
-        metodo_pago: paymentMethod,
-        restaurante_id: restauranteId,
-        direccion_entrega_id: 1 // TODO: Implementar selección dinámica de dirección
-    };
-}
 
 // 3. Función Auxiliar: Maneja la lógica de la billetera y el QR
 async function processWalletPayment(orderPayload, paymentMethod) {
@@ -338,13 +322,7 @@ async function submitOrder(orderPayload, paymentMethod) {
 // ==========================================
 window.app = {
 
-    loadFavorites: async () => {
-        if (!window.authToken) return;
-        const favorites = await api.fetchFavoritesAPI(window.authToken);
-        state.setFavorites(favorites);
-        ui.renderProducts();
-        ui.renderFavoritesOffcanvas();
-    },
+    loadFavorites: () => loadFavorites(),
 
     handleToggleFavorite: async (productId) => {
         if (!window.currentUser || !window.authToken) {

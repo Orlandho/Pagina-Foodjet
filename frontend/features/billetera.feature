@@ -5,27 +5,23 @@ Feature: CP-03 Integración de Billeteras Digitales
     And el usuario ha iniciado sesion con un token valido
     And el metodo de pago seleccionado es "wallet"
     And el restaurante "KFC" del producto no tiene configurado un QR de pago
-    When se procesa el checkout con handleCheckoutSubmit
+    When se procesa el checkout con billetera digital
     Then el flujo de pago es abortado
-    And el modal de QR no se abre
-    And se muestra una alerta toast con el mensaje "No se encontró el QR de pago para este restaurante"
+    And se informa al usuario con el mensaje "No se encontró el QR de pago para este restaurante"
 
-  Scenario: UT-WALLET-002 Apertura exitosa del modal de pago Yape/QR
+  Scenario: UT-WALLET-002 Resolución del QR del restaurante para el cobro
     Given el carrito contiene un producto disponible
     And el usuario ha iniciado sesion con un token valido
     And el metodo de pago seleccionado es "wallet"
     And el restaurante "Bembos" del producto tiene el QR "url_qr.png"
-    When se procesa el checkout con handleCheckoutSubmit
-    Then el elemento "#qrRestaurantName" muestra el texto "Bembos"
-    And el elemento "#qrPaymentImage" recibe la ruta "url_qr.png"
-    And el modal de QR se abre exitosamente llamando a qrModal.show()
+    When se procesa el checkout con billetera digital
+    Then el restaurante resuelto para el cobro es "Bembos" con el QR "url_qr.png"
 
-  Scenario: UT-WALLET-003 Finalización del temporizador y envío de orden
+  Scenario: UT-WALLET-003 Construcción del pedido que se envía tras confirmar el pago
     Given el carrito contiene un producto disponible
     And el usuario ha iniciado sesion con un token valido
     And el metodo de pago seleccionado es "wallet"
     And el restaurante "Bembos" del producto tiene el QR "url_qr.png"
-    When se procesa el checkout con handleCheckoutSubmit
-    And transcurren los 5 segundos completos del temporizador de pago
-    Then el modal de QR se oculta llamando a qrModal.hide()
-    And se ejecuta automaticamente la funcion submitOrder con los datos del pedido cargados
+    When se procesa el checkout con billetera digital
+    Then el pedido enviado lleva el metodo de pago "wallet" y el restaurante 5
+    And el pedido enviado contiene 1 articulo

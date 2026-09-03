@@ -8,115 +8,12 @@ import {
     deriveSubtotal,
     ETAPAS
 } from './domain/orderStatus.js';
-
-// ==========================================
-// HELPERS DE PRECIO Y DESCUENTO
-// ==========================================
-
-// Función pura de cálculo
-function calculateStudentPrice(product, user) {
-    let finalPrice = product.precio;
-    let hasDiscount = false;
-
-    if (
-        user &&
-        user.es_estudiante &&
-        product.descuento_estudiante > 0
-    ) {
-        finalPrice =
-            product.precio -
-            (product.precio * (product.descuento_estudiante / 100));
-
-        hasDiscount = true;
-    }
-
-    return {
-        originalPrice: product.precio,
-        finalPrice,
-        hasDiscount
-    };
-}
-
-// Función de presentación UI
-function renderProductPrice(product, user) {
-    const priceData = calculateStudentPrice(product, user);
-
-    if (priceData.hasDiscount) {
-        return `
-            <span class="text-decoration-line-through text-muted fs-6">
-                S/ ${priceData.originalPrice.toFixed(2)}
-            </span>
-            <span class="text-success fw-bold ms-2">
-                S/ ${priceData.finalPrice.toFixed(2)}
-            </span>
-        `;
-    }
-
-    return `S/ ${priceData.originalPrice.toFixed(2)}`;
-}
-
-
-// ==========================================
-// HELPERS DE FILTRADO
-// ==========================================
-
-// Función auxiliar para parsear tiempo de entrega
-function parseDeliveryTime(tiempoStr) {
-    if (!tiempoStr) return 999999;
-
-    if (tiempoStr.includes("30")) return 30;
-
-    if (
-        tiempoStr.includes("1 hora") &&
-        !tiempoStr.includes("Más")
-    ) {
-        return 60;
-    }
-
-    if (tiempoStr.includes("Más de 1 hora")) {
-        return 90;
-    }
-
-    return parseInt(tiempoStr) || 0;
-}
-
-
-// Función principal de filtrado
-function filterProducts(
-    products,
-    minPrice,
-    maxPrice,
-    maxTime,
-    selectedCategories
-) {
-    return products.filter(product => {
-
-        const matchesPrice =
-            product.precio >= minPrice &&
-            product.precio <= maxPrice;
-
-        const productTime = parseDeliveryTime(
-            product.Restaurant?.tiempo_entrega
-        );
-
-        const matchesTime = productTime <= maxTime;
-
-        const categoryName =
-            product.categoria?.nombre ||
-            product.tipo_comida;
-
-        const matchesCategory =
-            selectedCategories.length === 0 ||
-            selectedCategories.includes(categoryName);
-
-        return (
-            matchesPrice &&
-            matchesTime &&
-            matchesCategory
-        );
-    });
-}
-
+import {
+    calculateStudentPrice,
+    renderProductPrice,
+    parseDeliveryTime,
+    filterProducts
+} from './domain/catalog.js';
 
 // UTILIDADES GENERALES DE UI
 export function showToast(message, type = 'success') {
@@ -1124,14 +1021,17 @@ export function stopOrderTracking() {
 }
 
 // No tiene sentido seguir preguntando por el pedido con la pestaña oculta.
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        if (trackingIntervalId !== null) {
-            clearInterval(trackingIntervalId);
-            trackingIntervalId = null;
+// El guard permite importar este módulo desde Node (las pruebas) sin DOM.
+if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            if (trackingIntervalId !== null) {
+                clearInterval(trackingIntervalId);
+                trackingIntervalId = null;
+            }
+        } else if (trackingOrderId && trackingIntervalId === null) {
+            pollOnce();
+            trackingIntervalId = setInterval(pollOnce, POLL_MS);
         }
-    } else if (trackingOrderId && trackingIntervalId === null) {
-        pollOnce();
-        trackingIntervalId = setInterval(pollOnce, POLL_MS);
-    }
-});
+    });
+}
