@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: foodjet-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - foodjet_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # El backend arranca ejecutando migraciones: sin esperar a que Postgres
+      # acepte conexiones, Prisma falla y el contenedor entra en bucle de reinicio.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    image: foodjet-api:latest
+    container_name: foodjet-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+    user: "1000:1000"
+    volumes:
+      - ./backend:/app
+      # Volumen anónimo: evita que el bind mount de arriba tape las
+      # dependencias instaladas dentro de la imagen.
+      - /app/node_modules
+
+  frontend:
+    image: nginx:alpine
+    container_name: foodjet-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # El 8080 está ocupado por otro proyecto en esta máquina.
+      - "127.0.0.1:8081:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+
+volumes:
+  foodjet_pgdata:

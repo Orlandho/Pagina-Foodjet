@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api';
+const API_URL = window.FOODJET_API_URL;
 
 document.addEventListener('DOMContentLoaded', () => {
     // Legacy app initialization if needed
