@@ -15,7 +15,23 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../src/config/db');
 
-const QR_DEMO = 'https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg';
+/**
+ * QR de cobro por restaurante.
+ *
+ * Son ficticios y se sirven desde el propio sitio (frontend/img/qr/), no desde
+ * un dominio ajeno: antes los tres restaurantes compartían un QR genérico
+ * alojado en Wikipedia, así que el pago con billetera mostraba siempre la
+ * misma imagen y dependía de que ese enlace externo siguiera vivo.
+ *
+ * Cada uno codifica una cadena tipo Yape/Plin que identifica al comercio y
+ * lleva la marca DEMO-NO-VALIDO, para que quede claro al escanearlo que no
+ * corresponde a una cuenta real.
+ */
+const QR_POR_RESTAURANTE = {
+    1: '/img/qr/burger-king.svg',
+    2: '/img/qr/pizza-hut.svg',
+    3: '/img/qr/sushi-club.svg'
+};
 
 async function seedUsers() {
     const usuarios = [
@@ -37,9 +53,9 @@ async function seedUsers() {
 
 async function seedRestaurants() {
     const restaurantes = [
-        { id: 1, nombre: 'Burger King', descripcion: 'Las mejores hamburguesas a la parrilla', estado_afiliacion: 'activo', calificacion_promedio: 4.5, qr_pago: QR_DEMO, tiempo_entrega: '30 minutos' },
-        { id: 2, nombre: 'Pizza Hut', descripcion: 'Pizzas recién horneadas con los mejores ingredientes', estado_afiliacion: 'activo', calificacion_promedio: 4.2, qr_pago: QR_DEMO, tiempo_entrega: '1 hora' },
-        { id: 3, nombre: 'Sushi Club', descripcion: 'El sushi más fresco y delicioso de la ciudad', estado_afiliacion: 'activo', calificacion_promedio: 4.8, qr_pago: QR_DEMO, tiempo_entrega: 'Más de 1 hora' }
+        { id: 1, nombre: 'Burger King', descripcion: 'Las mejores hamburguesas a la parrilla', estado_afiliacion: 'activo', calificacion_promedio: 4.5, qr_pago: QR_POR_RESTAURANTE[1], tiempo_entrega: '30 minutos' },
+        { id: 2, nombre: 'Pizza Hut', descripcion: 'Pizzas recién horneadas con los mejores ingredientes', estado_afiliacion: 'activo', calificacion_promedio: 4.2, qr_pago: QR_POR_RESTAURANTE[2], tiempo_entrega: '1 hora' },
+        { id: 3, nombre: 'Sushi Club', descripcion: 'El sushi más fresco y delicioso de la ciudad', estado_afiliacion: 'activo', calificacion_promedio: 4.8, qr_pago: QR_POR_RESTAURANTE[3], tiempo_entrega: 'Más de 1 hora' }
     ];
 
     for (const r of restaurantes) {
