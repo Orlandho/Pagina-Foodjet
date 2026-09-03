@@ -76,3 +76,18 @@ export function calculateCartTotal(cart, getProductById, user) {
         return total + calculateStudentPrice(product, user).finalPrice * cantidad;
     }, 0);
 }
+
+/**
+ * Restaurante de un producto.
+ *
+ * La API lo entrega como `Restaurant`, que es el nombre que Prisma da a la
+ * relación. Varios puntos del frontend lo leían como `restaurante` en
+ * minúscula, así que siempre obtenían undefined: el pago con billetera
+ * abortaba con "No se encontró el QR" y el checkout mostraba la palabra
+ * "Restaurante" en lugar del nombre del comercio.
+ *
+ * Se acepta también la forma en minúscula por si algún punto la construye así.
+ */
+export function getProductRestaurant(product) {
+    return product?.Restaurant || product?.restaurante || null;
+}

@@ -12,7 +12,8 @@ import {
     calculateStudentPrice,
     renderProductPrice,
     parseDeliveryTime,
-    filterProducts
+    filterProducts,
+    getProductRestaurant
 } from './domain/catalog.js';
 
 // UTILIDADES GENERALES DE UI
@@ -457,7 +458,7 @@ export function renderCheckoutCart() {
                 <img src="${product.imagen_url}" alt="${product.nombre}" class="rounded me-3 object-fit-cover" style="width: 50px; height: 50px;">
                 <div class="flex-grow-1">
                     <h6 class="my-0 fw-bold">${product.nombre} <span class="badge bg-secondary rounded-pill ms-1">x${quantity}</span></h6>
-                    <small class="text-muted d-block mt-1">${product.restaurante ? product.restaurante.nombre : 'Restaurante'}</small>
+                    <small class="text-muted d-block mt-1">${getProductRestaurant(product)?.nombre || 'Restaurante'}</small>
                     ${isDiscounted ? '<small class="text-warning fw-bold"><i class="bi bi-star-fill me-1"></i>Descuento estudiante aplicado</small>' : ''}
                 </div>
                 <span class="text-muted fw-bold">S/ ${itemTotal.toFixed(2)}</span>

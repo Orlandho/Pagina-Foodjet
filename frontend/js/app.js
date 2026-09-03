@@ -3,6 +3,7 @@ import * as state from './state.js';
 import * as ui from './ui.js';
 import { validateCard, formatCardNumber, formatExpiry } from './domain/payment.js';
 import { buildOrderPayload } from './domain/checkout.js';
+import { getProductRestaurant } from './domain/catalog.js';
 import { loadFavorites } from './favorites.js';
 
 // Inicializar aplicación (Punto de entrada)
@@ -283,7 +284,7 @@ async function processCardPayment(orderPayload, paymentMethod) {
 // 3. Función Auxiliar: Maneja la lógica de la billetera y el QR
 async function processWalletPayment(orderPayload, paymentMethod) {
     const firstProduct = state.getProductById(Object.keys(state.getCart())[0]);
-    const restaurante = firstProduct ? firstProduct.restaurante : null;
+    const restaurante = getProductRestaurant(firstProduct);
 
     if (!restaurante || !restaurante.qr_pago) {
         return ui.showToast('No se encontró el QR de pago para este restaurante', 'warning');
