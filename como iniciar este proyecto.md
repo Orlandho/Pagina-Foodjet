@@ -110,7 +110,20 @@ docker compose run --rm --entrypoint sh backend -c "npx prisma migrate dev --nam
 
 # Inspeccionar la base de datos
 docker compose exec db psql -U foodjet_user -d FoodjetBackend
+
+# Restablecer la contraseña de un usuario
+docker compose exec backend node src/scripts/reset-password.js <email> [nueva]
 ```
+
+Sobre el restablecimiento de contraseñas: **no las cambies con un UPDATE por
+SQL**. Se guardan cifradas con bcrypt, así que escribir el texto plano en la
+columna deja al usuario sin poder entrar (es lo que le pasaba a los usuarios
+del script SQL original). El script aplica el mismo cifrado que el registro.
+
+Sin el segundo argumento genera una contraseña aleatoria y la muestra. Cambiar
+la contraseña **no cierra las sesiones abiertas**: el JWT no la contiene, así
+que los tokens ya emitidos valen hasta caducar (24 h). Para invalidarlos todos
+de golpe hay que rotar `JWT_SECRET` y reiniciar el backend.
 
 ## 9. Publicar en internet (túnel de Cloudflare)
 
