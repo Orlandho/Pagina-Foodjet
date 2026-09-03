@@ -656,6 +656,70 @@ export function requestUserLocation() {
     );
 }
 
+const CAMPOS_TARJETA = {
+    numero: 'cardNumber',
+    expiracion: 'cardExpiry',
+    cvc: 'cardCvc'
+};
+
+/** Quita la marca de error de un campo concreto. */
+export function clearFieldError(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    input.classList.remove('is-invalid');
+    const feedback = document.getElementById(`${inputId}Error`);
+    if (feedback) feedback.textContent = '';
+}
+
+/**
+ * Marca los campos inválidos de la tarjeta y lleva el foco al primero.
+ * Mover el foco es lo que hace que el error sea perceptible para quien navega
+ * con teclado o lector de pantalla (WCAG 3.3.1 y 3.3.3).
+ */
+export function showCardErrors(errors = {}) {
+    let primerInvalido = null;
+
+    Object.entries(CAMPOS_TARJETA).forEach(([clave, inputId]) => {
+        const input = document.getElementById(inputId);
+        const feedback = document.getElementById(`${inputId}Error`);
+        const mensaje = errors[clave];
+
+        if (!input) return;
+
+        input.classList.toggle('is-invalid', Boolean(mensaje));
+        if (feedback) feedback.textContent = mensaje || '';
+
+        if (mensaje && !primerInvalido) primerInvalido = input;
+    });
+
+    primerInvalido?.focus();
+}
+
+/** Simula la autorización con el banco. No viaja ningún dato de la tarjeta. */
+export function runCardAuthorization(marca, duracionMs = 2500) {
+    return new Promise((resolve) => {
+        const modalElement = document.getElementById('cardAuthModal');
+
+        if (!modalElement) {
+            setTimeout(resolve, duracionMs);
+            return;
+        }
+
+        const etiquetas = { visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express' };
+        const detalle = document.getElementById('cardAuthBrand');
+        if (detalle) detalle.textContent = etiquetas[marca] ? `Tarjeta ${etiquetas[marca]}` : '';
+
+        // eslint-disable-next-line no-undef
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+
+        modalElement.addEventListener('hidden.bs.modal', () => resolve(), { once: true });
+        modal.show();
+
+        setTimeout(() => modal.hide(), duracionMs);
+    });
+}
+
 export function toggleCardDetails() {
     const cardDetails = document.getElementById('cardDetails');
     if (!cardDetails) return;

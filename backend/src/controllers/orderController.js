@@ -5,6 +5,12 @@ const {
     isCancelable,
     isValidTransition
 } = require('../domain/orderStatus');
+const {
+    METODOS_VALIDOS,
+    isMetodoValido,
+    resolvePaymentStatus,
+    resolveInitialOrderStatus
+} = require('../domain/payment');
 
 exports.createOrder = async (req, res) => {
     try {
@@ -18,6 +24,12 @@ exports.createOrder = async (req, res) => {
 
         if (!restaurante_id || !direccion_entrega_id || !metodo_pago) {
             return res.status(400).json({ error: 'Faltan datos requeridos (restaurante_id, direccion_entrega_id, metodo_pago).' });
+        }
+
+        if (!isMetodoValido(metodo_pago)) {
+            return res.status(400).json({
+                error: `Método de pago no soportado. Debe ser uno de: ${METODOS_VALIDOS.join(', ')}.`
+            });
         }
 
         let subtotal = 0;
@@ -77,6 +89,12 @@ exports.createOrder = async (req, res) => {
         const impuestos = subtotalConDescuento * IMPUESTO_PORCENTAJE;
         const total = subtotalConDescuento + impuestos + COSTO_ENVIO;
 
+        // El efectivo se cobra en la puerta: ese pedido nace pendiente y queda
+        // bajo la vigilancia de la auto-cancelación. Tarjeta y billetera se
+        // autorizan antes, así que el pedido entra ya confirmado.
+        const estadoPago = resolvePaymentStatus(metodo_pago);
+        const estadoInicial = resolveInitialOrderStatus(estadoPago);
+
         // Crear la orden, los items y la transacción de manera atómica
         const result = await prisma.$transaction(async (tx) => {
             const newOrder = await tx.order.create({
@@ -88,7 +106,7 @@ exports.createOrder = async (req, res) => {
                     total,
                     impuestos,
                     costo_envio: COSTO_ENVIO,
-                    estado: "pendiente",
+                    estado: estadoInicial,
                     OrderItem: { create: orderItemsData }
                 },
                 include: { OrderItem: true }
@@ -99,7 +117,7 @@ exports.createOrder = async (req, res) => {
                     pedido_id: newOrder.id,
                     metodo_pago,
                     monto: total,
-                    estado_pago: "completado" // Simulando que el pago se aprueba instantáneamente
+                    estado_pago: estadoPago
                 }
             });
 

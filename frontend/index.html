@@ -363,12 +363,12 @@
                                     </div>
 
                                     <div class="payment-option" data-payment="card">
-                                        <input type="radio" class="btn-check" name="paymentMethod" id="payCard" value="card" disabled>
-                                        <label class="btn btn-outline-primary w-100 text-start p-3 opacity-50" for="payCard">
+                                        <input type="radio" class="btn-check" name="paymentMethod" id="payCard" value="card">
+                                        <label class="btn btn-outline-primary w-100 text-start p-3" for="payCard">
                                             <i class="bi bi-credit-card fs-4 me-3"></i>
                                             <div class="d-inline-block">
                                                 <div class="fw-bold">Tarjeta de Crédito/Débito</div>
-                                                <small class="text-muted">Deshabilitado temporalmente</small>
+                                                <small class="text-muted">Visa &middot; Mastercard &middot; American Express</small>
                                             </div>
                                         </label>
                                     </div>
@@ -388,18 +388,34 @@
                                         <hr>
                                         <div class="mb-3">
                                             <label for="cardNumber" class="form-label">Número de tarjeta</label>
-                                            <input type="text" class="form-control" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
+                                            <input type="text" class="form-control" id="cardNumber"
+                                                   placeholder="1234 5678 9012 3456" maxlength="19"
+                                                   inputmode="numeric" autocomplete="cc-number"
+                                                   aria-describedby="cardNumberError">
+                                            <div class="invalid-feedback" id="cardNumberError"></div>
                                         </div>
                                         <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="cardExpiry" class="form-label">Fecha de expiración</label>
-                                                <input type="text" class="form-control" id="cardExpiry" placeholder="MM/AA" maxlength="5">
+                                                <input type="text" class="form-control" id="cardExpiry"
+                                                       placeholder="MM/AA" maxlength="5"
+                                                       inputmode="numeric" autocomplete="cc-exp"
+                                                       aria-describedby="cardExpiryError">
+                                                <div class="invalid-feedback" id="cardExpiryError"></div>
                                             </div>
                                             <div class="col-md-6 mb-3">
                                                 <label for="cardCvc" class="form-label">CVC</label>
-                                                <input type="text" class="form-control" id="cardCvc" placeholder="123" maxlength="3">
+                                                <input type="text" class="form-control" id="cardCvc"
+                                                       placeholder="123" maxlength="4"
+                                                       inputmode="numeric" autocomplete="cc-csc"
+                                                       aria-describedby="cardCvcError">
+                                                <div class="invalid-feedback" id="cardCvcError"></div>
                                             </div>
                                         </div>
+                                        <p class="small text-muted mb-0">
+                                            <i class="bi bi-shield-lock me-1" aria-hidden="true"></i>
+                                            Los datos de tu tarjeta no se almacenan ni se envían a nuestros servidores.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -853,6 +869,23 @@
     <script src="js/config.js"></script>
     <script src="js/legacy.js"></script>
     <script type="module" src="js/app.js"></script>
+
+    <!-- Modal de autorización con el banco (simulada) -->
+    <div class="modal fade" id="cardAuthModal" tabindex="-1" aria-labelledby="cardAuthModalLabel" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cardAuthModalLabel">Autorizando el pago</h5>
+                </div>
+                <div class="modal-body text-center py-4" role="status" aria-live="polite">
+                    <div class="spinner-border text-primary mb-3" aria-hidden="true"></div>
+                    <p class="mb-1">Estamos autorizando el pago con tu banco…</p>
+                    <p class="small text-muted mb-0" id="cardAuthBrand"></p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Widget de Accesibilidad UserWay -->
     <script>

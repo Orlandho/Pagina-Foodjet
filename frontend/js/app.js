@@ -1,6 +1,7 @@
 import * as api from './api.js';
 import * as state from './state.js';
 import * as ui from './ui.js';
+import { validateCard, formatCardNumber, formatExpiry } from './domain/payment.js';
 
 // Inicializar aplicación (Punto de entrada)
 document.addEventListener('DOMContentLoaded', async function() {
@@ -102,6 +103,8 @@ function initEventListeners() {
     });
 
     // Payment method toggle
+    setupCardInputs();
+
     document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
         radio.addEventListener('change', () => {
             if (typeof ui.toggleCardDetails === 'function') {
@@ -174,9 +177,59 @@ async function handleCheckoutSubmit(e) {
 
     if (paymentMethod === 'wallet') {
         await processWalletPayment(orderPayload, paymentMethod);
+    } else if (paymentMethod === 'card') {
+        await processCardPayment(orderPayload, paymentMethod);
     } else {
         await submitOrder(orderPayload, paymentMethod);
     }
+}
+
+// ==========================================
+// PAGO CON TARJETA
+// ==========================================
+
+/** Formatea el número y la fecha mientras se escriben. */
+function setupCardInputs() {
+    const numero = document.getElementById('cardNumber');
+    const expiracion = document.getElementById('cardExpiry');
+    const cvc = document.getElementById('cardCvc');
+
+    numero?.addEventListener('input', (e) => { e.target.value = formatCardNumber(e.target.value); });
+    expiracion?.addEventListener('input', (e) => { e.target.value = formatExpiry(e.target.value); });
+    cvc?.addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, ''); });
+
+    // Al corregir un campo desaparece su error, sin esperar a reenviar.
+    [numero, expiracion, cvc].forEach((campo) => {
+        campo?.addEventListener('input', () => ui.clearFieldError(campo.id));
+    });
+}
+
+function readCardForm() {
+    return {
+        numero: document.getElementById('cardNumber')?.value || '',
+        expiracion: document.getElementById('cardExpiry')?.value || '',
+        cvc: document.getElementById('cardCvc')?.value || ''
+    };
+}
+
+/**
+ * Valida la tarjeta y simula la autorización bancaria.
+ *
+ * Los datos de la tarjeta no salen de aquí: el pedido viaja al backend solo
+ * con metodo_pago = 'card'.
+ */
+async function processCardPayment(orderPayload, paymentMethod) {
+    const datos = readCardForm();
+    const { valid, errors, marca } = validateCard(datos);
+
+    if (!valid) {
+        ui.showCardErrors(errors);
+        return ui.showToast('Revisa los datos de tu tarjeta', 'warning');
+    }
+
+    ui.showCardErrors({});
+    await ui.runCardAuthorization(marca);
+    await submitOrder(orderPayload, paymentMethod);
 }
 
 // 2. Función Auxiliar: Arma el cuerpo de la petición
