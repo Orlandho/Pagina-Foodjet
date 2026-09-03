@@ -24,7 +24,7 @@ exports.register= async (req, res) => {
                 return res.status(validation.status).json({ error: validation.error });
             }
 
-            const { nombre, email, telefono, password, rol } = req.body;
+            const { nombre, email, telefono, password } = req.body;
 
             // 2. Validación de reglas de negocio (Duplicidad)
             const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -42,7 +42,10 @@ exports.register= async (req, res) => {
                     email,
                     telefono,
                     password: hashedPassword,
-                    rol: rol === 'admin' ? 'admin' : 'cliente',
+                    // El rol NO se toma del body: aceptarlo permitía que
+                    // cualquiera se registrase como administrador desde el
+                    // formulario público. Las cuentas admin salen del seed.
+                    rol: 'cliente',
                 }
             });
 
@@ -59,13 +62,12 @@ exports.login = async (req, res) => {
 
         // Buscar el usuario
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) {
-            return res.status(404).json({ error: 'Usuario no encontrado.' });
-        }
 
-        // Verificar la contraseña
-        const validPassword = await bcrypt.compare(password, user.password);
-        if (!validPassword) {
+        // Mismo 401 y mismo mensaje tanto si el usuario no existe como si la
+        // contraseña falla: distinguirlos permitía averiguar qué correos están
+        // registrados probándolos uno a uno.
+        const validPassword = user ? await bcrypt.compare(password, user.password) : false;
+        if (!user || !validPassword) {
             return res.status(401).json({ error: 'Credenciales inválidas.' });
         }
 

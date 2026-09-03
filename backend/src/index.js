@@ -10,6 +10,7 @@ const favoriteRoutes = require('./routes/favoriteRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 
 const userRoutes = require('./routes/userRoutes');
+const { startJobs } = require('./jobs/orderJobs');
 const app = express();
 
 // Middlewares globales
@@ -33,4 +34,5 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT}`);
+    startJobs();
 });
