@@ -1,0 +1,55 @@
+sequenceDiagram
+    autonumber
+    actor Cliente
+    participant Checkout as Checkout UI (app.js / ui.js)
+    participant Domain as Domain Validators (payment.js / checkout.js)
+    participant QRModal as Modal QR Dinámico
+    participant API as api.js
+    participant Backend as Backend API (/api/orders)
+
+    Cliente->>Checkout: Clic en "Confirmar Pedido"
+    Checkout->>Checkout: Valida sesión (window.authToken)
+    Checkout->>API: fetchMyAddressesAPI()
+    API-->>Checkout: Retorna direcciones guardadas
+    alt Dirección no existe
+        Checkout->>API: createAddressAPI(nuevaDireccion)
+        API-->>Checkout: ID de nueva dirección
+    end
+
+    Checkout->>Domain: buildOrderPayload(cart, restaurante_id, direccionId, metodoPago)
+    Domain-->>Checkout: orderPayload armado
+
+    alt Método: Efectivo (cash)
+        Checkout->>API: createOrderAPI(orderPayload, token)
+        API->>Backend: POST /api/orders
+        Backend-->>API: 201 Created (Pedido 'pendiente')
+        API-->>Checkout: Éxito
+        Checkout->>Checkout: Limpiar carrito y abrir trackingView
+    else Método: Tarjeta (card)
+        Checkout->>Domain: validateCard({ numero, expiracion, cvc })
+        alt Tarjeta Inválida (Luhn o expiración)
+            Domain-->>Checkout: Errores en campos
+            Checkout->>Cliente: Muestra errores en inputs
+        else Tarjeta Válida
+            Checkout->>Checkout: ui.runCardAuthorization() (Simula spinner 2s)
+            Checkout->>API: createOrderAPI(orderPayload, token)
+            API->>Backend: POST /api/orders
+            Backend-->>API: 201 Created (Pedido 'confirmado')
+            API-->>Checkout: Éxito
+            Checkout->>Checkout: Limpiar carrito y abrir trackingView
+        end
+    else Método: Billetera Digital (wallet - Yape / Plin)
+        Checkout->>QRModal: openQRModal(restaurante.qr_pago)
+        QRModal->>Cliente: Muestra QR y cuenta regresiva de 5 segundos
+        alt Usuario cancela modal
+            Cliente->>QRModal: Clic en cancelar
+            QRModal->>Checkout: Detiene temporizador
+        else Transcurren los 5 segundos
+            QRModal->>Checkout: Confirmación automática simulada
+            Checkout->>API: createOrderAPI(orderPayload, token)
+            API->>Backend: POST /api/orders
+            Backend-->>API: 201 Created (Pedido 'confirmado')
+            API-->>Checkout: Éxito
+            Checkout->>Checkout: Limpiar carrito y abrir trackingView
+        end
+    end
