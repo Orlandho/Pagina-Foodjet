@@ -1,0 +1,83 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: foodjet-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - foodjet_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # El backend arranca ejecutando migraciones: sin esperar a que Postgres
+      # acepte conexiones, Prisma falla y el contenedor entra en bucle de reinicio.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    image: foodjet-api:latest
+    container_name: foodjet-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+    user: "1000:1000"
+    volumes:
+      # Solo el código, no el directorio completo: montar ./backend entero
+      # taparía el node_modules de la imagen y obligaría a un volumen anónimo,
+      # que Docker materializa en el host como un directorio de root.
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+
+  # Única puerta de entrada: sirve el frontend y hace de proxy hacia la API en
+  # el mismo origen. Sustituye al nginx anterior, que solo servía estáticos y
+  # obligaba al navegador a llamar a la API por su cuenta a localhost:3000.
+  proxy:
+    image: caddy:2-alpine
+    container_name: foodjet-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    ports:
+      # HTTP_BIND decide quién alcanza el proxy directamente. Con el túnel en
+      # marcha se deja en 127.0.0.1 y entonces la única entrada es Cloudflare;
+      # 0.0.0.0 lo abre a la red local. Docker publica los puertos saltándose
+      # firewalld, así que esta línea es el control real.
+      # El 8080 está ocupado por otro proyecto en esta máquina.
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8081}:80"
+    volumes:
+      - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend:/srv:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # Salida hacia Cloudflare. No publica ningún puerto: es el contenedor el que
+  # abre la conexión hacia fuera, así que no hace falta IP fija ni abrir nada
+  # en el router. Se arranca con:  docker compose --profile tunel up -d
+  tunel:
+    image: cloudflare/cloudflared:latest
+    container_name: foodjet-tunel
+    restart: unless-stopped
+    profiles: ["tunel"]
+    env_file:
+      - .env
+    command: tunnel --no-autoupdate run
+    depends_on:
+      - proxy
+
+volumes:
+  foodjet_pgdata:
+  caddy_data:
+  caddy_config:

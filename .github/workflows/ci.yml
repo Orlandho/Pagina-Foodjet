@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pruebas:
+    name: Pruebas de aceptación (Cucumber)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar dependencias del runner de pruebas
+        run: npm ci
+
+      - name: Instalar dependencias del backend
+        working-directory: backend
+        run: npm ci
+
+      # Los pasos del backend importan controladores que cargan el cliente de
+      # Prisma al requerirse. Generarlo no necesita base de datos.
+      - name: Generar el cliente de Prisma
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Pruebas del frontend
+        run: npm run test:frontend
+
+      - name: Pruebas del backend
+        run: npm run test:backend
+
+      - name: Publicar el informe de pruebas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informe-cucumber
+          path: reports/cucumber.html
+          if-no-files-found: warn

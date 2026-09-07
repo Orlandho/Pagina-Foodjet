@@ -35,4 +35,26 @@ const adminMiddleware = (req, res, next) => {
     next();
 };
 
-module.exports = { authMiddleware, adminMiddleware };
+/**
+ * Restringe una ruta a los roles indicados.
+ *
+ * Compara en minúsculas a propósito: el rol convive en tres grafías según de
+ * dónde venga el usuario ('Cliente' por el default del esquema, 'cliente' por
+ * el registro, 'Administrador' por el script SQL heredado).
+ */
+const requireRole = (...roles) => (req, res, next) => {
+    if (req.method === 'OPTIONS') {
+        return next();
+    }
+
+    const rol = String(req.user?.rol || '').toLowerCase();
+    const permitidos = roles.map((r) => String(r).toLowerCase());
+
+    if (!permitidos.includes(rol)) {
+        return res.status(403).json({ error: 'Acceso denegado. No tienes permisos para esta operación.' });
+    }
+    next();
+};
+
+module.exports = { authMiddleware, adminMiddleware, requireRole };
+

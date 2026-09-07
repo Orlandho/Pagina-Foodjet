@@ -52,6 +52,11 @@
     --primary-color: #f5af69;
     --primary-hover: #f39d4a;
     --primary-light: #fef3e8;
+    /* El naranja de marca da 1.87:1 sobre blanco, muy por debajo del 4.5:1
+       que exige WCAG AA. Como fondo de botón con texto oscuro funciona bien
+       (11.2:1), así que se conserva; para texto sobre claro se usa esta
+       variante oscurecida del mismo tono, que llega a 4.76:1. */
+    --primary-text: #a9611a;
     --dark-color: #1a1a1a;
     --gray-color: #6c757d;
     --light-gray: #f8f9fa;
@@ -103,7 +108,7 @@ body {
 }
 
 .text-primary {
-    color: var(--primary-color) !important;
+    color: var(--primary-text) !important;
 }
 
 .bg-primary {
@@ -144,7 +149,7 @@ body {
 
 .nav-link:hover,
 .nav-link:focus {
-    color: var(--primary-color);
+    color: var(--primary-text);
 }
 
 .nav-link::after {
@@ -380,7 +385,7 @@ body {
     align-items: center;
     justify-content: center;
     margin: 0 auto;
-    color: var(--primary-color);
+    color: var(--primary-text);
     animation: pulse 2s ease-in-out infinite;
 }
 
@@ -547,6 +552,11 @@ body {
         transition-duration: 0.01ms !important;
     }
 
+    /* El pulso del icono de seguimiento es continuo: se desactiva del todo. */
+    .order-status-icon {
+        animation: none;
+    }
+
     /* Desactivar scroll suave */
     html {
         scroll-behavior: auto !important;
@@ -660,6 +670,9 @@ footer .text-muted {
         --gray-color: #adb5bd;
         --bs-body-color: #e8e8e8;
         --bs-body-bg: #121212;
+        /* Sobre fondo oscuro el problema se invierte: el tono oscurecido baja
+           a 3.94:1 y el naranja original sube a 10:1. */
+        --primary-text: #f5af69;
     }
 
     body {
@@ -1105,4 +1118,11 @@ footer .text-muted {
     .btn-primary {
         color: #000 !important;
     }
+}
+
+/* El encabezado recibe el foco al cambiar de vista; sin outline propio el
+   navegador dibuja uno por defecto que aquí resulta confuso. */
+h1[tabindex="-1"]:focus {
+    outline: 2px solid var(--primary-text);
+    outline-offset: 4px;
 }

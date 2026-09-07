@@ -1,22 +1,17 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/db');
+const { validateRegistrationData } = require('../domain/userValidation');
 
-const validateRegistrationData = (data) => {
-    const { nombre, email, telefono, password } = data;
 
-    if (!nombre || !email || !telefono || !password) {
-        return { isValid: false, status: 400, error: 'Todos los campos son obligatorios.' };
-    }
-
-    if (!/^\d{9}$/.test(telefono)) {
-        return { isValid: false, status: 400, error: 'El teléfono debe tener exactamente 9 dígitos.' };
-    }
-
-    return { isValid: true };
-};
-
-exports.register= async (req, res) => {
+/**
+ * Fábrica del controlador de registro.
+ *
+ * Las dependencias entran por parámetro para que las pruebas puedan pasar
+ * dobles de prisma y bcrypt. No se añaden como tercer argumento de register
+ * porque Express reserva esa posición para next().
+ */
+exports.makeRegister = ({ prisma, bcrypt }) => async (req, res) => {
         try {
             // 1. Validación de formato
             const validation = validateRegistrationData(req.body);
@@ -24,7 +19,7 @@ exports.register= async (req, res) => {
                 return res.status(validation.status).json({ error: validation.error });
             }
 
-            const { nombre, email, telefono, password, rol } = req.body;
+            const { nombre, email, telefono, password } = req.body;
 
             // 2. Validación de reglas de negocio (Duplicidad)
             const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -42,7 +37,10 @@ exports.register= async (req, res) => {
                     email,
                     telefono,
                     password: hashedPassword,
-                    rol: rol === 'admin' ? 'admin' : 'cliente',
+                    // El rol NO se toma del body: aceptarlo permitía que
+                    // cualquiera se registrase como administrador desde el
+                    // formulario público. Las cuentas admin salen del seed.
+                    rol: 'cliente',
                 }
             });
 
@@ -51,7 +49,9 @@ exports.register= async (req, res) => {
             console.error(error);
             return res.status(500).json({ error: 'Error en el servidor al registrar usuario.' });
         }
-}
+};
+
+exports.register = exports.makeRegister({ prisma, bcrypt });
 
 exports.login = async (req, res) => {
     try {
@@ -59,13 +59,12 @@ exports.login = async (req, res) => {
 
         // Buscar el usuario
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) {
-            return res.status(404).json({ error: 'Usuario no encontrado.' });
-        }
 
-        // Verificar la contraseña
-        const validPassword = await bcrypt.compare(password, user.password);
-        if (!validPassword) {
+        // Mismo 401 y mismo mensaje tanto si el usuario no existe como si la
+        // contraseña falla: distinguirlos permitía averiguar qué correos están
+        // registrados probándolos uno a uno.
+        const validPassword = user ? await bcrypt.compare(password, user.password) : false;
+        if (!user || !validPassword) {
             return res.status(401).json({ error: 'Credenciales inválidas.' });
         }
 

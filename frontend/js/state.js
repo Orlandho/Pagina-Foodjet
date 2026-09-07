@@ -1,3 +1,5 @@
+import { calculateCartTotal } from './domain/catalog.js';
+
 // Estado local de la aplicación para el CUN01
 
 let products = [];
@@ -71,20 +73,15 @@ export function clearCart() {
     cart = {};
 }
 
-export function getCartTotal() {
-    let total = 0;
-    Object.entries(cart).forEach(([productId, quantity]) => {
-        const product = getProductById(productId);
-        if (product) {
-
-
-            let price = product.precio;
-            if (window.currentUser && window.currentUser.es_estudiante && product.descuento_estudiante > 0) {
-                price = price - (price * (product.descuento_estudiante / 100));
-            }
-            total += price * quantity;        }
-    });
-    return total;
+/**
+ * Total del carrito para un usuario dado.
+ *
+ * Antes leía window.currentUser desde dentro del módulo de estado, lo que
+ * acoplaba el estado a una global del navegador y hacía imposible probarlo en
+ * Node. Ahora el usuario llega por parámetro.
+ */
+export function getCartTotal(user = typeof window !== 'undefined' ? window.currentUser : null) {
+    return calculateCartTotal(cart, getProductById, user);
 }
 
 let activeCoupon = null;

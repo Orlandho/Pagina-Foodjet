@@ -1,114 +1,20 @@
 import * as state from './state.js';
 import * as api from './api.js';
-
-// ==========================================
-// HELPERS DE PRECIO Y DESCUENTO
-// ==========================================
-
-// Función pura de cálculo
-function calculateStudentPrice(product, user) {
-    let finalPrice = product.precio;
-    let hasDiscount = false;
-
-    if (
-        user &&
-        user.es_estudiante &&
-        product.descuento_estudiante > 0
-    ) {
-        finalPrice =
-            product.precio -
-            (product.precio * (product.descuento_estudiante / 100));
-
-        hasDiscount = true;
-    }
-
-    return {
-        originalPrice: product.precio,
-        finalPrice,
-        hasDiscount
-    };
-}
-
-// Función de presentación UI
-function renderProductPrice(product, user) {
-    const priceData = calculateStudentPrice(product, user);
-
-    if (priceData.hasDiscount) {
-        return `
-            <span class="text-decoration-line-through text-muted fs-6">
-                S/ ${priceData.originalPrice.toFixed(2)}
-            </span>
-            <span class="text-success fw-bold ms-2">
-                S/ ${priceData.finalPrice.toFixed(2)}
-            </span>
-        `;
-    }
-
-    return `S/ ${priceData.originalPrice.toFixed(2)}`;
-}
-
-
-// ==========================================
-// HELPERS DE FILTRADO
-// ==========================================
-
-// Función auxiliar para parsear tiempo de entrega
-function parseDeliveryTime(tiempoStr) {
-    if (!tiempoStr) return 999999;
-
-    if (tiempoStr.includes("30")) return 30;
-
-    if (
-        tiempoStr.includes("1 hora") &&
-        !tiempoStr.includes("Más")
-    ) {
-        return 60;
-    }
-
-    if (tiempoStr.includes("Más de 1 hora")) {
-        return 90;
-    }
-
-    return parseInt(tiempoStr) || 0;
-}
-
-
-// Función principal de filtrado
-function filterProducts(
-    products,
-    minPrice,
-    maxPrice,
-    maxTime,
-    selectedCategories
-) {
-    return products.filter(product => {
-
-        const matchesPrice =
-            product.precio >= minPrice &&
-            product.precio <= maxPrice;
-
-        const productTime = parseDeliveryTime(
-            product.Restaurant?.tiempo_entrega
-        );
-
-        const matchesTime = productTime <= maxTime;
-
-        const categoryName =
-            product.categoria?.nombre ||
-            product.tipo_comida;
-
-        const matchesCategory =
-            selectedCategories.length === 0 ||
-            selectedCategories.includes(categoryName);
-
-        return (
-            matchesPrice &&
-            matchesTime &&
-            matchesCategory
-        );
-    });
-}
-
+import {
+    getTrackingViewModel,
+    normalizeEstado,
+    isLineCompleted,
+    getEstadoBadge,
+    deriveSubtotal,
+    ETAPAS
+} from './domain/orderStatus.js';
+import {
+    calculateStudentPrice,
+    renderProductPrice,
+    parseDeliveryTime,
+    filterProducts,
+    getProductRestaurant
+} from './domain/catalog.js';
 
 // UTILIDADES GENERALES DE UI
 export function showToast(message, type = 'success') {
@@ -158,6 +64,17 @@ export function showView(viewToShowId) {
     const viewToShow = document.getElementById(viewToShowId);
     if (viewToShow) {
         viewToShow.style.display = 'block';
+
+        // El foco viaja al encabezado de la vista: sin esto, quien navega con
+        // teclado o lector de pantalla se queda donde estaba y no percibe que
+        // la página cambió (WCAG 2.4.3, orden del foco).
+        viewToShow.querySelector('h1')?.focus();
+    }
+
+    // Sin esto el sondeo del pedido seguiría corriendo para siempre en
+    // segundo plano, y se acumularía uno nuevo con cada pedido.
+    if (viewToShowId !== 'trackingView') {
+        stopOrderTracking();
     }
 }
 
@@ -541,7 +458,7 @@ export function renderCheckoutCart() {
                 <img src="${product.imagen_url}" alt="${product.nombre}" class="rounded me-3 object-fit-cover" style="width: 50px; height: 50px;">
                 <div class="flex-grow-1">
                     <h6 class="my-0 fw-bold">${product.nombre} <span class="badge bg-secondary rounded-pill ms-1">x${quantity}</span></h6>
-                    <small class="text-muted d-block mt-1">${product.restaurante ? product.restaurante.nombre : 'Restaurante'}</small>
+                    <small class="text-muted d-block mt-1">${getProductRestaurant(product)?.nombre || 'Restaurante'}</small>
                     ${isDiscounted ? '<small class="text-warning fw-bold"><i class="bi bi-star-fill me-1"></i>Descuento estudiante aplicado</small>' : ''}
                 </div>
                 <span class="text-muted fw-bold">S/ ${itemTotal.toFixed(2)}</span>
@@ -628,6 +545,9 @@ export function requestUserLocation() {
 
                 if (data && data.display_name) {
                     addressInput.value = data.display_name;
+                    // Se conservan para guardarlas junto con la dirección.
+                    addressInput.dataset.lat = lat;
+                    addressInput.dataset.lon = lon;
                 } else {
                     showToast('No se pudo determinar la dirección de la ubicación actual.', 'warning');
                 }
@@ -640,6 +560,70 @@ export function requestUserLocation() {
             console.error("Error getting location:", error);
         }
     );
+}
+
+const CAMPOS_TARJETA = {
+    numero: 'cardNumber',
+    expiracion: 'cardExpiry',
+    cvc: 'cardCvc'
+};
+
+/** Quita la marca de error de un campo concreto. */
+export function clearFieldError(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    input.classList.remove('is-invalid');
+    const feedback = document.getElementById(`${inputId}Error`);
+    if (feedback) feedback.textContent = '';
+}
+
+/**
+ * Marca los campos inválidos de la tarjeta y lleva el foco al primero.
+ * Mover el foco es lo que hace que el error sea perceptible para quien navega
+ * con teclado o lector de pantalla (WCAG 3.3.1 y 3.3.3).
+ */
+export function showCardErrors(errors = {}) {
+    let primerInvalido = null;
+
+    Object.entries(CAMPOS_TARJETA).forEach(([clave, inputId]) => {
+        const input = document.getElementById(inputId);
+        const feedback = document.getElementById(`${inputId}Error`);
+        const mensaje = errors[clave];
+
+        if (!input) return;
+
+        input.classList.toggle('is-invalid', Boolean(mensaje));
+        if (feedback) feedback.textContent = mensaje || '';
+
+        if (mensaje && !primerInvalido) primerInvalido = input;
+    });
+
+    primerInvalido?.focus();
+}
+
+/** Simula la autorización con el banco. No viaja ningún dato de la tarjeta. */
+export function runCardAuthorization(marca, duracionMs = 2500) {
+    return new Promise((resolve) => {
+        const modalElement = document.getElementById('cardAuthModal');
+
+        if (!modalElement) {
+            setTimeout(resolve, duracionMs);
+            return;
+        }
+
+        const etiquetas = { visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express' };
+        const detalle = document.getElementById('cardAuthBrand');
+        if (detalle) detalle.textContent = etiquetas[marca] ? `Tarjeta ${etiquetas[marca]}` : '';
+
+        // eslint-disable-next-line no-undef
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+
+        modalElement.addEventListener('hidden.bs.modal', () => resolve(), { once: true });
+        modal.show();
+
+        setTimeout(() => modal.hide(), duracionMs);
+    });
 }
 
 export function toggleCardDetails() {
@@ -693,20 +677,16 @@ export async function renderOrderHistory() {
 
             // Dibujar las tarjetas de esta página
             paginatedOrders.forEach(order => {
-                const date = order.fecha_creacion ? new Date(order.fecha_creacion).toLocaleDateString('es-PE', {
+                // El modelo guarda 'fecha'; 'fecha_creacion' no existe, así que
+                // antes todos los pedidos aparecían con la fecha de hoy.
+                const date = order.fecha ? new Date(order.fecha).toLocaleDateString('es-PE', {
                     year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit'
                 }) : 'Fecha desconocida';
 
-                // Determinar color y estado
-                let statusColor = 'bg-secondary';
-                let statusIcon = 'bi-clock';
-                const estadoStr = order.estado ? order.estado.toLowerCase() : 'pendiente';
-                
-                if (estadoStr === 'pendiente') { statusColor = 'bg-warning text-dark'; statusIcon = 'bi-hourglass-split'; }
-                if (estadoStr === 'en_preparacion') { statusColor = 'bg-info text-dark'; statusIcon = 'bi-fire'; }
-                if (estadoStr === 'en_camino') { statusColor = 'bg-primary'; statusIcon = 'bi-bicycle'; }
-                if (estadoStr === 'entregado') { statusColor = 'bg-success'; statusIcon = 'bi-check-circle'; }
-                if (estadoStr === 'cancelado') { statusColor = 'bg-danger'; statusIcon = 'bi-x-circle'; }
+                const badge = getEstadoBadge(order.estado);
+                const statusColor = badge.color;
+                const statusIcon = badge.icon;
+                const estadoStr = normalizeEstado(order.estado) || 'pendiente';
 
                 // Reseñas
                 let reviewHtml = '';
@@ -758,7 +738,7 @@ export async function renderOrderHistory() {
                             <span class="fw-bold text-primary">Pedido #${String(order.id || '000').substring(0,8)}...</span>
                             <small class="text-muted d-block mt-1"><i class="bi bi-calendar3 me-1"></i>${date}</small>
                         </div>
-                        <span class="badge rounded-pill ${statusColor} px-3 py-2"><i class="bi ${statusIcon} me-1"></i>${(order.estado || 'Pendiente').toUpperCase()}</span>
+                        <span class="badge rounded-pill ${statusColor} px-3 py-2"><i class="bi ${statusIcon} me-1"></i>${badge.label.toUpperCase()}</span>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -772,7 +752,7 @@ export async function renderOrderHistory() {
                                 <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">Resumen</h6>
                                 <div class="d-flex justify-content-between small text-muted mb-1">
                                     <span>Subtotal</span>
-                                    <span>S/ ${order.subtotal || '0.00'}</span>
+                                    <span>S/ ${deriveSubtotal(order).toFixed(2)}</span>
                                 </div>
                                 <div class="d-flex justify-content-between small text-muted mb-1">
                                     <span>IGV (18%)</span>
@@ -895,97 +875,172 @@ export function renderFoodTypeFilters() {
 // ==========================================
 // SEGUIMIENTO DE PEDIDOS (VERSIÓN DEFINITIVA)
 // ==========================================
-export function startOrderTracking(paymentMethod, orderData) {
-    // 1. Rellenar los detalles del pedido usando los IDs de tu HTML
-    const orderElements = {
-        orderNumber: document.getElementById('orderNumber'),
-        paymentMethod: document.getElementById('orderPayment'),
-        date: document.getElementById('orderDate'),
-        subtotal: document.getElementById('orderSubtotal'),
-        taxes: document.getElementById('orderTaxes'),
-        delivery: document.getElementById('orderDelivery'),
-        total: document.getElementById('orderTotalFinal')
+// ==========================================
+// SEGUIMIENTO DEL PEDIDO EN TIEMPO REAL
+// ==========================================
+
+const POLL_MS = 4000;
+const MAX_FALLOS = 5;
+
+let trackingIntervalId = null;
+let trackingOrderId = null;
+let trackingFallos = 0;
+
+/** Pinta los datos del pedido que no cambian mientras avanza la entrega. */
+function renderOrderDetails(orderData, paymentMethod) {
+    const set = (id, valor) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = valor;
     };
 
-    if (orderElements.orderNumber) orderElements.orderNumber.textContent = `#FJ${String(orderData?.id || '0000').padStart(4, '0')}`;
-    if (orderElements.paymentMethod) {
-        let methodText = paymentMethod || '-';
-        if (paymentMethod === 'card') methodText = 'Tarjeta';
-        if (paymentMethod === 'cash') methodText = 'Efectivo';
-        if (paymentMethod === 'wallet') methodText = 'Billetera Digital';
-        orderElements.paymentMethod.textContent = methodText;
-    }
-    if (orderElements.date) {
-        const date = orderData?.fecha_creacion ? new Date(orderData.fecha_creacion) : new Date();
-        orderElements.date.textContent = date.toLocaleDateString('es-PE');
-    }
-    if (orderElements.subtotal) orderElements.subtotal.textContent = `S/ ${(orderData?.subtotal || 0).toFixed(2)}`;
-    if (orderElements.taxes) orderElements.taxes.textContent = `S/ ${(orderData?.impuestos || 0).toFixed(2)}`;
-    if (orderElements.delivery) orderElements.delivery.textContent = `S/ ${(orderData?.costo_envio || 0).toFixed(2)}`;
-    if (orderElements.total) orderElements.total.textContent = `S/ ${(orderData?.total || 0).toFixed(2)}`;
+    const metodos = { card: 'Tarjeta', cash: 'Efectivo', wallet: 'Billetera Digital' };
 
-    // 2. Elementos visuales de progreso (Icono, Título, Bolitas, Líneas)
+    set('orderNumber', `#FJ${String(orderData?.id || '0000').padStart(4, '0')}`);
+    set('orderPayment', metodos[paymentMethod] || paymentMethod || '-');
+
+    // El modelo tiene 'fecha'; 'fecha_creacion' no existe.
+    const fecha = orderData?.fecha ? new Date(orderData.fecha) : new Date();
+    set('orderDate', fecha.toLocaleDateString('es-PE'));
+
+    set('orderSubtotal', `S/ ${deriveSubtotal(orderData).toFixed(2)}`);
+    set('orderTaxes', `S/ ${(Number(orderData?.impuestos) || 0).toFixed(2)}`);
+    set('orderDelivery', `S/ ${(Number(orderData?.costo_envio) || 0).toFixed(2)}`);
+    set('orderTotalFinal', `S/ ${(Number(orderData?.total) || 0).toFixed(2)}`);
+}
+
+/** Vuelca el modelo de vista sobre la línea de tiempo. */
+function applyTrackingViewModel(vm) {
     const statusIcon = document.getElementById('statusIcon');
     const statusTitle = document.getElementById('statusTitle');
     const statusDesc = document.getElementById('statusDescription');
     const estimatedTime = document.getElementById('estimatedTime');
-    
-    const step1 = document.getElementById('step1'); // Preparando
-    const step2 = document.getElementById('step2'); // En camino
-    const step3 = document.getElementById('step3'); // Entregado
-    const line1 = document.getElementById('line1'); // Línea 1-2
-    const line2 = document.getElementById('line2'); // Línea 2-3
 
-    // Estado inicial: "Preparando"
-    if (statusIcon) statusIcon.innerHTML = '<i class="bi bi-box-seam fs-1 text-primary"></i>';
-    if (statusTitle) statusTitle.textContent = 'Preparando tu pedido';
-    if (statusDesc) statusDesc.textContent = 'Tu pedido está siendo preparado con mucho cuidado';
-    if (estimatedTime) estimatedTime.innerHTML = '<i class="bi bi-clock me-2"></i>Tiempo estimado: 30 minutos';
-    
-    // 3. SIMULACIÓN DE AVANCE (Temporizadores)
-    const tiempoPorPaso = 10000; // 10000 ms = 10 segundos
+    if (statusIcon) {
+        const color = vm.cancelled ? 'text-danger' : (vm.terminal ? 'text-success' : 'text-primary');
+        statusIcon.innerHTML = `<i class="bi ${vm.iconClass} fs-1 ${color}" aria-hidden="true"></i>`;
+        statusIcon.classList.toggle('delivered', vm.terminal);
+    }
+    if (statusTitle) statusTitle.textContent = vm.title;
+    if (statusDesc) statusDesc.textContent = vm.description;
 
-    // Paso 1: Cambiar a "En camino" después de 10 segundos
-    setTimeout(() => {
-        showToast('🛵 Tu pedido ya está en camino', 'info');
-        
-        // Actualizar Cabecera
-        if (statusIcon) statusIcon.innerHTML = '<i class="bi bi-bicycle fs-1 text-primary"></i>';
-        if (statusTitle) statusTitle.textContent = 'Pedido en camino';
-        if (statusDesc) statusDesc.textContent = 'El repartidor está cerca. Mantente atento.';
-        if (estimatedTime) estimatedTime.innerHTML = '<i class="bi bi-clock me-2"></i>Llega en aprox. 10 minutos';
-
-        // Actualizar Bolitas de Progreso
-        if (step1) {
-            step1.classList.remove('active');
-            step1.classList.add('completed');
-            step1.innerHTML = '<i class="bi bi-check-circle-fill"></i>'; // Cambiar a check
+    if (estimatedTime) {
+        if (vm.etaText) {
+            estimatedTime.innerHTML = `<i class="bi bi-clock me-2" aria-hidden="true"></i>${vm.etaText}`;
+            estimatedTime.style.display = '';
+        } else {
+            estimatedTime.style.display = 'none';
         }
-        
-        if (line1) line1.classList.add('completed'); // Pintar la línea
-        if (step2) step2.classList.add('active'); // Activar el segundo paso
-        
-    }, tiempoPorPaso);
+    }
 
-    // Paso 2: Cambiar a "Entregado" después de 20 segundos
-    setTimeout(() => {
-        showToast('✅ ¡Tu pedido ha sido entregado! Buen provecho.', 'success');
-        
-        // Actualizar Cabecera
-        if (statusIcon) statusIcon.innerHTML = '<i class="bi bi-check-circle fs-1 text-success"></i>';
-        if (statusTitle) statusTitle.textContent = '¡Pedido Entregado!';
-        if (statusDesc) statusDesc.textContent = 'Esperamos que disfrutes tu comida.';
-        if (estimatedTime) estimatedTime.style.display = 'none'; // Ocultar el tiempo
+    ETAPAS.forEach((etiqueta, i) => {
+        const paso = document.getElementById(`step${i + 1}`);
+        if (!paso) return;
 
-        // Actualizar Bolitas de Progreso
-        if (step2) {
-            step2.classList.remove('active');
-            step2.classList.add('completed'); // Marcar "En camino" como completado con check ✅
-            step2.innerHTML = '<i class="bi bi-check-circle-fill"></i>'; // Cambiar ícono a check
+        const completado = i < vm.completedCount;
+        const activo = i === vm.activeIndex;
+
+        paso.classList.toggle('completed', completado);
+        paso.classList.toggle('active', activo && !completado);
+
+        if (activo) {
+            paso.setAttribute('aria-current', 'step');
+        } else {
+            paso.removeAttribute('aria-current');
         }
-        
-        if (line2) line2.classList.add('completed'); // Pintar la segunda línea
-        if (step3) step3.classList.add('active'); // Activar el paso final
 
-    }, tiempoPorPaso * 2);
+        const icono = completado ? 'bi-check-circle-fill' : ICONOS_ETAPA[i];
+        paso.innerHTML = `<i class="bi ${icono}" aria-hidden="true"></i>`;
+        paso.setAttribute('aria-label', `Etapa ${i + 1} de ${ETAPAS.length}: ${etiqueta}`);
+
+        const linea = document.getElementById(`line${i + 1}`);
+        if (linea) linea.classList.toggle('completed', isLineCompleted(vm, i));
+    });
+}
+
+const ICONOS_ETAPA = ['bi-hourglass-split', 'bi-box-seam', 'bi-bicycle', 'bi-house-door'];
+
+function setConnectionNotice(texto) {
+    const el = document.getElementById('trackingConnection');
+    if (el) el.textContent = texto;
+}
+
+/** Consulta el estado actual del pedido y refleja el resultado en pantalla. */
+async function pollOnce() {
+    if (!trackingOrderId) return;
+
+    const resultado = await api.fetchOrderByIdAPI(trackingOrderId, window.authToken);
+
+    if (!resultado.ok) {
+        trackingFallos += 1;
+        setConnectionNotice('Sin conexión con el servidor, reintentando…');
+
+        if (trackingFallos >= MAX_FALLOS) {
+            setConnectionNotice('No se pudo actualizar el estado del pedido.');
+            stopOrderTracking();
+        }
+        return;
+    }
+
+    trackingFallos = 0;
+    setConnectionNotice('');
+
+    const vm = getTrackingViewModel(resultado.data.estado);
+    applyTrackingViewModel(vm);
+
+    if (vm.terminal) {
+        showToast(
+            vm.cancelled ? '❌ Tu pedido fue cancelado.' : '✅ ¡Tu pedido ha sido entregado! Buen provecho.',
+            vm.cancelled ? 'warning' : 'success'
+        );
+        stopOrderTracking();
+    }
+}
+
+/**
+ * Arranca el seguimiento de un pedido.
+ *
+ * Antes esto era una animación: dos setTimeout que movían los iconos a los 10
+ * y 20 segundos sin consultar nada. Ahora sondea el estado real del pedido
+ * contra la API, de modo que la línea de tiempo refleja lo que de verdad está
+ * pasando con la entrega.
+ */
+export function startOrderTracking(paymentMethod, orderData) {
+    renderOrderDetails(orderData, paymentMethod);
+    applyTrackingViewModel(getTrackingViewModel(orderData?.estado));
+
+    stopOrderTracking();
+
+    trackingOrderId = orderData?.id;
+    trackingFallos = 0;
+
+    if (!trackingOrderId) return;
+
+    pollOnce();
+    trackingIntervalId = setInterval(pollOnce, POLL_MS);
+}
+
+/** Detiene el sondeo. Es idempotente: se puede llamar siempre. */
+export function stopOrderTracking() {
+    if (trackingIntervalId !== null) {
+        clearInterval(trackingIntervalId);
+        trackingIntervalId = null;
+    }
+    trackingOrderId = null;
+    trackingFallos = 0;
+}
+
+// No tiene sentido seguir preguntando por el pedido con la pestaña oculta.
+// El guard permite importar este módulo desde Node (las pruebas) sin DOM.
+if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            if (trackingIntervalId !== null) {
+                clearInterval(trackingIntervalId);
+                trackingIntervalId = null;
+            }
+        } else if (trackingOrderId && trackingIntervalId === null) {
+            pollOnce();
+            trackingIntervalId = setInterval(pollOnce, POLL_MS);
+        }
+    });
 }
