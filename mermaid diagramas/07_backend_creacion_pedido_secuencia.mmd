@@ -1,0 +1,55 @@
+sequenceDiagram
+    autonumber
+    actor Cliente
+    participant Router as orderRoutes.js
+    participant AuthMid as authMiddleware
+    participant Ctrl as orderController.js
+    participant DomainStatus as domain/orderStatus.js
+    participant DomainPay as domain/payment.js
+    participant Prisma as Prisma Client
+    participant DB as PostgreSQL
+
+    Cliente->>Router: POST /api/orders (Payload + Bearer Token)
+    Router->>AuthMid: Valida JWT
+    AuthMid-->>Router: req.user = { userId, rol }
+    Router->>Ctrl: createOrder(req, res)
+
+    Ctrl->>Prisma: user.findUnique(userId)
+    Prisma-->>Ctrl: Usuario (obtiene flag es_estudiante)
+
+    Ctrl->>Prisma: deliveryAddress.findUnique(direccion_entrega_id)
+    alt Dirección no existe o direccion.usuario_id != userId
+        Ctrl-->>Cliente: 403 Forbidden ("La dirección no te pertenece")
+    end
+
+    Ctrl->>Prisma: product.findMany(productIds)
+    alt Productos no encontrados o de distinto restaurante
+        Ctrl-->>Cliente: 400 Bad Request ("El producto no pertenece al restaurante")
+    end
+
+    loop Por cada item del pedido
+        Ctrl->>Ctrl: Calcula precio unitario (aplica descuento estudiante si aplica)
+        Ctrl->>Ctrl: Suma subtotal acumulado
+    end
+
+    alt Posee cupon_id
+        Ctrl->>Prisma: discountCoupon.findUnique(cupon_id)
+        Ctrl->>Ctrl: Calcula descuento del cupón sobre subtotal
+    end
+
+    Ctrl->>Ctrl: Calcula IGV (18%) + Costo de Envío fijo (S/ 5.00)
+    Ctrl->>DomainPay: resolvePaymentStatus(metodo_pago)
+    DomainPay-->>Ctrl: 'Completado' o 'Pendiente'
+    Ctrl->>DomainPay: resolveInitialOrderStatus(estadoPago)
+    DomainPay-->>Ctrl: 'confirmado' o 'pendiente'
+
+    rect rgb(235, 245, 255)
+        Note over Ctrl,DB: Transacción Atómica prisma.$transaction
+        Ctrl->>Prisma: tx.order.create({ total, estado, OrderItem: [items] })
+        Prisma->>DB: INSERT INTO "Order", INSERT INTO "OrderItem"
+        Ctrl->>Prisma: tx.transaction.create({ pedido_id, metodo_pago, monto, estado_pago })
+        Prisma->>DB: INSERT INTO "Transaction"
+        DB-->>Prisma: Commit OK
+    end
+
+    Ctrl-->>Cliente: 201 Created { message, order, transaction }

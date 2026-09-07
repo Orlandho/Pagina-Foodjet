@@ -1,0 +1,63 @@
+graph TD
+    ClientReq["Petición HTTP entrante (/api/*)"] --> ExpressApp["Express App (src/index.js)"]
+
+    subgraph GlobalMiddlewares["Middlewares Globales"]
+        CORS["cors()"]
+        JSON["express.json()"]
+    end
+
+    ExpressApp --> GlobalMiddlewares
+
+    subgraph RoutingLayer["Capa de Enrutamiento (src/routes/*)"]
+        RAuth["authRoutes.js"]
+        ROrder["orderRoutes.js"]
+        RProduct["productRoutes.js"]
+        RReview["reviewRoutes.js"]
+        RFav["favoriteRoutes.js"]
+        RUser["userRoutes.js"]
+        RAddr["addressRoutes.js"]
+    end
+
+    GlobalMiddlewares --> RoutingLayer
+
+    subgraph SecurityLayer["Capa de Seguridad (src/middlewares/*)"]
+        JWTAuth["authMiddleware (Verifica token JWT)"]
+        RBAC["requireRole('admin', 'repartidor') / adminMiddleware"]
+    end
+
+    RoutingLayer --> SecurityLayer
+
+    subgraph ControllerLayer["Capa de Controladores (src/controllers/*)"]
+        CAuth["authController.js"]
+        COrder["orderController.js"]
+        CProduct["productController.js"]
+        CReview["reviewController.js"]
+        CFav["favoriteController.js"]
+        CUser["userController.js"]
+        CAddr["addressController.js"]
+    end
+
+    SecurityLayer --> ControllerLayer
+
+    subgraph DomainLayer["Capa de Dominio Puro (src/domain/*)"]
+        DOrderStatus["orderStatus.js (Máquina de Estados)"]
+        DPayment["payment.js (Mapeo de Estados de Pago)"]
+        DUserVal["userValidation.js (Validación de Registro)"]
+    end
+
+    ControllerLayer --> DomainLayer
+
+    subgraph PersistenceLayer["Persistencia (Prisma & Postgres)"]
+        PrismaClient["Prisma Client (src/config/db.js)"]
+        DB[(PostgreSQL 16)]
+    end
+
+    ControllerLayer --> PrismaClient
+    PrismaClient --> DB
+
+    subgraph BackgroundJobs["Tareas Periódicas (src/jobs/orderJobs.js)"]
+        SimJob["avanzarPedidos (cada 15s si ENABLE_JOBS=true)"]
+        AutoCancelJob["autoCancelUnconfirmedOrders (cada 60s)"]
+    end
+
+    BackgroundJobs --> PrismaClient

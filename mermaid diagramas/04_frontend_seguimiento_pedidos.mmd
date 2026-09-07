@@ -1,0 +1,24 @@
+flowchart TD
+    StartTracking([startOrderTracking]) --> RenderInitial[Renderiza vista previa y mapa simulado]
+    RenderInitial --> PollOnce[Ejecutar pollOnce]
+
+    PollOnce --> FetchAPI["GET /api/orders/:id (api.js)"]
+    FetchAPI --> CheckResponse{¿Respuesta exitosa?}
+
+    CheckResponse -- Error de red --> IncFail[trackingFallos++]
+    IncFail --> CheckMaxFail{¿trackingFallos >= 5?}
+    CheckMaxFail -- Sí --> ShowNetErr["Aviso: No se pudo actualizar estado"] --> StopTracking([Detener Polling])
+    CheckMaxFail -- No --> WaitNext[Esperar intervalo 4000 ms] --> VisibilityCheck
+
+    CheckResponse -- Éxito 200 --> ResetFail[trackingFallos = 0]
+    ResetFail --> ViewModel["getTrackingViewModel(estado)"]
+    ViewModel --> ApplyUI[Actualizar stepper: Paso 1 a 4, Icono, ETA]
+
+    ApplyUI --> IsTerminal{¿Es estado terminal? 'entregado' o 'cancelado'}
+    IsTerminal -- Sí --> ShowToastFinal["Toast final (Éxito o Cancelado)"] --> StopTracking
+    IsTerminal -- No --> WaitNext
+
+    VisibilityCheck{¿Pestaña visible? document.hidden}
+    VisibilityCheck -- Oculta --> PauseTimer[Pausar setInterval]
+    VisibilityCheck -- Activa --> ResumeTimer[Reanudar pollOnce cada 4s]
+    ResumeTimer --> PollOnce
