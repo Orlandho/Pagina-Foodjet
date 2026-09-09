@@ -20,3 +20,10 @@ Feature: CP-02 Adición de Productos al Carrito
     When ejecuto addToCart con el producto 3
     Then el objeto cart no sufre modificaciones y mantiene solo el producto 1
     And la funcion retorna success false y error "DIFFERENT_RESTAURANT"
+  Scenario: UT-CART-004 El carrito sabe de que restaurante es el pedido
+    Given el estado inicial del carrito tiene el producto 1 con cantidad 1 del restaurante_id 10
+    Then el restaurante del carrito se llama "Burger King"
+
+  Scenario: UT-CART-005 Un carrito vacio no tiene restaurante asociado
+    Given el estado inicial del carrito es vacio
+    Then el carrito no tiene restaurante asociado

@@ -3,7 +3,7 @@ import * as state from './state.js';
 import * as ui from './ui.js';
 import { validateCard, formatCardNumber, formatExpiry } from './domain/payment.js';
 import { buildOrderPayload } from './domain/checkout.js';
-import { getProductRestaurant } from './domain/catalog.js';
+import { getProductRestaurant, getCartRestaurant } from './domain/catalog.js';
 import { loadFavorites } from './favorites.js';
 import { sanitizePhone, validatePhone } from './domain/validation.js';
 
@@ -446,7 +446,13 @@ window.app = {
             ui.showToast('Producto agregado al carrito');
         } else {
             if (result.error === 'DIFFERENT_RESTAURANT') {
-                ui.showToast('No puedes mezclar productos de diferentes restaurantes. Termina tu pedido actual primero.', 'warning');
+                const restaurante = getCartRestaurant(state.getCart(), state.getProductById);
+                ui.showToast(
+                    restaurante?.nombre
+                        ? `Tu pedido es de ${restaurante.nombre}. Vacía el carrito para pedir de otro restaurante.`
+                        : 'No puedes mezclar productos de diferentes restaurantes.',
+                    'warning'
+                );
             } else {
                 ui.showToast('Producto no disponible o agotado', 'warning');
             }

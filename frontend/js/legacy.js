@@ -385,6 +385,20 @@ function showToast(message, type = 'success') {
         document.body.appendChild(toastContainer);
     }
 
+    // Si el mismo aviso ya está en pantalla no se apila otro: al intentar
+    // añadir varios productos de otro restaurante se acumulaban seis mensajes
+    // idénticos que tapaban la página. Se reinicia el temporizador del que ya
+    // hay para que siga visible.
+    const yaVisible = Array.from(toastContainer.querySelectorAll('.toast'))
+        .find((t) => t.dataset.mensaje === message);
+
+    if (yaVisible) {
+        // eslint-disable-next-line no-undef
+        bootstrap.Toast.getOrCreateInstance(yaVisible, { delay: 3000 }).show();
+        return;
+    }
+
+    toast.dataset.mensaje = message;
     toastContainer.appendChild(toast);
     const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
     bsToast.show();

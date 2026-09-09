@@ -13,7 +13,8 @@ import {
     renderProductPrice,
     parseDeliveryTime,
     filterProducts,
-    getProductRestaurant
+    getProductRestaurant,
+    getCartRestaurant
 } from './domain/catalog.js';
 
 // UTILIDADES GENERALES DE UI
@@ -40,6 +41,20 @@ export function showToast(message, type = 'success') {
         document.body.appendChild(toastContainer);
     }
 
+    // Si el mismo aviso ya está en pantalla no se apila otro: al intentar
+    // añadir varios productos de otro restaurante se acumulaban seis mensajes
+    // idénticos que tapaban la página. Se reinicia el temporizador del que ya
+    // hay para que siga visible.
+    const yaVisible = Array.from(toastContainer.querySelectorAll('.toast'))
+        .find((t) => t.dataset.mensaje === message);
+
+    if (yaVisible) {
+        // eslint-disable-next-line no-undef
+        bootstrap.Toast.getOrCreateInstance(yaVisible, { delay: 3000 }).show();
+        return;
+    }
+
+    toast.dataset.mensaje = message;
     toastContainer.appendChild(toast);
 
     // eslint-disable-next-line no-undef
@@ -76,6 +91,21 @@ export function showView(viewToShowId) {
     if (viewToShowId !== 'trackingView') {
         stopOrderTracking();
     }
+}
+
+/**
+ * Explica por qué se rechazó el producto nombrando el restaurante del carrito.
+ *
+ * QA reportó que el rechazo parecía arbitrario: el mensaje enunciaba la regla
+ * pero las tarjetas no decían de qué restaurante era cada producto, así que no
+ * había forma de saber cuál era el conflicto.
+ */
+function mensajeRestauranteDistinto() {
+    const restaurante = getCartRestaurant(state.getCart(), state.getProductById);
+
+    return restaurante?.nombre
+        ? `Tu pedido es de ${restaurante.nombre}. Vacía el carrito para pedir de otro restaurante.`
+        : 'Solo puedes agregar productos de un mismo restaurante al pedido.';
 }
 
 // RENDERIZADO DE PRODUCTOS EN EL INICIO
@@ -142,10 +172,13 @@ export function renderProducts() {
                 </div>
                 <img src="${product.imagen_url}" class="card-img-top" alt="${product.nombre}" style="height: 200px; object-fit: cover;">
                 <div class="card-body d-flex flex-column">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
                         <h5 class="card-title mb-0 fw-bold">${product.nombre}</h5>
-                        <span class="badge bg-light text-dark shadow-sm border"><i class="bi bi-clock me-1"></i>${product.Restaurant.tiempo_entrega} min</span>
+                        <span class="badge bg-light text-dark shadow-sm border"><i class="bi bi-clock me-1"></i>${product.Restaurant.tiempo_entrega}</span>
                     </div>
+                    <p class="card-text text-muted small mb-2">
+                        <i class="bi bi-shop me-1" aria-hidden="true"></i>${product.Restaurant?.nombre || 'Restaurante'}
+                    </p>
                     <p class="card-text text-muted small flex-grow-1">${product.descripcion || 'Delicioso plato preparado con los mejores ingredientes.'}</p>
                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
                         <div class="price-container">
@@ -174,7 +207,7 @@ export function renderProducts() {
                 cartOffcanvas.show();
             } else {
                 if (result.error === 'DIFFERENT_RESTAURANT') {
-                    showToast('Solo puedes agregar productos de un mismo restaurante al pedido.', 'warning');
+                    showToast(mensajeRestauranteDistinto(), 'warning');
                 } else if (result.error === 'UNAVAILABLE') {
                     showToast('Este producto no está disponible.', 'warning');
                 }
@@ -306,7 +339,7 @@ export function renderFavoritesOffcanvas() {
                 cartOffcanvas.show();
             } else {
                 if (result.error === 'DIFFERENT_RESTAURANT') {
-                    showToast('Solo puedes agregar productos de un mismo restaurante al pedido.', 'warning');
+                    showToast(mensajeRestauranteDistinto(), 'warning');
                 } else if (result.error === 'UNAVAILABLE') {
                     showToast('Este producto no está disponible.', 'warning');
                 }
