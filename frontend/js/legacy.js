@@ -13,6 +13,20 @@ function checkExistingSession() {
     // leerlo, así que window.authToken era undefined en un arranque en frío y
     // la sesión se perdía al recargar la página.
     const token = localStorage.getItem('token');
+
+    // Si el token ya caducó no se restaura nada. Restaurarlo dejaba la interfaz
+    // aparentando sesión activa mientras el servidor rechazaba cada petición
+    // con "Token inválido o expirado", y además disparaba una llamada a
+    // favoritos condenada al 403 antes de que nadie pudiera comprobarlo.
+    // FoodJetSession lo publica app.js, cuyo cuerpo de módulo corre antes que
+    // este manejador de DOMContentLoaded.
+    if (token && window.FoodJetSession?.isTokenExpired(token)) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        showToast('Tu sesión expiró. Vuelve a iniciar sesión.', 'warning');
+        return;
+    }
+
     if (token) window.authToken = token;
 
     if (userStr && window.authToken) {
@@ -384,4 +398,5 @@ window.handleLogin = handleLogin;
 window.handleRegister = handleRegister;
 window.handleLogout = handleLogout;
 window.displayDashboard = displayDashboard;
+window.updateUserUI = updateUserUI;
 window.showToast = showToast;

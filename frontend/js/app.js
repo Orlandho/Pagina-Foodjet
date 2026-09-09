@@ -5,6 +5,12 @@ import { validateCard, formatCardNumber, formatExpiry } from './domain/payment.j
 import { buildOrderPayload } from './domain/checkout.js';
 import { getProductRestaurant } from './domain/catalog.js';
 import { loadFavorites } from './favorites.js';
+import { isTokenExpired, isAuthFailure } from './domain/session.js';
+
+// El cuerpo de este módulo se ejecuta antes de que se dispare
+// DOMContentLoaded, así que legacy.js —que es un script clásico y no puede
+// importar módulos— ya encuentra estos helpers cuando restaura la sesión.
+window.FoodJetSession = { isTokenExpired, isAuthFailure };
 
 // Inicializar aplicación (Punto de entrada)
 document.addEventListener('DOMContentLoaded', async function() {
@@ -12,11 +18,50 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.state = state;
     window.ui = ui;
 
+    descartarSesionCaducada();
+
     await initCatalog();
     initEventListeners();
     ui.renderCartOffcanvas(); 
     ui.renderCheckoutCart();
 });
+
+/**
+ * Cierra la sesión si el token guardado ya caducó.
+ *
+ * legacy.js restaura la sesión desde localStorage sin mirar la fecha de
+ * caducidad, así que tras 24 horas la interfaz mostraba al usuario como
+ * conectado mientras el servidor rechazaba cada petición con
+ * "Token inválido o expirado". El síntoma aparecía al comprar, que es la
+ * primera acción que necesita el token.
+ *
+ * La comprobación principal vive en checkExistingSession (legacy.js), que se
+ * ejecuta antes; esta queda como red de seguridad por si aquello no llegara a
+ * correr.
+ */
+function descartarSesionCaducada() {
+    if (!window.authToken) return;
+    if (!isTokenExpired(window.authToken)) return;
+
+    cerrarSesionCaducada('Tu sesión expiró. Vuelve a iniciar sesión.');
+}
+
+/**
+ * Limpia la sesión y avisa al usuario.
+ *
+ * No delega en handleLogout a propósito: ese anuncia "Has cerrado sesión", y
+ * aquí el usuario no cerró nada, se le caducó.
+ */
+function cerrarSesionCaducada(mensaje) {
+    window.authToken = null;
+    window.currentUser = null;
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+
+    if (typeof window.updateUserUI === 'function') window.updateUserUI(null);
+
+    ui.showToast(mensaje, 'warning');
+}
 
 async function initCatalog() {
     const products = await api.fetchProductsAPI();
@@ -353,6 +398,12 @@ async function submitOrder(orderPayload, paymentMethod) {
             // Mostrar seguimiento
             ui.showView('trackingView');
             ui.startOrderTracking(paymentMethod, result.data.order);
+        } else if (isAuthFailure(result.status)) {
+            // El token pudo caducar con la pestaña abierta, o el servidor pudo
+            // reiniciarse con otro secreto. En ambos casos el mensaje crudo del
+            // servidor ("Token inválido o expirado") no le dice al usuario qué
+            // hacer, y la interfaz seguiría aparentando que tiene sesión.
+            cerrarSesionCaducada('Tu sesión expiró. Inicia sesión de nuevo para completar la compra.');
         } else {
             ui.showToast(result.data.error || 'Error al procesar el pedido', 'warning');
         }

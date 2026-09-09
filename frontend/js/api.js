@@ -39,10 +39,12 @@ export async function createOrderAPI(payload, token) {
         });
 
         const data = await response.json();
-        return { ok: response.ok, data };
+        // Se devuelve el status para poder distinguir un rechazo de negocio
+        // (400, 409) de una sesión caducada (401, 403).
+        return { ok: response.ok, status: response.status, data };
     } catch (error) {
         console.error('Error de conexión al crear el pedido:', error);
-        return { ok: false, data: { error: 'Error de conexión con el servidor' } };
+        return { ok: false, status: 0, data: { error: 'Error de conexión con el servidor' } };
     }
 }
 
