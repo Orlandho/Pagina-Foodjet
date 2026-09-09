@@ -332,7 +332,11 @@
                                         <label for="customerPhone" class="form-label">
                                             <i class="bi bi-telephone me-2"></i>Teléfono
                                         </label>
-                                        <input type="tel" class="form-control" id="customerPhone" placeholder="" required>
+                                        <input type="tel" class="form-control" id="customerPhone" placeholder="987654321"
+                                               inputmode="numeric" autocomplete="tel" maxlength="9" pattern="\d{9}"
+                                               title="Debe contener exactamente 9 dígitos numéricos"
+                                               aria-describedby="customerPhoneError" required>
+                                        <div id="customerPhoneError" class="invalid-feedback"></div>
                                     </div>
                                     <div class="mb-3">
                                         <label for="customerAddress" class="form-label">
@@ -726,7 +730,12 @@
                         <div class="mb-3">                            <label for="registerPhone" class="form-label">
                                 <i class="bi bi-telephone me-2"></i>Teléfono
                             </label>
-                            <input type="tel" class="form-control" id="registerPhone" placeholder="987654321" pattern="\d{9}" title="Debe contener exactamente 9 dígitos numéricos" required>
+                            <input type="tel" class="form-control" id="registerPhone" placeholder="987654321"
+                                   inputmode="numeric" autocomplete="tel" maxlength="9" pattern="\d{9}"
+                                   title="Debe contener exactamente 9 dígitos numéricos"
+                                   aria-describedby="registerPhoneAyuda registerPhoneError" required>
+                            <div id="registerPhoneAyuda" class="form-text">9 dígitos, solo números.</div>
+                            <div id="registerPhoneError" class="invalid-feedback"></div>
                         </div>
                         <div class="mb-3">
                             <label for="registerPassword" class="form-label">

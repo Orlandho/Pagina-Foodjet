@@ -5,6 +5,12 @@ import { validateCard, formatCardNumber, formatExpiry } from './domain/payment.j
 import { buildOrderPayload } from './domain/checkout.js';
 import { getProductRestaurant } from './domain/catalog.js';
 import { loadFavorites } from './favorites.js';
+import { sanitizePhone, validatePhone } from './domain/validation.js';
+
+// El cuerpo de este módulo se ejecuta antes de que se dispare
+// DOMContentLoaded, así que legacy.js —que es un script clásico y no puede
+// importar módulos— ya encuentra estos helpers cuando registra sus listeners.
+window.FoodJetValidation = { sanitizePhone, validatePhone };
 
 // Inicializar aplicación (Punto de entrada)
 document.addEventListener('DOMContentLoaded', async function() {
@@ -107,6 +113,7 @@ function initEventListeners() {
 
     // Payment method toggle
     setupCardInputs();
+    setupPhoneInput('customerPhone', 'customerPhoneError');
 
     document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
         radio.addEventListener('change', () => {
@@ -176,6 +183,10 @@ async function handleCheckoutSubmit(e) {
         return ui.showToast('Debes iniciar sesión para completar la compra', 'warning');
     }
 
+    if (!validarTelefono('customerPhone', 'customerPhoneError')) {
+        return ui.showToast('Revisa el teléfono de contacto', 'warning');
+    }
+
     const direccionId = await resolveDeliveryAddressId();
     if (!direccionId) return;
 
@@ -237,6 +248,42 @@ async function resolveDeliveryAddressId() {
 // ==========================================
 
 /** Formatea el número y la fecha mientras se escriben. */
+/**
+ * Impide escribir cualquier cosa que no sea un teléfono válido.
+ *
+ * QA reportó que el campo aceptaba letras y más de 9 dígitos: el registro se
+ * enviaba igual y solo fallaba en el servidor. Filtrar mientras se escribe
+ * evita el viaje de ida y vuelta.
+ */
+function setupPhoneInput(inputId, errorId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    input.addEventListener('input', () => {
+        const limpio = sanitizePhone(input.value);
+        if (input.value !== limpio) input.value = limpio;
+
+        input.classList.remove('is-invalid');
+        const feedback = document.getElementById(errorId);
+        if (feedback) feedback.textContent = '';
+    });
+}
+
+/** Marca el campo si el teléfono no es válido y lleva el foco. @returns {boolean} */
+function validarTelefono(inputId, errorId) {
+    const input = document.getElementById(inputId);
+    if (!input) return true;
+
+    const { valid, error } = validatePhone(input.value);
+    const feedback = document.getElementById(errorId);
+
+    input.classList.toggle('is-invalid', !valid);
+    if (feedback) feedback.textContent = valid ? '' : error;
+
+    if (!valid) input.focus();
+    return valid;
+}
+
 function setupCardInputs() {
     const numero = document.getElementById('cardNumber');
     const expiracion = document.getElementById('cardExpiry');

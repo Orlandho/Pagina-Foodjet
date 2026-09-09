@@ -37,6 +37,21 @@ function initializeLegacyEventListeners() {
         refreshOperationsBtn.addEventListener('click', () => renderOperationsPanel());
     }
 
+    // El teléfono solo admite dígitos y como mucho 9. QA reportó que aceptaba
+    // letras y longitudes mayores, y que el registro se enviaba igual para
+    // fallar después en el servidor.
+    const registerPhone = document.getElementById('registerPhone');
+    if (registerPhone) {
+        registerPhone.addEventListener('input', () => {
+            const limpio = window.FoodJetValidation?.sanitizePhone(registerPhone.value) ?? registerPhone.value;
+            if (registerPhone.value !== limpio) registerPhone.value = limpio;
+
+            registerPhone.classList.remove('is-invalid');
+            const feedback = document.getElementById('registerPhoneError');
+            if (feedback) feedback.textContent = '';
+        });
+    }
+
     // --- ELEMENTOS DE NAVEGACIÓN DE USUARIO ---
     const logoutBtn = document.getElementById('logoutBtn');
 
@@ -125,6 +140,19 @@ async function handleRegister(e) {
     const email = document.getElementById('registerEmail').value;
     const telefono = document.getElementById('registerPhone').value;
     const password = document.getElementById('registerPassword').value;
+
+    // El atributo pattern del campo no llega a actuar porque el envío se
+    // intercepta con preventDefault, así que la comprobación se hace aquí.
+    const revision = window.FoodJetValidation?.validatePhone(telefono);
+    if (revision && !revision.valid) {
+        const input = document.getElementById('registerPhone');
+        const feedback = document.getElementById('registerPhoneError');
+
+        input.classList.add('is-invalid');
+        if (feedback) feedback.textContent = revision.error;
+        input.focus();
+        return;
+    }
 
     try {
         const response = await fetch(`${API_URL}/auth/register`, {
