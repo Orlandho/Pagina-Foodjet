@@ -3,6 +3,7 @@ import * as api from './api.js';
 import {
     getTrackingViewModel,
     normalizeEstado,
+    isTerminal,
     isLineCompleted,
     getEstadoBadge,
     deriveSubtotal,
@@ -740,8 +741,24 @@ export async function renderOrderHistory() {
                 const estadoStr = normalizeEstado(order.estado) || 'pendiente';
 
                 // Reseñas
+                // Al seguimiento solo se llegaba justo despues de comprar: si el
+                // usuario salia de la vista, no habia forma de volver. Desde aqui
+                // puede retomar el de cualquier pedido que siga en curso.
+                const seguimientoHtml = isTerminal(estadoStr)
+                    ? ''
+                    : `
+                        <button class="btn btn-sm btn-outline-primary mt-3 me-2 btn-ver-seguimiento"
+                            data-order-id="${order.id}">
+                            <i class="bi bi-geo-alt-fill me-1" aria-hidden="true"></i>Ver seguimiento
+                        </button>
+                    `;
+
                 let reviewHtml = '';
-                if (estadoStr === 'entregado' && (!order.reviews || order.reviews.length === 0)) {
+                // La relación se llama Review y es uno a uno: 'reviews' no existe,
+                // así que el botón salía incluso en pedidos ya reseñados.
+                const resena = order.Review || (Array.isArray(order.reviews) ? order.reviews[0] : null);
+
+                if (estadoStr === 'entregado' && !resena) {
                     reviewHtml = `
                         <button class="btn btn-sm btn-outline-warning mt-3 btn-leave-review"
                             data-bs-toggle="modal" data-bs-target="#reviewModal"
@@ -749,8 +766,8 @@ export async function renderOrderHistory() {
                             <i class="bi bi-star-fill me-1"></i>Dejar una Reseña
                         </button>
                     `;
-                } else if (order.reviews && order.reviews.length > 0) {
-                    const r = order.reviews[0];
+                } else if (resena) {
+                    const r = resena;
                     let stars = '';
                     for(let i=1; i<=5; i++) {
                         stars += `<i class="bi bi-star${i<=r.puntuacion?'-fill text-warning':''} me-1"></i>`;
@@ -841,7 +858,7 @@ export async function renderOrderHistory() {
                                 </div>
                             </div>
                         </div>
-                        ${reviewHtml}
+                        ${seguimientoHtml}${reviewHtml}
                     </div>
                 `;
                 container.appendChild(card);
@@ -894,6 +911,17 @@ export async function renderOrderHistory() {
                     });
                 });
             }
+
+            document.querySelectorAll('.btn-ver-seguimiento').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const orderId = Number(e.currentTarget.dataset.orderId);
+                    const pedido = orders.find((o) => o.id === orderId);
+                    if (!pedido) return;
+
+                    showView('trackingView');
+                    startOrderTracking(pedido.Transaction?.metodo_pago, pedido);
+                });
+            });
 
             // Asignar order ID al modal de reseñas para los elementos de esta página
             document.querySelectorAll('.btn-leave-review').forEach(btn => {
