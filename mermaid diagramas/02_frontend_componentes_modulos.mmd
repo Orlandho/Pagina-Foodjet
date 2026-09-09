@@ -1,0 +1,39 @@
+graph TD
+    subgraph HTML["index.html (SPA Entrypoint)"]
+        VHome["#homeView (Catálogo y Filtros)"]
+        VCheckout["#checkoutView (Resumen y Pago)"]
+        VTracking["#trackingView (Línea de Tiempo)"]
+        VHistory["#orderHistoryView (Historial y Reseñas)"]
+        VDashboard["#dashboardView (Panel Operaciones Admin)"]
+        OffCart["#cartOffcanvas (Carrito Lateral)"]
+        OffFav["#favoritesOffcanvas (Favoritos)"]
+        Modals["Modales (Login, Registro, Mi Cuenta, QR, Calificación)"]
+    end
+
+    subgraph CoreJS["Lógica de Aplicación Frontend"]
+        App["app.js (Orquestador Principal)"]
+        Legacy["legacy.js (Auth, Sesión y Panel Admin)"]
+        State["state.js (Almacén de Estado en Memoria)"]
+        UI["ui.js (Renderizado e Interacción DOM)"]
+        API["api.js (Cliente HTTP Fetch)"]
+    end
+
+    subgraph DomainJS["Lógica Pura de Dominio (frontend/js/domain)"]
+        CatalogDom["catalog.js (Totales, Restricción Monorrestaurante)"]
+        PaymentDom["payment.js (Validación Luhn, Formato Tarjeta)"]
+        CheckoutDom["checkout.js (Construcción Payload de Orden)"]
+        StatusDom["orderStatus.js (ViewModel de Seguimiento)"]
+    end
+
+    HTML --> App
+    HTML --> Legacy
+    App --> UI
+    App --> State
+    App --> API
+    App --> DomainJS
+    Legacy --> API
+    Legacy --> UI
+    State --> CatalogDom
+    UI --> StatusDom
+    UI --> PaymentDom
+    API -->|"Peticiones HTTP /api"| BackendProxy["Proxy Caddy (/api)"]

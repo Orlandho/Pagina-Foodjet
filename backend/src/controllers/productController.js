@@ -24,7 +24,7 @@ exports.getAllProducts = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
     try {
-        const { restaurante_id, nombre, descripcion, precio, imagen_url, disponibilidad } = req.body;
+        const { restaurante_id, nombre, descripcion, precio, imagen_url, disponibilidad, tipo_comida, descuento_estudiante } = req.body;
 
         const newProduct = await prisma.product.create({
             data: {
@@ -34,6 +34,8 @@ exports.createProduct = async (req, res) => {
                 precio: parseFloat(precio),
                 imagen_url,
                 disponibilidad: disponibilidad !== undefined ? disponibilidad : true,
+                tipo_comida: tipo_comida || 'General',
+                descuento_estudiante: descuento_estudiante !== undefined ? parseFloat(descuento_estudiante) : 0.0
             }
         });
 

@@ -1,0 +1,40 @@
+flowchart TB
+    subgraph Internet["Acceso Externo"]
+        User["Usuario / Navegador Web"]
+        CF["Cloudflare Edge Network"]
+    end
+
+    subgraph DockerHost["Entorno Docker Compose (Host: 8081 / 5433 / 3000)"]
+        subgraph TunelContainer["Contenedor: foodjet-tunel (cloudflared)"]
+            CFTunnel["Cloudflare Tunnel Client"]
+        end
+
+        subgraph ProxyContainer["Contenedor: foodjet-web (Caddy 2)"]
+            Proxy["Caddy Reverse Proxy"]
+            StaticFiles["Frontend Estático (/srv: HTML, JS, CSS)"]
+        end
+
+        subgraph APIContainer["Contenedor: foodjet-api (Node.js Express)"]
+            Express["Servidor Express :3000"]
+            Middlewares["Middlewares (CORS, JWT Auth, RBAC)"]
+            Controllers["Controladores REST (/api/*)"]
+            Domain["Reglas de Dominio Puras"]
+            Prisma["Prisma ORM"]
+            Jobs["Cron Jobs (Simulador & Auto-cancelación)"]
+        end
+
+        subgraph DBContainer["Contenedor: foodjet-db (PostgreSQL 16)"]
+            Postgres[("Base de Datos: FoodjetBackend")]
+        end
+    end
+
+    User -->|"HTTP http://localhost:8081"| Proxy
+    User -.->|"HTTPS https://foodjet.asen.pe"| CF
+    CF --> CFTunnel
+    CFTunnel -->|"HTTP proxy:80"| Proxy
+
+    Proxy -->|"Rutas estáticas / /js/* /css/*"| StaticFiles
+    Proxy -->|"Reenvío /api/*"| Express
+
+    Express --> Middlewares --> Controllers --> Domain --> Prisma --> Postgres
+    Jobs -->|"Actualizaciones periódicas"| Prisma

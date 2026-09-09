@@ -1,0 +1,135 @@
+erDiagram
+    User ||--o{ DeliveryAddress : "posee"
+    User ||--o{ Order : "realiza (cliente)"
+    User ||--o{ Order : "entrega (repartidor)"
+    User ||--o{ Review : "escribe"
+    User ||--o{ SupportTicket : "reporta"
+    User ||--o{ SupportMessage : "envía"
+    User }o--o{ Product : "favoritos (UserFavoriteProducts)"
+
+    Restaurant ||--o{ Product : "ofrece"
+    Restaurant ||--o{ Order : "recibe"
+    Restaurant ||--o{ Review : "recibe"
+
+    Order ||--|{ OrderItem : "contiene"
+    Order ||--o| Transaction : "registra pago"
+    Order ||--o| Review : "recibe calificación"
+    Order }o--|| DeliveryAddress : "se envía a"
+    Order }o--o| DiscountCoupon : "aplica"
+    Order ||--o{ SupportTicket : "genera incidente"
+
+    Product ||--o{ OrderItem : "incluido en"
+    SupportTicket ||--|{ SupportMessage : "contiene"
+
+    User {
+        int id PK
+        string nombre
+        string email UK
+        string password
+        string telefono
+        string rol
+        boolean es_estudiante
+        datetime createdAt
+    }
+
+    DeliveryAddress {
+        int id PK
+        int usuario_id FK
+        string direccion_detallada
+        string referencia
+        float latitud
+        float longitud
+        boolean es_predeterminada
+    }
+
+    Restaurant {
+        int id PK
+        string nombre
+        string descripcion
+        string estado_afiliacion
+        string tiempo_entrega
+        float calificacion_promedio
+        string qr_pago
+    }
+
+    Product {
+        int id PK
+        int restaurante_id FK
+        string nombre
+        string descripcion
+        float precio
+        string tipo_comida
+        string imagen_url
+        float descuento_estudiante
+        boolean disponibilidad
+    }
+
+    Order {
+        int id PK
+        int user_id FK
+        int restaurante_id FK
+        int direccion_entrega_id FK
+        int repartidor_id FK
+        int cupon_id FK
+        float total
+        float impuestos
+        float costo_envio
+        string estado
+        datetime fecha
+    }
+
+    OrderItem {
+        int id PK
+        int order_id FK
+        int product_id FK
+        int cantidad
+        float precio_unitario
+    }
+
+    Transaction {
+        int id PK
+        int pedido_id FK,UK
+        string metodo_pago
+        float monto
+        string estado_pago
+        datetime fecha_transaccion
+    }
+
+    DiscountCoupon {
+        int id PK
+        string codigo UK
+        float porcentaje_descuento
+        float monto_maximo
+        datetime fecha_expiracion
+        string estado
+    }
+
+    Review {
+        int id PK
+        int usuario_id FK
+        int restaurante_id FK
+        int pedido_id FK,UK
+        int puntuacion
+        string comentario
+        datetime fecha_publicacion
+    }
+
+    SupportTicket {
+        int id PK
+        int usuario_id FK
+        int pedido_id FK
+        int agente_soporte_id FK
+        string asunto
+        string descripcion_problema
+        string estado
+        datetime fecha_apertura
+        datetime fecha_cierre
+    }
+
+    SupportMessage {
+        int id PK
+        int ticket_id FK
+        int emisor_id FK
+        string mensaje
+        datetime fecha_envio
+    }

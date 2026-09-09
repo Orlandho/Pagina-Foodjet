@@ -1,0 +1,17 @@
+stateDiagram-v2
+    [*] --> Pendiente: Pago en Efectivo (cash)
+    [*] --> Confirmado: Pago con Tarjeta (card) o Billetera (wallet)
+
+    Pendiente --> Confirmado: Pago validado / Admin confirma
+    Pendiente --> Cancelado: Cliente cancela o CronJob auto-cancela (> 30 min)
+
+    Confirmado --> En_Preparacion: Cocina inicia preparación
+    Confirmado --> Cancelado: Cliente cancela antes de cocina
+
+    En_Preparacion --> En_Camino: Repartidor recoge el pedido
+    note right of En_Preparacion: Bloqueo - YA NO se puede cancelar
+
+    En_Camino --> Entregado: Repartidor entrega al cliente
+
+    Entregado --> [*]: Estado terminal (Permite reseña)
+    Cancelado --> [*]: Estado terminal (Sin avance)
