@@ -27,3 +27,7 @@ Feature: CP-02 Adición de Productos al Carrito
   Scenario: UT-CART-005 Un carrito vacio no tiene restaurante asociado
     Given el estado inicial del carrito es vacio
     Then el carrito no tiene restaurante asociado
+
+  Scenario: UT-CART-006 El conteo de articulos suma las cantidades
+    Given el estado inicial del carrito tiene el producto 1 con cantidad 3 del restaurante_id 10
+    Then el carrito tiene 3 articulos

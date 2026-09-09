@@ -129,6 +129,7 @@ async function seedOrders() {
         {
             id: 1, user_id: 2, restaurante_id: 1, direccion_entrega_id: 1,
             estado: 'entregado', costo_envio: 5.0, impuestos: 2.79, total: 23.29,
+            pago: { metodo_pago: 'card', estado_pago: 'completado' },
             items: [
                 { id: 1, product_id: 1, cantidad: 1, precio_unitario: 8.5 },
                 { id: 2, product_id: 5, cantidad: 1, precio_unitario: 7.0 }
@@ -137,6 +138,7 @@ async function seedOrders() {
         {
             id: 2, user_id: 3, restaurante_id: 2, direccion_entrega_id: 2,
             estado: 'en_preparacion', costo_envio: 5.0, impuestos: 2.52, total: 21.52,
+            pago: { metodo_pago: 'wallet', estado_pago: 'completado' },
             items: [
                 { id: 3, product_id: 2, cantidad: 1, precio_unitario: 12.0 },
                 { id: 4, product_id: 6, cantidad: 1, precio_unitario: 2.0 }
@@ -144,13 +146,21 @@ async function seedOrders() {
         }
     ];
 
-    for (const { items, ...pedido } of pedidos) {
+    for (const { items, pago, ...pedido } of pedidos) {
         await prisma.order.upsert({ where: { id: pedido.id }, update: pedido, create: pedido });
 
         for (const item of items) {
             const fila = { ...item, order_id: pedido.id };
             await prisma.orderItem.upsert({ where: { id: item.id }, update: fila, create: fila });
         }
+
+        // Sin transacción el historial no puede mostrar con qué se pagó.
+        const transaccion = { ...pago, pedido_id: pedido.id, monto: pedido.total };
+        await prisma.transaction.upsert({
+            where: { pedido_id: pedido.id },
+            update: transaccion,
+            create: transaccion
+        });
     }
     return pedidos.length;
 }

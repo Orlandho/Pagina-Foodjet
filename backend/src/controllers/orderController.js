@@ -162,6 +162,8 @@ exports.getMyOrders = async (req, res) => {
                     }
                 },
                 Review: true,
+                // Sin la transacción el historial no puede decir con qué se pagó.
+                Transaction: true,
                 OrderItem: {
                     include: {
                         Product: true

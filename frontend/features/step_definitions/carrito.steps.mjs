@@ -81,3 +81,7 @@ Then('el restaurante del carrito se llama {string}', function (nombre) {
 Then('el carrito no tiene restaurante asociado', function () {
     expect(getCartRestaurant(state.getCart(), state.getProductById)).to.equal(null);
 });
+
+Then('el carrito tiene {int} articulos', function (cantidad) {
+    expect(state.getCartItemCount()).to.equal(cantidad);
+});

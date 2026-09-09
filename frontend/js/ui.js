@@ -108,6 +108,17 @@ function mensajeRestauranteDistinto() {
         : 'Solo puedes agregar productos de un mismo restaurante al pedido.';
 }
 
+/** Nombre legible del método de pago guardado en la transacción. */
+function etiquetaMetodoPago(metodo) {
+    const etiquetas = { cash: 'Efectivo', card: 'Tarjeta', wallet: 'Billetera digital (Yape/Plin)' };
+    return etiquetas[metodo] || 'No registrado';
+}
+
+function etiquetaEstadoPago(estado) {
+    const etiquetas = { pendiente: 'Pendiente de cobro', completado: 'Pagado' };
+    return etiquetas[estado] || 'No registrado';
+}
+
 // RENDERIZADO DE PRODUCTOS EN EL INICIO
 export function renderProducts() {
     const products = state.getProducts();
@@ -356,7 +367,12 @@ export function renderCartOffcanvas() {
     const checkoutBtn = document.getElementById('checkoutBtn');
     const cartFooter = document.getElementById('cartFooter');
     const emptyCart = document.getElementById('emptyCart');
-    const cartCountBadge = document.getElementById('cartCount') || document.getElementById('cartItemCount');
+    // Son DOS insignias: la de la barra superior y la del propio panel. Con un
+    // || solo se actualizaba la primera, así que la del panel se quedaba
+    // clavada en 0 aunque el carrito tuviera productos.
+    const cartCountBadges = ['cartCount', 'cartItemCount']
+        .map((id) => document.getElementById(id))
+        .filter(Boolean);
 
     if (!cartItemsContainer || !cartTotalElement) return;
 
@@ -369,10 +385,12 @@ export function renderCartOffcanvas() {
         if (cartFooter) cartFooter.style.display = 'none';
         if (emptyCart) emptyCart.style.display = 'block';
 
-        if (cartCountBadge) {
-            cartCountBadge.textContent = '0';
-            cartCountBadge.style.display = 'none';
-        }
+        cartCountBadges.forEach((badge) => {
+            badge.textContent = '0';
+            // La del panel acompaña al título y debe verse siempre; la de la
+            // barra superior solo cuando hay algo dentro.
+            if (badge.id === 'cartCount') badge.style.display = 'none';
+        });
         return;
     }
 
@@ -419,10 +437,10 @@ export function renderCartOffcanvas() {
     cartTotalElement.textContent = `S/ ${total.toFixed(2)}`;
 
     const count = state.getCartItemCount();
-    if (cartCountBadge) {
-        cartCountBadge.textContent = count.toString();
-        cartCountBadge.style.display = count > 0 ? 'inline-flex' : 'none';
-    }
+    cartCountBadges.forEach((badge) => {
+        badge.textContent = count.toString();
+        if (badge.id === 'cartCount') badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    });
 
     // Event listeners
     document.querySelectorAll('.plus-btn').forEach(btn => {
@@ -748,7 +766,9 @@ export async function renderOrderHistory() {
                     `;
                 }
 
-                const itemsArray = order.items || [];
+                // Prisma devuelve la relación como OrderItem; 'items' no existe, y
+                // por eso el historial siempre decía "No hay detalles de artículos".
+                const itemsArray = order.OrderItem || order.items || [];
                 const itemsHtml = itemsArray.map(item => {
                     const nombreProd = item.producto?.nombre || item.Product?.nombre || item.Producto?.nombre || 'Producto Desconocido';
                     const precioStr = item.precio_unitario || item.precio || 0;
@@ -758,7 +778,7 @@ export async function renderOrderHistory() {
                                 <span class="badge bg-light text-dark border me-2">${item.cantidad || 1}x</span>
                                 ${nombreProd}
                             </span>
-                            <span class="text-muted">S/ ${precioStr}</span>
+                            <span class="text-muted">S/ ${Number(precioStr).toFixed(2)}</span>
                         </li>
                     `;
                 }).join('');
@@ -768,7 +788,7 @@ export async function renderOrderHistory() {
                 card.innerHTML = `
                     <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="fw-bold text-primary">Pedido #${String(order.id || '000').substring(0,8)}...</span>
+                            <span class="fw-bold text-primary">Pedido #FJ${String(order.id || 0).padStart(4, '0')}</span>
                             <small class="text-muted d-block mt-1"><i class="bi bi-calendar3 me-1"></i>${date}</small>
                         </div>
                         <span class="badge rounded-pill ${statusColor} px-3 py-2"><i class="bi ${statusIcon} me-1"></i>${badge.label.toUpperCase()}</span>
@@ -784,16 +804,29 @@ export async function renderOrderHistory() {
                             <div class="col-md-4 mt-3 mt-md-0 border-start ps-md-4">
                                 <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">Resumen</h6>
                                 <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span>Restaurante</span>
+                                    <span>${order.Restaurant?.nombre || '-'}</span>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span>Método de pago</span>
+                                    <span>${etiquetaMetodoPago(order.Transaction?.metodo_pago)}</span>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span>Estado del pago</span>
+                                    <span>${etiquetaEstadoPago(order.Transaction?.estado_pago)}</span>
+                                </div>
+                                <hr class="my-2">
+                                <div class="d-flex justify-content-between small text-muted mb-1">
                                     <span>Subtotal</span>
                                     <span>S/ ${deriveSubtotal(order).toFixed(2)}</span>
                                 </div>
                                 <div class="d-flex justify-content-between small text-muted mb-1">
                                     <span>IGV (18%)</span>
-                                    <span>S/ ${order.impuestos || '0.00'}</span>
+                                    <span>S/ ${Number(order.impuestos || 0).toFixed(2)}</span>
                                 </div>
                                 <div class="d-flex justify-content-between small text-muted mb-1">
                                     <span>Envío</span>
-                                    <span>S/ ${order.costo_envio || '0.00'}</span>
+                                    <span>S/ ${Number(order.costo_envio || 0).toFixed(2)}</span>
                                 </div>
                                 ${(parseFloat(order.descuento) > 0) ? `
                                     <div class="d-flex justify-content-between small text-success mb-1">
@@ -804,7 +837,7 @@ export async function renderOrderHistory() {
                                 <hr class="my-2">
                                 <div class="d-flex justify-content-between fw-bold fs-5 text-dark">
                                     <span>Total</span>
-                                    <span>S/ ${order.total || '0.00'}</span>
+                                    <span>S/ ${Number(order.total || 0).toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
