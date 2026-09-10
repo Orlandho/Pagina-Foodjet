@@ -53,9 +53,9 @@ async function seedUsers() {
 
 async function seedRestaurants() {
     const restaurantes = [
-        { id: 1, nombre: 'Burger King', descripcion: 'Las mejores hamburguesas a la parrilla', estado_afiliacion: 'activo', calificacion_promedio: 4.5, qr_pago: QR_POR_RESTAURANTE[1], tiempo_entrega: '30 minutos' },
-        { id: 2, nombre: 'Pizza Hut', descripcion: 'Pizzas recién horneadas con los mejores ingredientes', estado_afiliacion: 'activo', calificacion_promedio: 4.2, qr_pago: QR_POR_RESTAURANTE[2], tiempo_entrega: '1 hora' },
-        { id: 3, nombre: 'Sushi Club', descripcion: 'El sushi más fresco y delicioso de la ciudad', estado_afiliacion: 'activo', calificacion_promedio: 4.8, qr_pago: QR_POR_RESTAURANTE[3], tiempo_entrega: 'Más de 1 hora' }
+        { id: 1, nombre: 'Burger King', descripcion: 'Las mejores hamburguesas a la parrilla', direccion: 'Av. Larco 345, Miraflores', latitud: -12.1219, longitud: -77.0297, estado_afiliacion: 'activo', calificacion_promedio: 4.5, qr_pago: QR_POR_RESTAURANTE[1], tiempo_entrega: '30 minutos' },
+        { id: 2, nombre: 'Pizza Hut', descripcion: 'Pizzas recién horneadas con los mejores ingredientes', direccion: 'Av. Arequipa 4545, Miraflores', latitud: -12.1114, longitud: -77.0325, estado_afiliacion: 'activo', calificacion_promedio: 4.2, qr_pago: QR_POR_RESTAURANTE[2], tiempo_entrega: '1 hora' },
+        { id: 3, nombre: 'Sushi Club', descripcion: 'El sushi más fresco y delicioso de la ciudad', direccion: 'Av. Conquistadores 500, San Isidro', latitud: -12.0977, longitud: -77.0365, estado_afiliacion: 'activo', calificacion_promedio: 4.8, qr_pago: QR_POR_RESTAURANTE[3], tiempo_entrega: 'Más de 1 hora' }
     ];
 
     for (const r of restaurantes) {
@@ -97,8 +97,8 @@ async function seedProducts() {
 
 async function seedAddresses() {
     const direcciones = [
-        { id: 1, usuario_id: 2, direccion_detallada: 'Av. Principal 123', referencia: 'Cerca al parque', es_predeterminada: true },
-        { id: 2, usuario_id: 3, direccion_detallada: 'Calle Secundaria 456', referencia: 'Edificio rojo, piso 3', es_predeterminada: true }
+        { id: 1, usuario_id: 2, direccion_detallada: 'Av. Principal 123, Miraflores', referencia: 'Cerca al parque', latitud: -12.1310, longitud: -77.0220, es_predeterminada: true },
+        { id: 2, usuario_id: 3, direccion_detallada: 'Calle Secundaria 456, San Isidro', referencia: 'Edificio rojo, piso 3', latitud: -12.0920, longitud: -77.0510, es_predeterminada: true }
     ];
 
     for (const d of direcciones) {

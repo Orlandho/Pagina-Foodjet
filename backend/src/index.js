@@ -11,6 +11,7 @@ const reviewRoutes = require('./routes/reviewRoutes');
 
 const userRoutes = require('./routes/userRoutes');
 const addressRoutes = require('./routes/addressRoutes');
+const restaurantRoutes = require('./routes/restaurantRoutes');
 const { startJobs } = require('./jobs/orderJobs');
 const app = express();
 
@@ -27,6 +28,7 @@ app.use('/api/favorites', favoriteRoutes);
 
 app.use('/api/users', userRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/restaurants', restaurantRoutes);
 // Manejo de errores global
 app.use((err, req, res, next) => {
     console.error(err.stack);
