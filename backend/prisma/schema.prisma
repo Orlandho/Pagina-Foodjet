@@ -47,6 +47,18 @@ model Order {
   costo_envio                    Float           @default(0.0)
   estado                         String          @default("Pendiente")
   fecha                          DateTime        @default(now())
+  /// Momento en que el pedido salió a reparto. Sirve de origen para calcular
+  /// por dónde va el repartidor y cuánto le queda.
+  envio_iniciado_en              DateTime?
+  /// Ruta del local a la dirección de entrega, como lista de [lat, lon].
+  /// Se calcula una sola vez al salir a reparto y se guarda, para que la
+  /// simulación no dependa de que el servicio de rutas siga disponible.
+  ruta                           Json?
+  distancia_metros               Float?
+  eta_minutos                    Int?
+  /// Posición actual del repartidor, que avanza a lo largo de la ruta.
+  repartidor_lat                 Float?
+  repartidor_lon                 Float?
   DiscountCoupon                 DiscountCoupon? @relation(fields: [cupon_id], references: [id])
   DeliveryAddress                DeliveryAddress @relation(fields: [direccion_entrega_id], references: [id])
   User_Order_repartidor_idToUser User?           @relation("Order_repartidor_idToUser", fields: [repartidor_id], references: [id])
@@ -87,6 +99,9 @@ model Restaurant {
   id                    Int       @id @default(autoincrement())
   nombre                String
   descripcion           String?
+  direccion             String?
+  latitud               Float?
+  longitud              Float?
   estado_afiliacion     String    @default("pendiente")
   tiempo_entrega        String?   @default("30 minutos")
   calificacion_promedio Float?    @default(0.0)
