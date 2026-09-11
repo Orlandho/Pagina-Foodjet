@@ -91,3 +91,17 @@ export function calculateCartTotal(cart, getProductById, user) {
 export function getProductRestaurant(product) {
     return product?.Restaurant || product?.restaurante || null;
 }
+
+/**
+ * Restaurante al que quedó atado el carrito, o null si está vacío.
+ *
+ * El pedido solo puede ser de un restaurante, así que el primer producto
+ * añadido fija cuál. Saberlo permite explicar el rechazo en vez de soltar una
+ * regla abstracta.
+ */
+export function getCartRestaurant(cart, getProductById) {
+    const primeraClave = Object.keys(cart || {})[0];
+    if (primeraClave === undefined) return null;
+
+    return getProductRestaurant(getProductById(primeraClave));
+}

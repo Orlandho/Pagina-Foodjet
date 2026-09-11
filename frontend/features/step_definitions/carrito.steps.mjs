@@ -1,6 +1,7 @@
 import { Given, When, Then } from '@cucumber/cucumber';
 import { expect } from 'chai';
 import * as state from '../../js/state.js';
+import { getCartRestaurant } from '../../js/domain/catalog.js';
 
 // Se prueba la addToCart real de js/state.js, no una copia.
 
@@ -12,7 +13,13 @@ Given('el estado inicial del carrito es vacio', function () {
 Given(
     'el estado inicial del carrito tiene el producto {int} con cantidad {int} del restaurante_id {int}',
     function (productId, cantidad, restauranteId) {
-        state.setProducts([{ id: productId, disponibilidad: true, restaurante_id: restauranteId, precio: 10 }]);
+        state.setProducts([{
+            id: productId,
+            disponibilidad: true,
+            restaurante_id: restauranteId,
+            precio: 10,
+            Restaurant: { id: restauranteId, nombre: 'Burger King' }
+        }]);
 
         for (let i = 0; i < cantidad; i++) {
             state.addToCart(productId);
@@ -65,4 +72,16 @@ Then('el objeto cart no sufre modificaciones y mantiene solo el producto {int}',
 Then('la funcion retorna success false y error {string}', function (error) {
     expect(this.resultado.success).to.equal(false);
     expect(this.resultado.error).to.equal(error);
+});
+
+Then('el restaurante del carrito se llama {string}', function (nombre) {
+    expect(getCartRestaurant(state.getCart(), state.getProductById)?.nombre).to.equal(nombre);
+});
+
+Then('el carrito no tiene restaurante asociado', function () {
+    expect(getCartRestaurant(state.getCart(), state.getProductById)).to.equal(null);
+});
+
+Then('el carrito tiene {int} articulos', function (cantidad) {
+    expect(state.getCartItemCount()).to.equal(cantidad);
 });

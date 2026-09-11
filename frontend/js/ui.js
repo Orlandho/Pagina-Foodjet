@@ -3,6 +3,7 @@ import * as api from './api.js';
 import {
     getTrackingViewModel,
     normalizeEstado,
+    isTerminal,
     isLineCompleted,
     getEstadoBadge,
     deriveSubtotal,
@@ -13,7 +14,8 @@ import {
     renderProductPrice,
     parseDeliveryTime,
     filterProducts,
-    getProductRestaurant
+    getProductRestaurant,
+    getCartRestaurant
 } from './domain/catalog.js';
 
 // UTILIDADES GENERALES DE UI
@@ -40,6 +42,20 @@ export function showToast(message, type = 'success') {
         document.body.appendChild(toastContainer);
     }
 
+    // Si el mismo aviso ya está en pantalla no se apila otro: al intentar
+    // añadir varios productos de otro restaurante se acumulaban seis mensajes
+    // idénticos que tapaban la página. Se reinicia el temporizador del que ya
+    // hay para que siga visible.
+    const yaVisible = Array.from(toastContainer.querySelectorAll('.toast'))
+        .find((t) => t.dataset.mensaje === message);
+
+    if (yaVisible) {
+        // eslint-disable-next-line no-undef
+        bootstrap.Toast.getOrCreateInstance(yaVisible, { delay: 3000 }).show();
+        return;
+    }
+
+    toast.dataset.mensaje = message;
     toastContainer.appendChild(toast);
 
     // eslint-disable-next-line no-undef
@@ -76,6 +92,32 @@ export function showView(viewToShowId) {
     if (viewToShowId !== 'trackingView') {
         stopOrderTracking();
     }
+}
+
+/**
+ * Explica por qué se rechazó el producto nombrando el restaurante del carrito.
+ *
+ * QA reportó que el rechazo parecía arbitrario: el mensaje enunciaba la regla
+ * pero las tarjetas no decían de qué restaurante era cada producto, así que no
+ * había forma de saber cuál era el conflicto.
+ */
+function mensajeRestauranteDistinto() {
+    const restaurante = getCartRestaurant(state.getCart(), state.getProductById);
+
+    return restaurante?.nombre
+        ? `Tu pedido es de ${restaurante.nombre}. Vacía el carrito para pedir de otro restaurante.`
+        : 'Solo puedes agregar productos de un mismo restaurante al pedido.';
+}
+
+/** Nombre legible del método de pago guardado en la transacción. */
+function etiquetaMetodoPago(metodo) {
+    const etiquetas = { cash: 'Efectivo', card: 'Tarjeta', wallet: 'Billetera digital (Yape/Plin)' };
+    return etiquetas[metodo] || 'No registrado';
+}
+
+function etiquetaEstadoPago(estado) {
+    const etiquetas = { pendiente: 'Pendiente de cobro', completado: 'Pagado' };
+    return etiquetas[estado] || 'No registrado';
 }
 
 // RENDERIZADO DE PRODUCTOS EN EL INICIO
@@ -142,10 +184,13 @@ export function renderProducts() {
                 </div>
                 <img src="${product.imagen_url}" class="card-img-top" alt="${product.nombre}" style="height: 200px; object-fit: cover;">
                 <div class="card-body d-flex flex-column">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
                         <h5 class="card-title mb-0 fw-bold">${product.nombre}</h5>
-                        <span class="badge bg-light text-dark shadow-sm border"><i class="bi bi-clock me-1"></i>${product.Restaurant.tiempo_entrega} min</span>
+                        <span class="badge bg-light text-dark shadow-sm border"><i class="bi bi-clock me-1"></i>${product.Restaurant.tiempo_entrega}</span>
                     </div>
+                    <p class="card-text text-muted small mb-2">
+                        <i class="bi bi-shop me-1" aria-hidden="true"></i>${product.Restaurant?.nombre || 'Restaurante'}
+                    </p>
                     <p class="card-text text-muted small flex-grow-1">${product.descripcion || 'Delicioso plato preparado con los mejores ingredientes.'}</p>
                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
                         <div class="price-container">
@@ -174,7 +219,7 @@ export function renderProducts() {
                 cartOffcanvas.show();
             } else {
                 if (result.error === 'DIFFERENT_RESTAURANT') {
-                    showToast('Solo puedes agregar productos de un mismo restaurante al pedido.', 'warning');
+                    showToast(mensajeRestauranteDistinto(), 'warning');
                 } else if (result.error === 'UNAVAILABLE') {
                     showToast('Este producto no está disponible.', 'warning');
                 }
@@ -306,7 +351,7 @@ export function renderFavoritesOffcanvas() {
                 cartOffcanvas.show();
             } else {
                 if (result.error === 'DIFFERENT_RESTAURANT') {
-                    showToast('Solo puedes agregar productos de un mismo restaurante al pedido.', 'warning');
+                    showToast(mensajeRestauranteDistinto(), 'warning');
                 } else if (result.error === 'UNAVAILABLE') {
                     showToast('Este producto no está disponible.', 'warning');
                 }
@@ -323,7 +368,12 @@ export function renderCartOffcanvas() {
     const checkoutBtn = document.getElementById('checkoutBtn');
     const cartFooter = document.getElementById('cartFooter');
     const emptyCart = document.getElementById('emptyCart');
-    const cartCountBadge = document.getElementById('cartCount') || document.getElementById('cartItemCount');
+    // Son DOS insignias: la de la barra superior y la del propio panel. Con un
+    // || solo se actualizaba la primera, así que la del panel se quedaba
+    // clavada en 0 aunque el carrito tuviera productos.
+    const cartCountBadges = ['cartCount', 'cartItemCount']
+        .map((id) => document.getElementById(id))
+        .filter(Boolean);
 
     if (!cartItemsContainer || !cartTotalElement) return;
 
@@ -336,10 +386,12 @@ export function renderCartOffcanvas() {
         if (cartFooter) cartFooter.style.display = 'none';
         if (emptyCart) emptyCart.style.display = 'block';
 
-        if (cartCountBadge) {
-            cartCountBadge.textContent = '0';
-            cartCountBadge.style.display = 'none';
-        }
+        cartCountBadges.forEach((badge) => {
+            badge.textContent = '0';
+            // La del panel acompaña al título y debe verse siempre; la de la
+            // barra superior solo cuando hay algo dentro.
+            if (badge.id === 'cartCount') badge.style.display = 'none';
+        });
         return;
     }
 
@@ -386,10 +438,10 @@ export function renderCartOffcanvas() {
     cartTotalElement.textContent = `S/ ${total.toFixed(2)}`;
 
     const count = state.getCartItemCount();
-    if (cartCountBadge) {
-        cartCountBadge.textContent = count.toString();
-        cartCountBadge.style.display = count > 0 ? 'inline-flex' : 'none';
-    }
+    cartCountBadges.forEach((badge) => {
+        badge.textContent = count.toString();
+        if (badge.id === 'cartCount') badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    });
 
     // Event listeners
     document.querySelectorAll('.plus-btn').forEach(btn => {
@@ -689,8 +741,24 @@ export async function renderOrderHistory() {
                 const estadoStr = normalizeEstado(order.estado) || 'pendiente';
 
                 // Reseñas
+                // Al seguimiento solo se llegaba justo despues de comprar: si el
+                // usuario salia de la vista, no habia forma de volver. Desde aqui
+                // puede retomar el de cualquier pedido que siga en curso.
+                const seguimientoHtml = isTerminal(estadoStr)
+                    ? ''
+                    : `
+                        <button class="btn btn-sm btn-outline-primary mt-3 me-2 btn-ver-seguimiento"
+                            data-order-id="${order.id}">
+                            <i class="bi bi-geo-alt-fill me-1" aria-hidden="true"></i>Ver seguimiento
+                        </button>
+                    `;
+
                 let reviewHtml = '';
-                if (estadoStr === 'entregado' && (!order.reviews || order.reviews.length === 0)) {
+                // La relación se llama Review y es uno a uno: 'reviews' no existe,
+                // así que el botón salía incluso en pedidos ya reseñados.
+                const resena = order.Review || (Array.isArray(order.reviews) ? order.reviews[0] : null);
+
+                if (estadoStr === 'entregado' && !resena) {
                     reviewHtml = `
                         <button class="btn btn-sm btn-outline-warning mt-3 btn-leave-review"
                             data-bs-toggle="modal" data-bs-target="#reviewModal"
@@ -698,8 +766,8 @@ export async function renderOrderHistory() {
                             <i class="bi bi-star-fill me-1"></i>Dejar una Reseña
                         </button>
                     `;
-                } else if (order.reviews && order.reviews.length > 0) {
-                    const r = order.reviews[0];
+                } else if (resena) {
+                    const r = resena;
                     let stars = '';
                     for(let i=1; i<=5; i++) {
                         stars += `<i class="bi bi-star${i<=r.puntuacion?'-fill text-warning':''} me-1"></i>`;
@@ -715,7 +783,9 @@ export async function renderOrderHistory() {
                     `;
                 }
 
-                const itemsArray = order.items || [];
+                // Prisma devuelve la relación como OrderItem; 'items' no existe, y
+                // por eso el historial siempre decía "No hay detalles de artículos".
+                const itemsArray = order.OrderItem || order.items || [];
                 const itemsHtml = itemsArray.map(item => {
                     const nombreProd = item.producto?.nombre || item.Product?.nombre || item.Producto?.nombre || 'Producto Desconocido';
                     const precioStr = item.precio_unitario || item.precio || 0;
@@ -725,7 +795,7 @@ export async function renderOrderHistory() {
                                 <span class="badge bg-light text-dark border me-2">${item.cantidad || 1}x</span>
                                 ${nombreProd}
                             </span>
-                            <span class="text-muted">S/ ${precioStr}</span>
+                            <span class="text-muted">S/ ${Number(precioStr).toFixed(2)}</span>
                         </li>
                     `;
                 }).join('');
@@ -735,7 +805,7 @@ export async function renderOrderHistory() {
                 card.innerHTML = `
                     <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="fw-bold text-primary">Pedido #${String(order.id || '000').substring(0,8)}...</span>
+                            <span class="fw-bold text-primary">Pedido #FJ${String(order.id || 0).padStart(4, '0')}</span>
                             <small class="text-muted d-block mt-1"><i class="bi bi-calendar3 me-1"></i>${date}</small>
                         </div>
                         <span class="badge rounded-pill ${statusColor} px-3 py-2"><i class="bi ${statusIcon} me-1"></i>${badge.label.toUpperCase()}</span>
@@ -751,16 +821,29 @@ export async function renderOrderHistory() {
                             <div class="col-md-4 mt-3 mt-md-0 border-start ps-md-4">
                                 <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">Resumen</h6>
                                 <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span>Restaurante</span>
+                                    <span>${order.Restaurant?.nombre || '-'}</span>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span>Método de pago</span>
+                                    <span>${etiquetaMetodoPago(order.Transaction?.metodo_pago)}</span>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span>Estado del pago</span>
+                                    <span>${etiquetaEstadoPago(order.Transaction?.estado_pago)}</span>
+                                </div>
+                                <hr class="my-2">
+                                <div class="d-flex justify-content-between small text-muted mb-1">
                                     <span>Subtotal</span>
                                     <span>S/ ${deriveSubtotal(order).toFixed(2)}</span>
                                 </div>
                                 <div class="d-flex justify-content-between small text-muted mb-1">
                                     <span>IGV (18%)</span>
-                                    <span>S/ ${order.impuestos || '0.00'}</span>
+                                    <span>S/ ${Number(order.impuestos || 0).toFixed(2)}</span>
                                 </div>
                                 <div class="d-flex justify-content-between small text-muted mb-1">
                                     <span>Envío</span>
-                                    <span>S/ ${order.costo_envio || '0.00'}</span>
+                                    <span>S/ ${Number(order.costo_envio || 0).toFixed(2)}</span>
                                 </div>
                                 ${(parseFloat(order.descuento) > 0) ? `
                                     <div class="d-flex justify-content-between small text-success mb-1">
@@ -771,11 +854,11 @@ export async function renderOrderHistory() {
                                 <hr class="my-2">
                                 <div class="d-flex justify-content-between fw-bold fs-5 text-dark">
                                     <span>Total</span>
-                                    <span>S/ ${order.total || '0.00'}</span>
+                                    <span>S/ ${Number(order.total || 0).toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
-                        ${reviewHtml}
+                        ${seguimientoHtml}${reviewHtml}
                     </div>
                 `;
                 container.appendChild(card);
@@ -828,6 +911,17 @@ export async function renderOrderHistory() {
                     });
                 });
             }
+
+            document.querySelectorAll('.btn-ver-seguimiento').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const orderId = Number(e.currentTarget.dataset.orderId);
+                    const pedido = orders.find((o) => o.id === orderId);
+                    if (!pedido) return;
+
+                    showView('trackingView');
+                    startOrderTracking(pedido.Transaction?.metodo_pago, pedido);
+                });
+            });
 
             // Asignar order ID al modal de reseñas para los elementos de esta página
             document.querySelectorAll('.btn-leave-review').forEach(btn => {

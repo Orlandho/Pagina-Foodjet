@@ -13,6 +13,20 @@ function checkExistingSession() {
     // leerlo, así que window.authToken era undefined en un arranque en frío y
     // la sesión se perdía al recargar la página.
     const token = localStorage.getItem('token');
+
+    // Si el token ya caducó no se restaura nada. Restaurarlo dejaba la interfaz
+    // aparentando sesión activa mientras el servidor rechazaba cada petición
+    // con "Token inválido o expirado", y además disparaba una llamada a
+    // favoritos condenada al 403 antes de que nadie pudiera comprobarlo.
+    // FoodJetSession lo publica app.js, cuyo cuerpo de módulo corre antes que
+    // este manejador de DOMContentLoaded.
+    if (token && window.FoodJetSession?.isTokenExpired(token)) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        showToast('Tu sesión expiró. Vuelve a iniciar sesión.', 'warning');
+        return;
+    }
+
     if (token) window.authToken = token;
 
     if (userStr && window.authToken) {
@@ -35,6 +49,21 @@ function initializeLegacyEventListeners() {
     const refreshOperationsBtn = document.getElementById('refreshOperationsBtn');
     if (refreshOperationsBtn) {
         refreshOperationsBtn.addEventListener('click', () => renderOperationsPanel());
+    }
+
+    // El teléfono solo admite dígitos y como mucho 9. QA reportó que aceptaba
+    // letras y longitudes mayores, y que el registro se enviaba igual para
+    // fallar después en el servidor.
+    const registerPhone = document.getElementById('registerPhone');
+    if (registerPhone) {
+        registerPhone.addEventListener('input', () => {
+            const limpio = window.FoodJetValidation?.sanitizePhone(registerPhone.value) ?? registerPhone.value;
+            if (registerPhone.value !== limpio) registerPhone.value = limpio;
+
+            registerPhone.classList.remove('is-invalid');
+            const feedback = document.getElementById('registerPhoneError');
+            if (feedback) feedback.textContent = '';
+        });
     }
 
     // --- ELEMENTOS DE NAVEGACIÓN DE USUARIO ---
@@ -125,6 +154,19 @@ async function handleRegister(e) {
     const email = document.getElementById('registerEmail').value;
     const telefono = document.getElementById('registerPhone').value;
     const password = document.getElementById('registerPassword').value;
+
+    // El atributo pattern del campo no llega a actuar porque el envío se
+    // intercepta con preventDefault, así que la comprobación se hace aquí.
+    const revision = window.FoodJetValidation?.validatePhone(telefono);
+    if (revision && !revision.valid) {
+        const input = document.getElementById('registerPhone');
+        const feedback = document.getElementById('registerPhoneError');
+
+        input.classList.add('is-invalid');
+        if (feedback) feedback.textContent = revision.error;
+        input.focus();
+        return;
+    }
 
     try {
         const response = await fetch(`${API_URL}/auth/register`, {
@@ -357,6 +399,20 @@ function showToast(message, type = 'success') {
         document.body.appendChild(toastContainer);
     }
 
+    // Si el mismo aviso ya está en pantalla no se apila otro: al intentar
+    // añadir varios productos de otro restaurante se acumulaban seis mensajes
+    // idénticos que tapaban la página. Se reinicia el temporizador del que ya
+    // hay para que siga visible.
+    const yaVisible = Array.from(toastContainer.querySelectorAll('.toast'))
+        .find((t) => t.dataset.mensaje === message);
+
+    if (yaVisible) {
+        // eslint-disable-next-line no-undef
+        bootstrap.Toast.getOrCreateInstance(yaVisible, { delay: 3000 }).show();
+        return;
+    }
+
+    toast.dataset.mensaje = message;
     toastContainer.appendChild(toast);
     const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
     bsToast.show();
@@ -384,4 +440,5 @@ window.handleLogin = handleLogin;
 window.handleRegister = handleRegister;
 window.handleLogout = handleLogout;
 window.displayDashboard = displayDashboard;
+window.updateUserUI = updateUserUI;
 window.showToast = showToast;
