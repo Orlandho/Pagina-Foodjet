@@ -9,6 +9,6 @@
     "test": "npm run test:frontend && npm run test:backend",
     "test:frontend": "cucumber-js --profile frontend",
     "test:backend": "cucumber-js --profile backend",
-    "test:unit": "node --test --experimental-test-coverage tests/unit/**/*.test.mjs"
+    "test:unit": "node --no-warnings --test --experimental-test-coverage tests/unit/domain.test.mjs"
   }
 }

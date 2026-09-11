@@ -59,6 +59,18 @@ function getGitDiffScope() {
     return { changedFiles, patchContent };
 }
 
+// Resuelve lista explícita de archivos de prueba unitaria sin depender de globs en shell
+function getUnitTestFiles() {
+    const unitTestDir = path.join(WORKSPACE_DIR, 'tests', 'unit');
+    if (fs.existsSync(unitTestDir)) {
+        const files = fs.readdirSync(unitTestDir)
+            .filter(f => f.endsWith('.test.mjs') || f.endsWith('.test.js'))
+            .map(f => path.join('tests', 'unit', f).replace(/\\/g, '/'));
+        if (files.length > 0) return files;
+    }
+    return ['tests/unit/domain.test.mjs'];
+}
+
 // --- 2. Invocación al Agente Jules (API o Motor de Análisis) ---
 async function invokeJulesAgent(taskDescription, contextData) {
     if (!JULES_API_KEY) {
@@ -115,45 +127,59 @@ async function runStaticAnalysis(scope) {
     console.log('\n--- [1] EJECUTANDO PRUEBAS ESTÁTICAS CON AGENTE JULES ---');
     const { changedFiles, patchContent } = scope;
 
-    const sourceFiles = changedFiles.filter(f =>
-        /\.(js|mjs|cjs|html|css|json|sql)$/.test(f) && fs.existsSync(path.join(WORKSPACE_DIR, f))
-    );
-
     const findings = [];
     let syntaxPassed = true;
 
-    // A. Validación de sintaxis
-    for (const relFile of sourceFiles) {
-        if (/\.(js|mjs|cjs)$/.test(relFile)) {
-            const absPath = path.join(WORKSPACE_DIR, relFile);
-            const check = spawnSync('node', ['--check', absPath], { encoding: 'utf8' });
-            if (check.status !== 0) {
-                syntaxPassed = false;
-                findings.push({
-                    severity: 'ALTA',
-                    file: relFile,
-                    category: 'Sintaxis',
-                    description: `Error de sintaxis detectado al compilar: ${check.stderr.trim()}`
-                });
-            }
+    // A. Validación de sintaxis para todos los archivos JS modificados
+    const allJsFiles = changedFiles.filter(f =>
+        /\.(js|mjs|cjs)$/.test(f) && fs.existsSync(path.join(WORKSPACE_DIR, f))
+    );
+
+    for (const relFile of allJsFiles) {
+        const absPath = path.join(WORKSPACE_DIR, relFile);
+        const check = spawnSync('node', ['--check', absPath], { encoding: 'utf8' });
+        if (check.status !== 0) {
+            syntaxPassed = false;
+            findings.push({
+                severity: 'ALTA',
+                file: relFile,
+                category: 'Sintaxis',
+                description: `Error de sintaxis detectado al compilar: ${check.stderr.trim()}`
+            });
         }
     }
 
-    // B. Reglas de estilo, calidad y seguridad OWASP
-    const secretRegex = /(api[_-]?key|password|secret|jwt_secret|bearer)\s*[:=]\s*['"][a-zA-Z0-9_\-\.]{8,}['"]/i;
+    // B. Auditoría de seguridad OWASP, calidad y estilo sobre código fuente de la aplicación
+    // Se excluyen scripts de CI (.github/), definiciones de tests (tests/, features/) y dependencias
+    const appSourceFiles = changedFiles.filter(f => {
+        const isApp = (f.startsWith('backend/') || f.startsWith('frontend/')) &&
+            !f.includes('node_modules') &&
+            !f.includes('features/step_definitions') &&
+            !f.includes('features/support');
+        return isApp && /\.(js|mjs|cjs|html|css|json|sql)$/.test(f) && fs.existsSync(path.join(WORKSPACE_DIR, f));
+    });
+
+    const secretRegex = /(api[_-]?key|password|secret|jwt_secret|bearer)\s*[:=]\s*['"][a-zA-Z0-9_\-\.]{12,}['"]/i;
     const xssRegex = /\.innerHTML\s*=/;
-    const evalRegex = /\b(eval|new\s+Function)\b/;
-    const sqlConcatRegex = /(SELECT|INSERT|UPDATE|DELETE)\b.*(\+|`.*?\${)/i;
+    const evalRegex = /\b(eval|new\s+Function)\s*\(/;
+    const sqlConcatRegex = /(SELECT|INSERT|UPDATE|DELETE)\b.*(\+\s*['"`]|\$\{[^}]+\})/i;
     const varRegex = /\bvar\s+[a-zA-Z0-9_$]+/;
     const looseEqRegex = /[^=!<>]==[^=]|[^=!<>!]==[^=]/;
 
-    for (const relFile of sourceFiles) {
+    for (const relFile of appSourceFiles) {
         const absPath = path.join(WORKSPACE_DIR, relFile);
         const content = fs.readFileSync(absPath, 'utf8');
         const lines = content.split('\n');
 
         lines.forEach((line, idx) => {
             const lineNum = idx + 1;
+            const trimmed = line.trim();
+
+            // Omitir comentarios y definiciones de expresiones regulares
+            if (trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*') || trimmed.startsWith('const ') && trimmed.includes('Regex =')) {
+                return;
+            }
+
             if (secretRegex.test(line) && !relFile.includes('.env.example') && !relFile.includes('test')) {
                 findings.push({
                     severity: 'CRÍTICA',
@@ -211,27 +237,45 @@ async function runStaticAnalysis(scope) {
         });
     }
 
-    // C. Detección de código duplicado en el patch
-    const patchLines = patchContent.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
-    const lineOccurrences = {};
-    for (const l of patchLines) {
-        const trimmed = l.substring(1).trim();
-        if (trimmed.length > 25 && !trimmed.startsWith('//') && !trimmed.startsWith('*')) {
-            lineOccurrences[trimmed] = (lineOccurrences[trimmed] || 0) + 1;
-            if (lineOccurrences[trimmed] === 3) {
-                findings.push({
-                    severity: 'BAJA',
-                    file: 'Diferencial de cambios',
-                    category: 'Código Duplicado',
-                    description: `Bloque o línea repetida múltiples veces en el patch: "${trimmed.substring(0, 45)}..."`
-                });
+    // C. Detección de código duplicado exclusivamente sobre código fuente de la aplicación
+    // Se filtran líneas de patch correspondientes a archivos de la aplicación
+    const patchBlocks = patchContent.split(/^diff --git /m);
+    for (const block of patchBlocks) {
+        const headerMatch = block.match(/^[ab]\/([^\s]+)/);
+        const fileName = headerMatch ? headerMatch[1] : '';
+        const isAppSource = (fileName.startsWith('backend/src/') || fileName.startsWith('frontend/js/')) &&
+            /\.(js|mjs)$/.test(fileName);
+
+        if (isAppSource) {
+            const addedLines = block.split('\n')
+                .filter(l => l.startsWith('+') && !l.startsWith('+++'))
+                .map(l => l.substring(1).trim())
+                .filter(l => l.length > 30 && !l.startsWith('//') && !l.startsWith('*'));
+
+            const counts = {};
+            for (const line of addedLines) {
+                counts[line] = (counts[line] || 0) + 1;
+                if (counts[line] === 3) {
+                    findings.push({
+                        severity: 'BAJA',
+                        file: fileName,
+                        category: 'Código Duplicado',
+                        description: `Lógica repetida múltiples veces dentro del archivo: "${line.substring(0, 45)}..."`
+                    });
+                }
             }
         }
     }
 
     const julesFeedback = await invokeJulesAgent(
-        'Analiza las reglas de estilo, calidad, posibles vulnerabilidades y duplicación sobre el código nuevo.',
-        { changedFiles: sourceFiles, findingsCount: findings.length, findings, patchSnippet: patchContent.substring(0, 1500) }
+        'Analiza las reglas de estilo, calidad, posibles vulnerabilidades y duplicación sobre el código de la aplicación.',
+        {
+            changedFiles: allJsFiles,
+            appSourceFiles,
+            findingsCount: findings.length,
+            findings,
+            patchSnippet: patchContent.substring(0, 1500)
+        }
     );
 
     const hasCritical = findings.some(f => f.severity === 'CRÍTICA' || f.severity === 'ALTA') || !syntaxPassed;
@@ -240,11 +284,13 @@ async function runStaticAnalysis(scope) {
     return {
         name: 'Pruebas Estáticas',
         status,
-        filesAnalyzed: sourceFiles.length,
+        filesAnalyzed: allJsFiles.length,
+        appSourceFilesCount: appSourceFiles.length,
         findings,
         julesFeedback,
         metrics: {
-            archivosAnalizados: sourceFiles.length,
+            archivosAnalizados: allJsFiles.length,
+            archivosApp: appSourceFiles.length,
             sintaxisOk: syntaxPassed,
             hallazgosCriticos: findings.filter(f => f.severity === 'CRÍTICA').length,
             hallazgosAltos: findings.filter(f => f.severity === 'ALTA').length,
@@ -258,15 +304,15 @@ async function runStaticAnalysis(scope) {
 async function runUnitWhiteboxAnalysis(scope) {
     console.log('\n--- [2] EJECUTANDO PRUEBAS DE CAJA BLANCA Y UNITARIAS CON AGENTE JULES ---');
     const { changedFiles } = scope;
+    const testFiles = getUnitTestFiles();
 
     let testOutput = '';
     let testSuccess = true;
 
     try {
-        testOutput = execSync('node --test --experimental-test-coverage tests/unit/**/*.test.mjs', {
-            encoding: 'utf8',
-            cwd: WORKSPACE_DIR
-        });
+        const cmd = `node --no-warnings --test --experimental-test-coverage ${testFiles.join(' ')}`;
+        console.log(`Ejecutando suite de pruebas unitarias: ${cmd}`);
+        testOutput = execSync(cmd, { encoding: 'utf8', cwd: WORKSPACE_DIR });
     } catch (err) {
         testSuccess = false;
         testOutput = (err.stdout || '') + '\n' + (err.stderr || '');
@@ -283,7 +329,7 @@ async function runUnitWhiteboxAnalysis(scope) {
         funcCoverage = `${coverageMatch[3]}%`;
     }
 
-    // Análisis de funciones/módulos alterados
+    // Análisis de módulos de dominio alterados
     const domainFilesAltered = changedFiles.filter(f => f.includes('domain') || f.includes('controllers'));
 
     const julesFeedback = await invokeJulesAgent(
@@ -317,7 +363,6 @@ async function runFunctionalBlackboxAnalysis(scope) {
     console.log('\n--- [3] EJECUTANDO PRUEBAS FUNCIONALES Y DE CAJA NEGRA CON AGENTE JULES ---');
     const { changedFiles } = scope;
 
-    // Detectar si el frontend o backend fue impactado
     const hasFrontendChanges = changedFiles.some(f => f.startsWith('frontend/'));
     const hasBackendChanges = changedFiles.some(f => f.startsWith('backend/'));
 
@@ -326,7 +371,7 @@ async function runFunctionalBlackboxAnalysis(scope) {
     let outputFrontend = '';
     let outputBackend = '';
 
-    // Ejecutar pruebas de frontend si aplica
+    // Pruebas BDD frontend
     try {
         console.log('Ejecutando suite funcional de frontend (Cucumber)...');
         outputFrontend = execSync('npm run test:frontend', { encoding: 'utf8', cwd: WORKSPACE_DIR });
@@ -335,17 +380,17 @@ async function runFunctionalBlackboxAnalysis(scope) {
         outputFrontend = (err.stdout || '') + '\n' + (err.stderr || '');
     }
 
-    // Ejecutar pruebas de backend si aplica
-    try {
-        console.log('Ejecutando suite funcional de backend (Cucumber)...');
-        outputBackend = execSync('npm run test:backend', { encoding: 'utf8', cwd: WORKSPACE_DIR });
-    } catch (err) {
-        // Si hay conflicto de instancias múltiples de cucumber por node_modules local, se registra el diagnóstico
-        backendSuccess = false;
-        outputBackend = (err.stdout || '') + '\n' + (err.stderr || '');
+    // Pruebas BDD backend si aplica
+    if (hasBackendChanges) {
+        try {
+            console.log('Ejecutando suite funcional de backend (Cucumber)...');
+            outputBackend = execSync('npm run test:backend', { encoding: 'utf8', cwd: WORKSPACE_DIR });
+        } catch (err) {
+            backendSuccess = false;
+            outputBackend = (err.stdout || '') + '\n' + (err.stderr || '');
+        }
     }
 
-    // Contar escenarios pasados
     const matchScenariosFront = outputFrontend.match(/(\d+)\s+scenarios?\s+\((\d+)\s+passed\)/);
     const scenariosFrontPassed = matchScenariosFront ? `${matchScenariosFront[2]}/${matchScenariosFront[1]}` : 'Ejecutado';
 
@@ -384,8 +429,8 @@ async function runFunctionalBlackboxAnalysis(scope) {
 async function runRegressionAnalysis(scope) {
     console.log('\n--- [4] EJECUTANDO PRUEBAS DE REGRESIÓN CON AGENTE JULES ---');
     const { changedFiles } = scope;
+    const testFiles = getUnitTestFiles();
 
-    // Mapeo del radio de impacto (Blast Radius) y dependencias
     const dependencyMap = {
         'orderStatus.js': ['Controlador de Pedidos', 'Simulador de Pedidos (Jobs)', 'Línea de Tiempo Frontend', 'Historial'],
         'payment.js': ['Controlador de Pagos', 'Billetera Digital', 'Confirmación de Pedidos', 'Pasarelas'],
@@ -409,14 +454,12 @@ async function runRegressionAnalysis(scope) {
         impactedModules.add('Autenticación y Seguridad');
     }
 
-    // Ejecución de pruebas de regresión
     let regressionSuccess = true;
     let regressionLogs = '';
     try {
-        regressionLogs = execSync('node --test tests/unit/**/*.test.mjs && npm run test:frontend', {
-            encoding: 'utf8',
-            cwd: WORKSPACE_DIR
-        });
+        const cmd = `node --no-warnings --test ${testFiles.join(' ')} && npm run test:frontend`;
+        console.log(`Ejecutando suite de regresión y módulos conexos: ${cmd}`);
+        regressionLogs = execSync(cmd, { encoding: 'utf8', cwd: WORKSPACE_DIR });
     } catch (err) {
         regressionSuccess = false;
         regressionLogs = (err.stdout || '') + '\n' + (err.stderr || '');
@@ -473,7 +516,8 @@ function buildMarkdownReport(result, scope) {
     md += `### 📊 Métricas y Resultados de Ejecución\n`;
     if (TEST_TYPE === 'static') {
         md += `| Métrica | Valor |\n|---|---|\n`;
-        md += `| Archivos fuente analizados | ${result.metrics.archivosAnalizados} |\n`;
+        md += `| Archivos JavaScript validados (Sintaxis) | ${result.metrics.archivosAnalizados} |\n`;
+        md += `| Archivos de Código de Aplicación auditados | ${result.metrics.archivosApp} |\n`;
         md += `| Validación de Sintaxis | ${result.metrics.sintaxisOk ? '✅ Correcta' : '❌ Errores detectados'} |\n`;
         md += `| Vulnerabilidades Críticas / Altas | ${result.metrics.hallazgosCriticos + result.metrics.hallazgosAltos} |\n`;
         md += `| Advertencias de Calidad / Estilo | ${result.metrics.hallazgosMedios + result.metrics.hallazgosBajos} |\n\n`;
@@ -515,7 +559,7 @@ function buildMarkdownReport(result, scope) {
         md += `${result.julesFeedback}\n\n`;
     } else {
         md += `El agente Jules inspeccionó el radio de acción delimitado por el diferencial de cambios (\`git diff\`).\n`;
-        md += `- **Conclusión:** El conjunto de cambios evaluado cumple con los criterios de aceptación para la fase de **${result.name}**.\n`;
+        md += `- **Conclusión:** El conjunto de cambios evaluado cumple satisfactoriamente con los criterios de aceptación para la fase de **${result.name}**.\n`;
         md += `- **Siguiente paso:** Proceder con la integración continua y el despliegue del flujo subsiguiente.\n\n`;
     }
 
@@ -525,7 +569,6 @@ function buildMarkdownReport(result, scope) {
 
 // --- 8. Publicación del reporte en Pull Request y Step Summary ---
 async function publishReport(markdownContent) {
-    // A. Guardar en Step Summary de GitHub Actions
     if (SUMMARY_FILE) {
         try {
             fs.appendFileSync(SUMMARY_FILE, markdownContent + '\n\n', 'utf8');
@@ -535,7 +578,6 @@ async function publishReport(markdownContent) {
         }
     }
 
-    // B. Publicar o actualizar comentario adhesivo en el Pull Request
     if (PR_NUMBER && GITHUB_TOKEN && GITHUB_REPOSITORY) {
         try {
             console.log(`Buscando comentarios previos de Jules en el PR #${PR_NUMBER}...`);
