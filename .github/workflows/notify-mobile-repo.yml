@@ -1,0 +1,33 @@
+name: Notificar al Repositorio Móvil
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  dispatch:
+    name: Enviar evento repository_dispatch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notificar al repositorio móvil
+        env:
+          PAT_CROSS_REPO: ${{ secrets.PAT_CROSS_REPO }}
+        run: |
+          curl -L \
+            --fail \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.PAT_CROSS_REPO }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/Orlandho/proyecto-app-movil-UPN-2026-2/dispatches \
+            -d '{
+              "event_type": "foodjet-updated",
+              "client_payload": {
+                "commit_sha": "${{ github.sha }}",
+                "sha": "${{ github.sha }}",
+                "author": "${{ github.actor }}",
+                "ref": "${{ github.ref }}",
+                "branch": "${{ github.ref_name }}"
+              }
+            }'
