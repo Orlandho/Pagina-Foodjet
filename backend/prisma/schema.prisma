@@ -59,6 +59,11 @@ model Order {
   /// Posición actual del repartidor, que avanza a lo largo de la ruta.
   repartidor_lat                 Float?
   repartidor_lon                 Float?
+  /// Cuántos segundos dura cada estado en la simulación del pedido, por
+  /// ejemplo {"pendiente": 12, "confirmado": 6, "en_preparacion": 66,
+  /// "en_camino": 86}. Un estado sin duración no avanza solo. Null en los
+  /// pedidos anteriores a la simulación.
+  plan_tiempos                   Json?
   DiscountCoupon                 DiscountCoupon? @relation(fields: [cupon_id], references: [id])
   DeliveryAddress                DeliveryAddress @relation(fields: [direccion_entrega_id], references: [id])
   User_Order_repartidor_idToUser User?           @relation("Order_repartidor_idToUser", fields: [repartidor_id], references: [id])
@@ -68,6 +73,21 @@ model Order {
   Review                         Review?
   SupportTicket                  SupportTicket[]
   Transaction                    Transaction?
+  OrderStatusHistory             OrderStatusHistory[]
+}
+
+/// Cada cambio de estado de un pedido: cuándo pasó y quién lo provocó.
+/// De aquí salen las horas de la línea de tiempo del seguimiento.
+model OrderStatusHistory {
+  id        Int      @id @default(autoincrement())
+  pedido_id Int
+  estado    String
+  fecha     DateTime @default(now())
+  /// cliente, personal, simulador o sistema
+  origen    String
+  Order     Order    @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
+
+  @@index([pedido_id, fecha])
 }
 
 model OrderItem {

@@ -1126,3 +1126,410 @@ h1[tabindex="-1"]:focus {
     outline: 2px solid var(--primary-text);
     outline-offset: 4px;
 }
+
+/* ============================
+   Mapa de la dirección de entrega (js/mapaEntrega.js)
+   ============================ */
+.mapa-entrega {
+    position: relative;
+    height: 280px;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.mapa-entrega__lienzo {
+    width: 100%;
+    height: 100%;
+}
+
+/* El pin no es un marcador de Google: está fijo en el centro y el mapa se
+   mueve debajo. La punta del icono es el punto que se guarda, por eso se
+   desplaza hacia arriba su propia altura. */
+.mapa-entrega__pin {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -100%);
+    font-size: 2.5rem;
+    line-height: 1;
+    color: var(--primary-hover);
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45));
+    pointer-events: none;
+    transition: transform 0.15s ease-out;
+}
+
+/* Sombra en el suelo: deja ver dónde cae la punta mientras se arrastra. */
+.mapa-entrega__pin::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -3px;
+    width: 10px;
+    height: 4px;
+    margin-left: -5px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.mapa-entrega--moviendo .mapa-entrega__pin {
+    transform: translate(-50%, calc(-100% - 8px));
+}
+
+.mapa-entrega__gps {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 2px;
+    background: #fff;
+    color: #333;
+    font-size: 1.15rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.mapa-entrega__gps:hover {
+    color: var(--primary-text);
+}
+
+.mapa-entrega__gps:focus-visible {
+    outline: 2px solid var(--primary-text);
+    outline-offset: 2px;
+}
+
+.mapa-entrega__estado:empty {
+    display: none;
+}
+
+.mapa-entrega__estado[data-tipo="ok"]::before {
+    content: "\f3e7";  /* bi-geo-alt-fill */
+    font-family: "bootstrap-icons";
+    margin-right: 0.35rem;
+    color: var(--primary-text);
+}
+
+.mapa-entrega__estado[data-tipo="aviso"] {
+    color: #b35c00;
+}
+
+@media (max-width: 575.98px) {
+    .mapa-entrega {
+        height: 240px;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .mapa-entrega {
+        border-color: #444;
+    }
+
+    /* .form-text toma el gris del tema claro de Bootstrap: sobre el fondo
+       oscuro no se leía. */
+    .mapa-entrega__estado {
+        color: #adb5bd;
+    }
+
+    .mapa-entrega__gps {
+        background: #2a2a2a;
+        color: #e8e8e8;
+    }
+
+    .mapa-entrega__gps:hover {
+        color: var(--primary-color);
+    }
+
+    .mapa-entrega__estado[data-tipo="ok"]::before {
+        color: var(--primary-color);
+    }
+
+    .mapa-entrega__estado[data-tipo="aviso"] {
+        color: #f0b37a;
+    }
+}
+
+/* ============================
+   Seguimiento del pedido con mapa (js/mapaSeguimiento.js)
+   ============================ */
+.seguimiento {
+    display: grid;
+    gap: 1.5rem;
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+/* Con mapa: el mapa manda a la izquierda y el panel acompaña a la derecha. */
+.seguimiento--con-mapa {
+    max-width: none;
+}
+
+@media (min-width: 992px) {
+    .seguimiento--con-mapa {
+        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+        align-items: start;
+    }
+
+    .seguimiento--con-mapa .seguimiento__mapa {
+        position: sticky;
+        top: 88px;
+    }
+}
+
+.seguimiento__mapa {
+    position: relative;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.seguimiento__lienzo {
+    width: 100%;
+    height: 320px;
+}
+
+@media (min-width: 992px) {
+    .seguimiento__lienzo {
+        height: min(640px, calc(100vh - 120px));
+        min-height: 440px;
+    }
+}
+
+/* Distancia: arriba a la izquierda, donde Google no pone controles. */
+.seguimiento__ruta {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    max-width: calc(100% - 24px);
+    margin: 0;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: #fff;
+    color: #1a1a1a;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.seguimiento__ruta:empty {
+    display: none;
+}
+
+.seguimiento__estado {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.seguimiento__estado .order-status-icon {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+/* Lo que el cliente viene a mirar: cuánto le falta. */
+.seguimiento__llegada {
+    display: flex;
+    flex-direction: column;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #dee2e6;
+}
+
+.seguimiento__llegada-cifra {
+    font-size: 2.75rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.seguimiento__llegada-cifra:empty {
+    display: none;
+}
+
+.seguimiento__llegada-texto {
+    margin-top: 0.35rem;
+    color: var(--gray-color);
+}
+
+/* --- Línea de tiempo vertical --- */
+.linea-tiempo {
+    list-style: none;
+    margin: 1.5rem 0 0;
+    padding: 0;
+}
+
+.linea-tiempo__etapa {
+    position: relative;
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    align-items: center;
+    column-gap: 0.85rem;
+    padding-bottom: 1.25rem;
+}
+
+.linea-tiempo__etapa:last-child {
+    padding-bottom: 0;
+}
+
+/* El conector baja del centro de una marca hasta la siguiente. */
+.linea-tiempo__etapa:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 32px;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.linea-tiempo__etapa[data-situacion="hecha"]:not(:last-child)::before {
+    background: var(--primary-color);
+}
+
+.linea-tiempo__marca {
+    position: relative;
+    z-index: 1;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    background: var(--light-gray);
+    color: var(--gray-color);
+    border: 2px solid transparent;
+}
+
+.linea-tiempo__etapa[data-situacion="hecha"] .linea-tiempo__marca {
+    background: var(--primary-color);
+    color: #1a1a1a;
+}
+
+.linea-tiempo__etapa[data-situacion="en_curso"] .linea-tiempo__marca {
+    background: var(--primary-light);
+    color: var(--primary-text);
+    border-color: var(--primary-color);
+    animation: etapa-en-curso 2s ease-out infinite;
+}
+
+.linea-tiempo__etapa[data-situacion="en_curso"] .linea-tiempo__nombre {
+    font-weight: 700;
+}
+
+.linea-tiempo__etapa[data-situacion="pendiente"] .linea-tiempo__nombre,
+.linea-tiempo__etapa[data-situacion="cancelada"] .linea-tiempo__nombre {
+    color: var(--gray-color);
+}
+
+.linea-tiempo__etapa[data-situacion="cancelada"] .linea-tiempo__nombre {
+    text-decoration: line-through;
+}
+
+.linea-tiempo__hora {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+    color: var(--gray-color);
+    white-space: nowrap;
+}
+
+.linea-tiempo__etapa[data-situacion="hecha"] .linea-tiempo__hora,
+.linea-tiempo__etapa[data-situacion="en_curso"] .linea-tiempo__hora {
+    color: inherit;
+}
+
+@keyframes etapa-en-curso {
+    0% { box-shadow: 0 0 0 0 rgba(245, 175, 105, 0.55); }
+    100% { box-shadow: 0 0 0 10px rgba(245, 175, 105, 0); }
+}
+
+/* --- Marcadores del mapa --- */
+.marcador-seguimiento {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.marcador-seguimiento--local {
+    background: #fff;
+    color: #1a1a1a;
+    border: 2px solid #1a1a1a;
+}
+
+.marcador-seguimiento--casa {
+    background: #1a1a1a;
+    color: #fff;
+    border: 2px solid #fff;
+}
+
+/* El repartidor es lo único naranja que se mueve: es lo que se mira. */
+.marcador-seguimiento--repartidor {
+    z-index: 2;
+    width: 42px;
+    height: 42px;
+    font-size: 1.3rem;
+    background: var(--primary-color);
+    color: #1a1a1a;
+    border: 3px solid #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .linea-tiempo__etapa[data-situacion="en_curso"] .linea-tiempo__marca {
+        animation: none;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .seguimiento__mapa {
+        border-color: #333;
+    }
+
+    .seguimiento__ruta {
+        background: #2a2a2a;
+        color: #e8e8e8;
+    }
+
+    .seguimiento__llegada {
+        border-top-color: #333;
+    }
+
+    .linea-tiempo__etapa:not(:last-child)::before {
+        background: #3a3a3a;
+    }
+
+    .linea-tiempo__marca {
+        background: #2a2a2a;
+    }
+
+    .linea-tiempo__etapa[data-situacion="en_curso"] .linea-tiempo__marca {
+        background: rgba(245, 175, 105, 0.15);
+        color: var(--primary-color);
+    }
+
+    .marcador-seguimiento--local {
+        background: #2a2a2a;
+        color: #e8e8e8;
+        border-color: #e8e8e8;
+    }
+
+    .marcador-seguimiento--casa {
+        background: #e8e8e8;
+        color: #1a1a1a;
+        border-color: #1a1a1a;
+    }
+
+    .marcador-seguimiento--repartidor {
+        border-color: #1a1a1a;
+    }
+}

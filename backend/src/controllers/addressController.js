@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { validarCoordenadas, numeroONulo } = require('../domain/coordenadas');
 
 /**
  * Direcciones de entrega del usuario autenticado.
@@ -29,6 +30,13 @@ exports.createAddress = async (req, res) => {
             return res.status(400).json({ error: 'La dirección es obligatoria.' });
         }
 
+        // Son el destino de la ruta del reparto: una coordenada inválida
+        // dibujaría al repartidor yendo a cualquier parte.
+        const coordenadas = validarCoordenadas(latitud, longitud);
+        if (!coordenadas.valid) {
+            return res.status(400).json({ error: coordenadas.error });
+        }
+
         const esPredeterminada = Boolean(es_predeterminada);
 
         // Solo puede haber una dirección predeterminada por usuario.
@@ -44,8 +52,8 @@ exports.createAddress = async (req, res) => {
                 usuario_id: req.user.userId,
                 direccion_detallada: String(direccion_detallada).trim(),
                 referencia: referencia ? String(referencia).trim() : null,
-                latitud: latitud !== undefined && latitud !== null ? Number(latitud) : null,
-                longitud: longitud !== undefined && longitud !== null ? Number(longitud) : null,
+                latitud: numeroONulo(latitud),
+                longitud: numeroONulo(longitud),
                 es_predeterminada: esPredeterminada
             }
         });
@@ -88,6 +96,11 @@ exports.updateAddress = async (req, res) => {
 
         const { direccion_detallada, referencia, latitud, longitud, es_predeterminada } = req.body;
 
+        const coordenadas = validarCoordenadas(latitud, longitud);
+        if (!coordenadas.valid) {
+            return res.status(400).json({ error: coordenadas.error });
+        }
+
         if (es_predeterminada) {
             await prisma.deliveryAddress.updateMany({
                 where: { usuario_id: req.user.userId },
@@ -100,8 +113,10 @@ exports.updateAddress = async (req, res) => {
             data: {
                 direccion_detallada: direccion_detallada ?? direccion.direccion_detallada,
                 referencia: referencia ?? direccion.referencia,
-                latitud: latitud !== undefined ? Number(latitud) : direccion.latitud,
-                longitud: longitud !== undefined ? Number(longitud) : direccion.longitud,
+                // Si no llegan se conservan; Number(null) daría 0 y llevaría
+                // la dirección al golfo de Guinea.
+                latitud: latitud !== undefined ? numeroONulo(latitud) : direccion.latitud,
+                longitud: longitud !== undefined ? numeroONulo(longitud) : direccion.longitud,
                 es_predeterminada: es_predeterminada ?? direccion.es_predeterminada
             }
         });

@@ -103,6 +103,38 @@ function progresoDelReparto(ruta, transcurridoMs, duracionMs) {
     };
 }
 
+/**
+ * Reduce una ruta a como mucho `maxPuntos`, conservando la primera y la
+ * última posición.
+ *
+ * El seguimiento la envía en cada consulta: una ruta entre ciudades trae
+ * miles de puntos que en el mapa no se distinguen. Se queda con un punto cada
+ * (longitud total / maxPuntos) metros, así que las curvas cerradas de un
+ * reparto urbano, que ya traen pocos puntos, quedan intactas.
+ */
+function simplificarRuta(ruta, maxPuntos = 300) {
+    if (!Array.isArray(ruta) || ruta.length <= maxPuntos || maxPuntos < 2) return ruta;
+
+    const paso = longitudRuta(ruta) / (maxPuntos - 1);
+    const resultado = [ruta[0]];
+    let acumulado = 0;
+
+    for (let i = 1; i < ruta.length - 1; i++) {
+        acumulado += distanciaMetros(ruta[i - 1], ruta[i]);
+        if (acumulado >= paso) {
+            resultado.push(ruta[i]);
+            acumulado = 0;
+        }
+    }
+
+    resultado.push(ruta[ruta.length - 1]);
+    if (resultado.length <= maxPuntos) return resultado;
+
+    // Por redondeo puede sobrar alguno: recorte uniforme por posición.
+    const salto = (resultado.length - 1) / (maxPuntos - 1);
+    return Array.from({ length: maxPuntos }, (_, k) => resultado[Math.round(k * salto)]);
+}
+
 module.exports = {
     RADIO_TIERRA_M,
     VELOCIDAD_KMH_POR_DEFECTO,
@@ -110,5 +142,6 @@ module.exports = {
     longitudRuta,
     puntoEnRuta,
     etaMinutos,
-    progresoDelReparto
+    progresoDelReparto,
+    simplificarRuta
 };

@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { validarCoordenadas } = require('../domain/coordenadas');
 
 /**
  * Locales y su ubicación en el mapa.
@@ -15,26 +16,8 @@ function validarLocal({ nombre, latitud, longitud, estado_afiliacion }, { exigir
         return { valid: false, error: 'El nombre del local es obligatorio.' };
     }
 
-    // Las coordenadas son opcionales, pero si vienen deben ser válidas y venir
-    // las dos: media coordenada no ubica nada.
-    const tieneLat = latitud !== undefined && latitud !== null && latitud !== '';
-    const tieneLon = longitud !== undefined && longitud !== null && longitud !== '';
-
-    if (tieneLat !== tieneLon) {
-        return { valid: false, error: 'Indica latitud y longitud, o ninguna de las dos.' };
-    }
-
-    if (tieneLat) {
-        const lat = Number(latitud);
-        const lon = Number(longitud);
-
-        if (Number.isNaN(lat) || lat < -90 || lat > 90) {
-            return { valid: false, error: 'La latitud debe estar entre -90 y 90.' };
-        }
-        if (Number.isNaN(lon) || lon < -180 || lon > 180) {
-            return { valid: false, error: 'La longitud debe estar entre -180 y 180.' };
-        }
-    }
+    const coordenadas = validarCoordenadas(latitud, longitud);
+    if (!coordenadas.valid) return coordenadas;
 
     if (estado_afiliacion && !ESTADOS_AFILIACION.includes(estado_afiliacion)) {
         return { valid: false, error: `Estado de afiliación no válido. Debe ser uno de: ${ESTADOS_AFILIACION.join(', ')}.` };
