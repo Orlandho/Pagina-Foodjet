@@ -5,8 +5,15 @@ import assert from 'node:assert/strict';
 import orderStatusBackend from '../../backend/src/domain/orderStatus.js';
 import paymentBackend from '../../backend/src/domain/payment.js';
 import userValidationBackend from '../../backend/src/domain/userValidation.js';
+import mapsConfigBackend from '../../backend/src/domain/mapsConfig.js';
 
 // Frontend domain (ESM)
+import {
+    cargarGoogleMaps,
+    siRechazaLaKey,
+    keyFueRechazada,
+    _resetCargaParaPruebas
+} from '../../frontend/js/googleMaps.js';
 import { buildOrderPayload } from '../../frontend/js/domain/checkout.js';
 import {
     normalizeEstado as normalizeEstadoFront,
@@ -134,3 +141,249 @@ describe('White-Box Unit Tests - Frontend Domain', () => {
         assert.deepEqual(payload.items[0], { productId: 10, cantidad: 2 });
     });
 });
+
+describe('White-Box Unit Tests - Google Maps Config Domain (Backend)', () => {
+    it('debe resolver ambas claves cuando ambas están configuradas', () => {
+        const res = mapsConfigBackend.resolveGoogleMapsKeys({
+            GOOGLE_MAPS_API_KEY: 'clave-primaria',
+            GOOGLE_MAPS_API_KEY_SECUNDARIA: 'clave-secundaria'
+        });
+        assert.equal(res.googleMapsApiKey, 'clave-primaria');
+        assert.deepEqual(res.googleMapsApiKeys, ['clave-primaria', 'clave-secundaria']);
+    });
+
+    it('debe usar clave primaria si la secundaria no está configurada', () => {
+        const res = mapsConfigBackend.resolveGoogleMapsKeys({
+            GOOGLE_MAPS_API_KEY: 'clave-primaria',
+            GOOGLE_MAPS_API_KEY_SECUNDARIA: ''
+        });
+        assert.equal(res.googleMapsApiKey, 'clave-primaria');
+        assert.deepEqual(res.googleMapsApiKeys, ['clave-primaria']);
+    });
+
+    it('debe usar clave secundaria como fallback si la primaria no existe', () => {
+        const res = mapsConfigBackend.resolveGoogleMapsKeys({
+            GOOGLE_MAPS_API_KEY: '',
+            GOOGLE_MAPS_API_KEY_SECUNDARIA: 'clave-secundaria'
+        });
+        assert.equal(res.googleMapsApiKey, 'clave-secundaria');
+        assert.deepEqual(res.googleMapsApiKeys, ['clave-secundaria']);
+    });
+
+    it('debe retornar null y arreglo vacío si ninguna clave está configurada', () => {
+        const res = mapsConfigBackend.resolveGoogleMapsKeys({});
+        assert.equal(res.googleMapsApiKey, null);
+        assert.deepEqual(res.googleMapsApiKeys, []);
+    });
+
+    it('debe deduplicar y limpiar espacios en blanco de las claves', () => {
+        const res = mapsConfigBackend.resolveGoogleMapsKeys({
+            GOOGLE_MAPS_API_KEY: '  misma-clave  ',
+            GOOGLE_MAPS_API_KEY_SECUNDARIA: 'misma-clave'
+        });
+        assert.equal(res.googleMapsApiKey, 'misma-clave');
+        assert.deepEqual(res.googleMapsApiKeys, ['misma-clave']);
+    });
+
+    it('debe manejar valores no string o undefined de forma segura', () => {
+        const res = mapsConfigBackend.resolveGoogleMapsKeys({
+            GOOGLE_MAPS_API_KEY: null,
+            GOOGLE_MAPS_API_KEY_SECUNDARIA: undefined
+        });
+        assert.equal(res.googleMapsApiKey, null);
+        assert.deepEqual(res.googleMapsApiKeys, []);
+    });
+});
+
+describe('White-Box Unit Tests - Google Maps Cascading Loader (Frontend)', () => {
+    let originalWindow;
+    let originalDocument;
+
+    function setupMockDom(scriptBehavior) {
+        _resetCargaParaPruebas();
+        const scripts = [];
+
+        const mockDocument = {
+            createElement: (tag) => {
+                const el = {
+                    tagName: tag.toUpperCase(),
+                    attributes: {},
+                    setAttribute: (k, v) => { el.attributes[k] = v; },
+                    remove: () => {
+                        const idx = scripts.indexOf(el);
+                        if (idx !== -1) scripts.splice(idx, 1);
+                    }
+                };
+                return el;
+            },
+            querySelectorAll: () => [...scripts],
+            head: {
+                appendChild: (el) => {
+                    scripts.push(el);
+                    queueMicrotask(() => {
+                        if (typeof scriptBehavior === 'function') {
+                            scriptBehavior(el, mockWindow);
+                        }
+                    });
+                }
+            }
+        };
+
+        const mockWindow = {
+            google: null,
+            document: mockDocument
+        };
+
+        globalThis.window = mockWindow;
+        globalThis.document = mockDocument;
+        return { mockWindow, scripts };
+    }
+
+    function teardownMockDom() {
+        _resetCargaParaPruebas();
+        if (originalWindow !== undefined) {
+            globalThis.window = originalWindow;
+        } else {
+            delete globalThis.window;
+        }
+        if (originalDocument !== undefined) {
+            globalThis.document = originalDocument;
+        } else {
+            delete globalThis.document;
+        }
+    }
+
+    it('debe cargar exitosamente con la clave primaria sin intentar la secundaria', async () => {
+        originalWindow = globalThis.window;
+        originalDocument = globalThis.document;
+        try {
+            const { scripts } = setupMockDom((scriptEl, win) => {
+                win.google = { maps: { importLibrary: async () => ({}) } };
+                win.__foodjetMapsListo?.();
+            });
+
+            await cargarGoogleMaps(['key-1', 'key-2']);
+            assert.equal(scripts.length, 1);
+            assert.ok(scripts[0].src.includes('key=key-1'));
+            assert.equal(keyFueRechazada(), false);
+        } finally {
+            teardownMockDom();
+        }
+    });
+
+    it('debe reintentar transparentemente con la clave secundaria si la primaria dispara gm_authFailure', async () => {
+        originalWindow = globalThis.window;
+        originalDocument = globalThis.document;
+        try {
+            let intento = 0;
+            setupMockDom((scriptEl, win) => {
+                intento++;
+                if (intento === 1) {
+                    win.gm_authFailure?.();
+                } else if (intento === 2) {
+                    win.google = { maps: { importLibrary: async () => ({}) } };
+                    win.__foodjetMapsListo?.();
+                }
+            });
+
+            await cargarGoogleMaps(['key-invalida', 'key-valida']);
+            assert.equal(intento, 2);
+            assert.equal(keyFueRechazada(), false);
+        } finally {
+            teardownMockDom();
+        }
+    });
+
+    it('debe reintentar con la secundaria si la primaria sufre un error de red (onerror)', async () => {
+        originalWindow = globalThis.window;
+        originalDocument = globalThis.document;
+        try {
+            let intento = 0;
+            setupMockDom((scriptEl, win) => {
+                intento++;
+                if (intento === 1) {
+                    scriptEl.onerror?.(new Error('Network error'));
+                } else if (intento === 2) {
+                    win.google = { maps: { importLibrary: async () => ({}) } };
+                    win.__foodjetMapsListo?.();
+                }
+            });
+
+            await cargarGoogleMaps(['key-red-caida', 'key-segunda']);
+            assert.equal(intento, 2);
+            assert.equal(keyFueRechazada(), false);
+        } finally {
+            teardownMockDom();
+        }
+    });
+
+    it('debe notificar rechazo y disparar callbacks si ambas claves fallan', async () => {
+        originalWindow = globalThis.window;
+        originalDocument = globalThis.document;
+        try {
+            let rechazoNotificado = false;
+            let intentos = 0;
+            setupMockDom((scriptEl, win) => {
+                intentos++;
+                win.gm_authFailure?.();
+            });
+
+            siRechazaLaKey(() => {
+                rechazoNotificado = true;
+            });
+
+            await assert.rejects(
+                async () => {
+                    await cargarGoogleMaps(['key-mala-1', 'key-mala-2']);
+                },
+                /Google Maps/
+            );
+
+            assert.equal(intentos, 2);
+            assert.equal(keyFueRechazada(), true);
+            assert.equal(rechazoNotificado, true);
+        } finally {
+            teardownMockDom();
+        }
+    });
+
+    it('debe rechazar de inmediato si la lista de claves está vacía', async () => {
+        originalWindow = globalThis.window;
+        originalDocument = globalThis.document;
+        try {
+            setupMockDom();
+            await assert.rejects(
+                async () => {
+                    await cargarGoogleMaps([]);
+                },
+                /No hay API key/
+            );
+        } finally {
+            teardownMockDom();
+        }
+    });
+
+    it('debe aceptar opciones en formato de objeto con apiKey y apiKeys', async () => {
+        originalWindow = globalThis.window;
+        originalDocument = globalThis.document;
+        try {
+            let intento = 0;
+            setupMockDom((scriptEl, win) => {
+                intento++;
+                if (intento === 1) {
+                    win.gm_authFailure?.();
+                } else if (intento === 2) {
+                    win.google = { maps: { importLibrary: async () => ({}) } };
+                    win.__foodjetMapsListo?.();
+                }
+            });
+
+            await cargarGoogleMaps({ apiKey: 'key-backup', apiKeys: ['key-primary'] });
+            assert.equal(intento, 2);
+            assert.equal(keyFueRechazada(), false);
+        } finally {
+            teardownMockDom();
+        }
+    });
+});
+

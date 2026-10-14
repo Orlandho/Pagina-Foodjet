@@ -194,10 +194,10 @@ export async function verifyStudentAPI(imageFile, token) {
 let configPublica = null;
 
 /**
- * Configuración pública del backend (por ahora, la key de Google Maps).
+ * Configuración pública del backend (por ahora, las keys de Google Maps).
  * Se pide una vez por visita. Si falla devuelve un objeto vacío y el
  * checkout sigue sin mapa.
- * @returns {Promise<{googleMapsApiKey?: string|null}>}
+ * @returns {Promise<{googleMapsApiKey?: string|null, googleMapsApiKeys?: string[]}>}
  */
 export async function fetchConfigAPI() {
     if (configPublica) return configPublica;

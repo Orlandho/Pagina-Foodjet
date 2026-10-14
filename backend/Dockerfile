@@ -15,7 +15,7 @@ RUN npx prisma generate
 COPY . .
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # El servicio corre como uid 1000 para que los archivos que genere Prisma en el
 # bind mount (prisma/migrations/) pertenezcan al usuario del host, no a root.

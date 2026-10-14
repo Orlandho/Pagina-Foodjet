@@ -295,20 +295,27 @@ function posicionInicial(guardadas) {
  *        volver al comportamiento anterior (GPS del navegador y texto libre).
  * @returns {Promise<boolean>} Si el mapa quedó disponible.
  */
-export async function iniciarMapaEntrega({ apiKey, guardadas = [], alFallar } = {}) {
+export async function iniciarMapaEntrega({ apiKey, apiKeys, guardadas = [], alFallar } = {}) {
     estado.alFallar = alFallar;
 
     if (estado.disponible) {
         posicionInicial(guardadas);
         return true;
     }
-    if (!apiKey || keyFueRechazada() || !$('deliveryMap')) {
+
+    const rawKeys = [
+        ...(Array.isArray(apiKeys) ? apiKeys : []),
+        ...(Array.isArray(apiKey) ? apiKey : [apiKey])
+    ];
+    const keys = [...new Set(rawKeys.filter((k) => typeof k === 'string' && k.trim()).map((k) => k.trim()))];
+
+    if (keys.length === 0 || keyFueRechazada() || !$('deliveryMap')) {
         alFallar?.();
         return false;
     }
 
     try {
-        await cargarGoogleMaps(apiKey);
+        await cargarGoogleMaps(keys);
         const [{ Map }, { Geocoder }] = await Promise.all([
             google.maps.importLibrary('maps'),
             google.maps.importLibrary('geocoding')

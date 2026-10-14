@@ -152,11 +152,15 @@ repartidor. Código en `frontend/js/mapaEntrega.js` y `frontend/js/domain/ubicac
    - *Restricciones de aplicaciones*: **Sitios web**, con
      `https://foodjet.asen.pe/*` y `http://localhost:8081/*`.
    - *Restricciones de API*: solo las dos de arriba.
-4. Pégala en `.env` como `GOOGLE_MAPS_API_KEY=...` y recrea el backend para
-   que lea la variable: `docker compose up -d backend`.
+4. Pégala en `.env` como `GOOGLE_MAPS_API_KEY=...` (o `GOOGLE_MAPS_API_KEY_SECUNDARIA=...` si es tu clave de respaldo) y recrea el backend para que lea la variable: `docker compose up -d backend`.
 
-La key viaja al navegador por `GET /api/config`: Google exige cargarla en el
-cliente, y lo que la protege es la restricción por sitio web. Si Google la
+El sistema opera en cascada de 3 niveles:
+1. **Clave principal (`GOOGLE_MAPS_API_KEY`):** Se intenta primero.
+2. **Clave secundaria (`GOOGLE_MAPS_API_KEY_SECUNDARIA`):** Respaldo automático si la principal falta, sufre error de red o es rechazada (`gm_authFailure`).
+3. **Modo sin API key:** Si ambas fallan o están vacías, la app degrada limpiamente al modo manual + GPS sin mapas interactivos.
+
+Las keys viajan al navegador por `GET /api/config` en `googleMapsApiKeys`: Google exige cargarlas en el
+cliente, y lo que las protege es la restricción por sitio web. Si Google las
 rechaza (dominio no autorizado, API sin activar, sin facturación) el mapa se
 retira solo y la consola del navegador dice por qué.
 

@@ -1115,8 +1115,9 @@ async function pollOnce() {
     const vm = getTrackingViewModel(pedido.estado);
     applyTrackingViewModel(vm, pedido);
 
-    const { googleMapsApiKey } = await api.fetchConfigAPI();
-    mostrarMapaSeguimiento(pedido, googleMapsApiKey);
+    const config = await api.fetchConfigAPI();
+    const mapKeys = config.googleMapsApiKeys?.length ? config.googleMapsApiKeys : config.googleMapsApiKey;
+    mostrarMapaSeguimiento(pedido, mapKeys);
 
     if (vm.terminal) {
         showToast(

@@ -545,9 +545,10 @@ async function mostrarMapaDetalle(pedido) {
     mapaDetalle = mapaDetalle || mapas.crearMapaSeguimiento({
         lienzo: 'orderDetailMap', tarjeta: 'orderDetailMapCard', ruta: 'orderDetailRoute', tituloCasa: 'Entrega'
     });
-    const { googleMapsApiKey } = await mapas.fetchConfigAPI();
+    const config = await mapas.fetchConfigAPI();
+    const mapKeys = config.googleMapsApiKeys?.length ? config.googleMapsApiKeys : config.googleMapsApiKey;
     if (pedido.id !== pedidoAbierto) return;
-    mapaDetalle.mostrar(pedido, googleMapsApiKey);
+    mapaDetalle.mostrar(pedido, mapKeys);
 }
 
 /** Nodos de la línea de tiempo: los que ya ocurrieron, con su duración, y los que faltan. */
