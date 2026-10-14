@@ -171,12 +171,19 @@ async function seedOrders() {
  * ocupada. Las reposicionamos al máximo usado.
  */
 async function resyncSequences() {
-    const tablas = ['User', 'Restaurant', 'Category', 'Product', 'DeliveryAddress', 'DiscountCoupon', 'Order', 'OrderItem'];
+    const queries = [
+        'SELECT setval(pg_get_serial_sequence(\'"User"\', \'id\'), COALESCE((SELECT MAX(id) FROM "User"), 1));',
+        'SELECT setval(pg_get_serial_sequence(\'"Restaurant"\', \'id\'), COALESCE((SELECT MAX(id) FROM "Restaurant"), 1));',
+        'SELECT setval(pg_get_serial_sequence(\'"Category"\', \'id\'), COALESCE((SELECT MAX(id) FROM "Category"), 1));',
+        'SELECT setval(pg_get_serial_sequence(\'"Product"\', \'id\'), COALESCE((SELECT MAX(id) FROM "Product"), 1));',
+        'SELECT setval(pg_get_serial_sequence(\'"DeliveryAddress"\', \'id\'), COALESCE((SELECT MAX(id) FROM "DeliveryAddress"), 1));',
+        'SELECT setval(pg_get_serial_sequence(\'"DiscountCoupon"\', \'id\'), COALESCE((SELECT MAX(id) FROM "DiscountCoupon"), 1));',
+        'SELECT setval(pg_get_serial_sequence(\'"Order"\', \'id\'), COALESCE((SELECT MAX(id) FROM "Order"), 1));',
+        'SELECT setval(pg_get_serial_sequence(\'"OrderItem"\', \'id\'), COALESCE((SELECT MAX(id) FROM "OrderItem"), 1));'
+    ];
 
-    for (const tabla of tablas) {
-        await prisma.$executeRawUnsafe(
-            `SELECT setval(pg_get_serial_sequence('"${tabla}"', 'id'), COALESCE((SELECT MAX(id) FROM "${tabla}"), 1));`
-        );
+    for (const query of queries) {
+        await prisma.$executeRawUnsafe(query);
     }
 }
 

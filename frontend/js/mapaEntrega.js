@@ -42,6 +42,7 @@ const estado = {
 };
 
 const $ = (id) => document.getElementById(id);
+const inputDireccion = () => $('customerAddress');
 
 siRechazaLaKey(() => {
     retirarMapa('El mapa no está disponible ahora. Escribe tu dirección con el mayor detalle posible.');
@@ -122,18 +123,18 @@ function manejarErrorGeocoder(error) {
 
 /** Escribe en el campo la dirección del punto, si el texto es nuestro. */
 async function rellenarDireccion(coords) {
-    const input = $('customerAddress');
-    if (!estado.geocoderActivo || !input) return;
-    if (input.value.trim() && !estado.textoAutomatico) return;
+    const el = inputDireccion();
+    if (!estado.geocoderActivo || !el) return;
+    if (el.value.trim() && !estado.textoAutomatico) return;
 
     // Si el cliente mueve el mapa varias veces seguidas, solo vale la última.
     const consulta = ++estado.consultaInversa;
     try {
         const { results } = await estado.geocoder.geocode({ location: coords });
         if (consulta !== estado.consultaInversa || !results?.length) return;
-        if (input.value.trim() && !estado.textoAutomatico) return;
+        if (el.value.trim() && !estado.textoAutomatico) return;
 
-        input.value = results[0].formatted_address;
+        el.value = results[0].formatted_address;
         estado.textoAutomatico = true;
     } catch (error) {
         if (consulta === estado.consultaInversa && error?.code !== 'ZERO_RESULTS') {
@@ -144,8 +145,8 @@ async function rellenarDireccion(coords) {
 
 /** Busca lo escrito en el campo y lleva el mapa hasta allí. */
 async function buscarDireccion() {
-    const input = $('customerAddress');
-    const texto = input?.value.trim();
+    const el = inputDireccion();
+    const texto = el?.value.trim();
     if (!estado.disponible || !texto) return;
 
     if (!estado.geocoderActivo) {
@@ -209,17 +210,17 @@ function usarMiUbicacion({ silencioso = false } = {}) {
 // ==========================================
 
 function engancharEventos() {
-    const input = $('customerAddress');
+    const el = inputDireccion();
     const lienzo = $('deliveryMapWrapper');
 
     // Enter en la dirección busca en vez de enviar el formulario.
-    input.addEventListener('keydown', (e) => {
+    el.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && estado.disponible) {
             e.preventDefault();
             buscarDireccion();
         }
     });
-    input.addEventListener('input', () => { estado.textoAutomatico = false; });
+    el.addEventListener('input', () => { estado.textoAutomatico = false; });
 
     $('deliveryAddressSearch')?.addEventListener('click', buscarDireccion);
     $('deliveryMapLocate')?.addEventListener('click', () => usarMiUbicacion());

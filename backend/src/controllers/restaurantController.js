@@ -41,10 +41,19 @@ exports.getAllRestaurants = async (req, res) => {
     }
 };
 
+function parseId(req, res) {
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) {
+        res.status(400).json({ error: 'Identificador inválido.' });
+        return null;
+    }
+    return id;
+}
+
 exports.getRestaurantById = async (req, res) => {
     try {
-        const id = parseInt(req.params.id, 10);
-        if (Number.isNaN(id)) return res.status(400).json({ error: 'Identificador inválido.' });
+        const id = parseId(req, res);
+        if (id === null) return;
 
         const local = await prisma.restaurant.findUnique({
             where: { id },
@@ -88,8 +97,8 @@ exports.createRestaurant = async (req, res) => {
 
 exports.updateRestaurant = async (req, res) => {
     try {
-        const id = parseInt(req.params.id, 10);
-        if (Number.isNaN(id)) return res.status(400).json({ error: 'Identificador inválido.' });
+        const id = parseId(req, res);
+        if (id === null) return;
 
         const revision = validarLocal(req.body, { exigirNombre: false });
         if (!revision.valid) return res.status(400).json({ error: revision.error });
@@ -123,8 +132,8 @@ exports.updateRestaurant = async (req, res) => {
 
 exports.deleteRestaurant = async (req, res) => {
     try {
-        const id = parseInt(req.params.id, 10);
-        if (Number.isNaN(id)) return res.status(400).json({ error: 'Identificador inválido.' });
+        const id = parseId(req, res);
+        if (id === null) return;
 
         const pedidos = await prisma.order.count({ where: { restaurante_id: id } });
         if (pedidos > 0) {

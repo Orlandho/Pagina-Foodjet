@@ -48,7 +48,7 @@ const ZONAS = [
     { cliente: 7, direccion: 'Jr. de la Unión 600, Cercado de Lima', referencia: 'Altura de la plaza', lat: -12.0464, lon: -77.0306 },
     { cliente: 0, direccion: 'Av. Angamos Este 1200, Surquillo', referencia: 'Oficina 4B', lat: -12.1117, lon: -77.0152 },
     { cliente: 1, direccion: 'Av. Brasil 3150, Magdalena del Mar', referencia: 'Portón verde', lat: -12.0897, lon: -77.0721 },
-    { cliente: 2, direccion: 'Av. Bolívar 780, Pueblo Libre', referencia: 'Cerca al parque', lat: -12.0716, lon: -77.0626 },
+    { cliente: 2, direccion: 'Av. Bolivar 780, Pueblo Libre', referencia: 'Cerca al parque', lat: -12.0716, lon: -77.0626 },
     { cliente: 3, direccion: 'Av. Arenales 1900, Lince', referencia: 'Edificio Los Álamos', lat: -12.0846, lon: -77.0342 }
 ];
 

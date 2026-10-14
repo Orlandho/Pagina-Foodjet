@@ -66,7 +66,10 @@ export function crearMapaSeguimiento(ids) {
                 this.posicion = posicion;
                 this.div = document.createElement('div');
                 this.div.className = `marcador-seguimiento ${clase}`;
-                this.div.innerHTML = `<i class="bi ${icono}" aria-hidden="true"></i>`;
+                const iconoEl = document.createElement('i');
+                iconoEl.className = `bi ${icono}`;
+                iconoEl.setAttribute('aria-hidden', 'true');
+                this.div.appendChild(iconoEl);
                 this.div.title = titulo;
             }
 
