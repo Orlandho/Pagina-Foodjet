@@ -4,10 +4,8 @@ import {
     getTrackingViewModel,
     normalizeEstado,
     isTerminal,
-    isLineCompleted,
     getEstadoBadge,
-    deriveSubtotal,
-    ETAPAS
+    deriveSubtotal
 } from './domain/orderStatus.js';
 import {
     calculateStudentPrice,
@@ -17,6 +15,8 @@ import {
     getProductRestaurant,
     getCartRestaurant
 } from './domain/catalog.js';
+import { lineaDeTiempo, formatearRestante } from './domain/seguimiento.js';
+import { mostrarMapaSeguimiento, detenerMapaSeguimiento } from './mapaSeguimiento.js';
 
 // UTILIDADES GENERALES DE UI
 export function showToast(message, type = 'success') {
@@ -1002,53 +1002,82 @@ function renderOrderDetails(orderData, paymentMethod) {
     set('orderTotalFinal', `S/ ${(Number(orderData?.total) || 0).toFixed(2)}`);
 }
 
-/** Vuelca el modelo de vista sobre la línea de tiempo. */
-function applyTrackingViewModel(vm) {
+const formatoHora = new Intl.DateTimeFormat('es-PE', { hour: 'numeric', minute: '2-digit' });
+
+/** Diferencia entre el reloj del servidor y el del navegador. */
+let desfaseServidorMs = 0;
+
+/**
+ * Vuelca el modelo de vista sobre la cabecera y la línea de tiempo.
+ *
+ * @param {Object} vm Modelo de getTrackingViewModel (títulos e iconos).
+ * @param {Object} [pedido] Pedido completo de la API: de su historial y su
+ *        plan salen las horas de cada etapa. Sin él, solo se marcan etapas.
+ */
+function applyTrackingViewModel(vm, pedido = null) {
     const statusIcon = document.getElementById('statusIcon');
     const statusTitle = document.getElementById('statusTitle');
     const statusDesc = document.getElementById('statusDescription');
-    const estimatedTime = document.getElementById('estimatedTime');
 
     if (statusIcon) {
         const color = vm.cancelled ? 'text-danger' : (vm.terminal ? 'text-success' : 'text-primary');
-        statusIcon.innerHTML = `<i class="bi ${vm.iconClass} fs-1 ${color}" aria-hidden="true"></i>`;
+        statusIcon.innerHTML = `<i class="bi ${vm.iconClass} fs-2 ${color}" aria-hidden="true"></i>`;
         statusIcon.classList.toggle('delivered', vm.terminal);
     }
     if (statusTitle) statusTitle.textContent = vm.title;
     if (statusDesc) statusDesc.textContent = vm.description;
 
-    if (estimatedTime) {
-        if (vm.etaText) {
-            estimatedTime.innerHTML = `<i class="bi bi-clock me-2" aria-hidden="true"></i>${vm.etaText}`;
-            estimatedTime.style.display = '';
-        } else {
-            estimatedTime.style.display = 'none';
-        }
-    }
+    const ahora = Date.now() + desfaseServidorMs;
+    const linea = lineaDeTiempo({ estado: vm.estado, ...(pedido || {}) }, ahora);
 
-    ETAPAS.forEach((etiqueta, i) => {
+    pintarLlegada(vm, linea, ahora);
+
+    linea.etapas.forEach((etapa, i) => {
         const paso = document.getElementById(`step${i + 1}`);
         if (!paso) return;
 
-        const completado = i < vm.completedCount;
-        const activo = i === vm.activeIndex;
-
-        paso.classList.toggle('completed', completado);
-        paso.classList.toggle('active', activo && !completado);
-
-        if (activo) {
+        paso.dataset.situacion = etapa.situacion;
+        if (etapa.situacion === 'en_curso') {
             paso.setAttribute('aria-current', 'step');
         } else {
             paso.removeAttribute('aria-current');
         }
 
-        const icono = completado ? 'bi-check-circle-fill' : ICONOS_ETAPA[i];
-        paso.innerHTML = `<i class="bi ${icono}" aria-hidden="true"></i>`;
-        paso.setAttribute('aria-label', `Etapa ${i + 1} de ${ETAPAS.length}: ${etiqueta}`);
+        const marca = paso.querySelector('.linea-tiempo__marca');
+        if (marca) {
+            const icono = etapa.situacion === 'hecha' ? 'bi-check-lg' : ICONOS_ETAPA[i];
+            marca.innerHTML = `<i class="bi ${icono}"></i>`;
+        }
 
-        const linea = document.getElementById(`line${i + 1}`);
-        if (linea) linea.classList.toggle('completed', isLineCompleted(vm, i));
+        const hora = document.getElementById(`stepTime${i + 1}`);
+        if (hora) {
+            hora.innerHTML = etapa.hora === null ? '' : `<time datetime="${new Date(etapa.hora).toISOString()}">${
+                etapa.estimada ? 'aprox. ' : ''}${formatoHora.format(etapa.hora)}</time>`;
+        }
     });
+}
+
+/** La cifra grande: cuánto falta para que llegue el pedido. */
+function pintarLlegada(vm, linea, ahora) {
+    const bloque = document.getElementById('estimatedTime');
+    const cifra = document.getElementById('etaValue');
+    const texto = document.getElementById('etaText');
+    if (!bloque || !cifra || !texto) return;
+
+    if (vm.terminal) {
+        bloque.hidden = true;
+        return;
+    }
+
+    bloque.hidden = false;
+    if (linea.llegada) {
+        cifra.textContent = formatearRestante(linea.llegada.hora - ahora);
+        texto.textContent = `Llegada aprox. ${formatoHora.format(linea.llegada.hora)}`;
+    } else {
+        // Pedidos sin plan de tiempos: queda la estimación genérica.
+        cifra.textContent = '';
+        texto.textContent = vm.etaText;
+    }
 }
 
 const ICONOS_ETAPA = ['bi-hourglass-split', 'bi-box-seam', 'bi-bicycle', 'bi-house-door'];
@@ -1078,8 +1107,16 @@ async function pollOnce() {
     trackingFallos = 0;
     setConnectionNotice('');
 
-    const vm = getTrackingViewModel(resultado.data.estado);
-    applyTrackingViewModel(vm);
+    const pedido = resultado.data;
+    if (pedido.servidor_ahora) {
+        desfaseServidorMs = new Date(pedido.servidor_ahora).getTime() - Date.now();
+    }
+
+    const vm = getTrackingViewModel(pedido.estado);
+    applyTrackingViewModel(vm, pedido);
+
+    const { googleMapsApiKey } = await api.fetchConfigAPI();
+    mostrarMapaSeguimiento(pedido, googleMapsApiKey);
 
     if (vm.terminal) {
         showToast(
@@ -1115,6 +1152,7 @@ export function startOrderTracking(paymentMethod, orderData) {
 
 /** Detiene el sondeo. Es idempotente: se puede llamar siempre. */
 export function stopOrderTracking() {
+    detenerMapaSeguimiento();
     if (trackingIntervalId !== null) {
         clearInterval(trackingIntervalId);
         trackingIntervalId = null;

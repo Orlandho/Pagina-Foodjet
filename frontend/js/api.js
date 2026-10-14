@@ -191,6 +191,27 @@ export async function verifyStudentAPI(imageFile, token) {
     }
 }
 
+let configPublica = null;
+
+/**
+ * Configuración pública del backend (por ahora, la key de Google Maps).
+ * Se pide una vez por visita. Si falla devuelve un objeto vacío y el
+ * checkout sigue sin mapa.
+ * @returns {Promise<{googleMapsApiKey?: string|null}>}
+ */
+export async function fetchConfigAPI() {
+    if (configPublica) return configPublica;
+    try {
+        const response = await fetch(`${API_URL}/config`);
+        if (!response.ok) return {};
+        configPublica = await response.json();
+        return configPublica;
+    } catch (error) {
+        console.error('Error al cargar la configuración:', error);
+        return {};
+    }
+}
+
 /**
  * Direcciones de entrega del usuario.
  * @returns {Promise<Array>} Lista de direcciones (vacía si falla)
@@ -222,9 +243,9 @@ export async function createAddressAPI(direccion, token) {
             body: JSON.stringify(direccion)
         });
         const data = await response.json();
-        return { ok: response.ok, data };
+        return { ok: response.ok, status: response.status, data };
     } catch (error) {
         console.error('Error al guardar la dirección:', error);
-        return { ok: false, data: null };
+        return { ok: false, status: 0, data: null };
     }
 }

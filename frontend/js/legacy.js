@@ -313,47 +313,160 @@ const ETIQUETA_ESTADO = {
     cancelado: 'Cancelado'
 };
 
-async function renderOperationsPanel() {
-    const tbody = document.getElementById('operationsTableBody');
-    const notice = document.getElementById('operationsNotice');
-    if (!tbody) return;
+const ESTADOS_EN_CURSO = ['pendiente', 'confirmado', 'en_preparacion', 'en_camino'];
+const FILTROS_OPERACIONES = [
+    { id: 'en_curso', etiqueta: 'En curso' },
+    ...ESTADOS_EN_CURSO.map(id => ({ id, etiqueta: ETIQUETA_ESTADO[id] })),
+    { id: 'entregado', etiqueta: ETIQUETA_ESTADO.entregado },
+    { id: 'cancelado', etiqueta: ETIQUETA_ESTADO.cancelado },
+    { id: 'todos', etiqueta: 'Todos' }
+];
+const INTERVALO_OPERACIONES_MS = 5000;
 
-    const response = await fetch(`${API_URL}/orders`, {
-        headers: { 'Authorization': `Bearer ${window.authToken}` }
-    });
+let pedidosOperaciones = [];
+let filtroOperaciones = 'en_curso';
+let temporizadorOperaciones = null;
+
+function coincideFiltro(order, filtro) {
+    if (filtro === 'todos') return true;
+    if (filtro === 'en_curso') return ESTADOS_EN_CURSO.includes(order.estado);
+    return order.estado === filtro;
+}
+
+function hace(fecha) {
+    const min = Math.max(0, Math.round((Date.now() - new Date(fecha).getTime()) / 60000));
+    if (min < 1) return 'hace un momento';
+    if (min < 60) return `hace ${min} min`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `hace ${h} h`;
+    return `hace ${Math.floor(h / 24)} d`;
+}
+
+/** 45 s, 2 min 10 s, 1 h 5 min. */
+function duracion(ms) {
+    const total = Math.max(0, Math.round(ms / 1000));
+    if (total < 60) return `${total} s`;
+    const min = Math.floor(total / 60);
+    if (min < 60) return total % 60 && min < 10 ? `${min} min ${total % 60} s` : `${min} min`;
+    const h = Math.floor(min / 60);
+    if (h >= 24) return h % 24 ? `${Math.floor(h / 24)} d ${h % 24} h` : `${Math.floor(h / 24)} d`;
+    return min % 60 ? `${h} h ${min % 60} min` : `${h} h`;
+}
+
+function escaparHtml(texto) {
+    const d = document.createElement('div');
+    d.textContent = texto ?? '';
+    return d.innerHTML;
+}
+
+/** Repinta filtros y tabla con los pedidos ya cargados, sin volver a pedirlos. */
+function pintarOperaciones() {
+    const tbody = document.getElementById('operationsTableBody');
+    const filtros = document.getElementById('operationsFilters');
+    if (!tbody || !filtros) return;
+
+    filtros.innerHTML = FILTROS_OPERACIONES.map(f => {
+        const n = pedidosOperaciones.filter(o => coincideFiltro(o, f.id)).length;
+        const activo = f.id === filtroOperaciones;
+        return `<button type="button" class="operaciones__filtro${activo ? ' is-active' : ''}"
+                        data-filter="${f.id}" aria-pressed="${activo}">
+                    ${f.etiqueta} <span class="operaciones__conteo">${n}</span>
+                </button>`;
+    }).join('');
+
+    const visibles = pedidosOperaciones.filter(o => coincideFiltro(o, filtroOperaciones));
+
+    tbody.innerHTML = visibles.length ? visibles.map(order => {
+        // Avanzar y cancelar viven dentro del detalle, donde se ve el historial
+        // y el mapa antes de decidir.
+        const acciones = `<div class="text-end">
+            <button type="button" class="btn btn-sm btn-primary btn-order-detail" data-order-id="${order.id}">
+                <i class="bi bi-eye me-1" aria-hidden="true"></i>Ver detalle</button></div>`;
+
+        return `
+            <tr>
+                <th scope="row">
+                    <button type="button" class="detalle-abrir btn-order-detail" data-order-id="${order.id}"
+                            aria-label="Ver detalle del pedido ${order.id}">#FJ${String(order.id).padStart(4, '0')}</button>
+                    <div class="small text-muted fw-normal">${hace(order.fecha)}</div></th>
+                <td>${escaparHtml(order.cliente)}
+                    <div class="small text-muted">${escaparHtml(order.restaurante)}</div></td>
+                <td>S/ ${Number(order.total).toFixed(2)}</td>
+                <td><span class="estado-pedido estado-pedido--${order.estado}">${ETIQUETA_ESTADO[order.estado] || order.estado}</span>
+                    ${ESTADOS_EN_CURSO.includes(order.estado) ? `<div class="small text-muted mt-1">lleva ${duracion(Date.now() - new Date(order.estado_desde).getTime())}</div>` : ''}</td>
+                <td>${acciones}</td>
+            </tr>`;
+    }).join('') : '<tr><td colspan="5" class="text-center text-muted py-4">No hay pedidos en este estado.</td></tr>';
+}
+
+async function renderOperationsPanel() {
+    const notice = document.getElementById('operationsNotice');
+    const actualizado = document.getElementById('operationsUpdated');
+    if (!document.getElementById('operationsTableBody')) return;
+
+    let response;
+    try {
+        response = await fetch(`${API_URL}/orders`, {
+            headers: { 'Authorization': `Bearer ${window.authToken}` }
+        });
+    } catch (error) {
+        if (notice) notice.textContent = 'Sin conexión con el servidor. Reintentando…';
+        return;
+    }
 
     if (!response.ok) {
-        tbody.innerHTML = '';
+        detenerRefrescoOperaciones();
         if (notice) notice.textContent = 'No se pudieron cargar los pedidos.';
         return;
     }
 
-    const orders = await response.json();
-    if (notice) notice.textContent = `${orders.length} pedidos cargados.`;
-
-    tbody.innerHTML = orders.map(order => {
-        const siguiente = SIGUIENTE_ESTADO[order.estado];
-        const accion = siguiente
-            ? `<button class="btn btn-sm btn-primary btn-advance-order" data-order-id="${order.id}" data-next="${siguiente}">
-                   Avanzar a ${ETIQUETA_ESTADO[siguiente]}
-               </button>`
-            : '<span class="text-muted small">Sin acciones</span>';
-
-        return `
-            <tr>
-                <th scope="row">#FJ${String(order.id).padStart(4, '0')}</th>
-                <td>${order.cliente}</td>
-                <td>S/ ${Number(order.total).toFixed(2)}</td>
-                <td>${ETIQUETA_ESTADO[order.estado] || order.estado}</td>
-                <td>${accion}</td>
-            </tr>
-        `;
-    }).join('');
-
-    tbody.querySelectorAll('.btn-advance-order').forEach(btn => {
-        btn.addEventListener('click', () => advanceOrder(btn.dataset.orderId, btn.dataset.next));
-    });
+    pedidosOperaciones = await response.json();
+    pintarOperaciones();
+    if (pedidoAbierto) cargarDetallePedido(pedidoAbierto, { silencioso: true });
+    if (actualizado) actualizado.textContent = `Actualizado ${new Date().toLocaleTimeString('es-PE')}`;
+    iniciarRefrescoOperaciones();
 }
+
+/** Mientras el panel está a la vista se actualiza solo: el simulador mueve los estados sin que nadie toque nada. */
+function iniciarRefrescoOperaciones() {
+    if (temporizadorOperaciones) return;
+    temporizadorOperaciones = setInterval(() => {
+        const vista = document.getElementById('dashboardView');
+        if (!vista || vista.style.display === 'none' || document.hidden) {
+            if (!vista || vista.style.display === 'none') detenerRefrescoOperaciones();
+            return;
+        }
+        renderOperationsPanel();
+    }, INTERVALO_OPERACIONES_MS);
+}
+
+function detenerRefrescoOperaciones() {
+    clearInterval(temporizadorOperaciones);
+    temporizadorOperaciones = null;
+}
+
+document.addEventListener('click', (e) => {
+    const filtro = e.target.closest('#operationsFilters [data-filter]');
+    if (filtro) {
+        filtroOperaciones = filtro.dataset.filter;
+        pintarOperaciones();
+        return;
+    }
+    const detalle = e.target.closest('.btn-order-detail');
+    if (detalle) {
+        abrirDetallePedido(Number(detalle.dataset.orderId));
+        return;
+    }
+    const avanzar = e.target.closest('.btn-advance-order');
+    if (avanzar) {
+        advanceOrder(avanzar.dataset.orderId, avanzar.dataset.next);
+        return;
+    }
+    const cancelar = e.target.closest('.btn-cancel-order');
+    if (cancelar && window.confirm(`¿Cancelar el pedido #${cancelar.dataset.orderId}? No se puede deshacer.`)) {
+        advanceOrder(cancelar.dataset.orderId, 'cancelado');
+    }
+});
 
 async function advanceOrder(orderId, nuevoEstado) {
     const notice = document.getElementById('operationsNotice');
@@ -371,12 +484,163 @@ async function advanceOrder(orderId, nuevoEstado) {
 
     if (!response.ok) {
         if (notice) notice.textContent = data.error || 'No se pudo actualizar el pedido.';
+        await renderOperationsPanel();
         return;
     }
 
     if (notice) notice.textContent = `Pedido #${orderId} actualizado a ${ETIQUETA_ESTADO[nuevoEstado]}.`;
     await renderOperationsPanel();
 }
+
+// ---------------------------------------------------------------------------
+// Detalle de un pedido: cuándo entró en cada estado y cuánto duró cada uno.
+// ---------------------------------------------------------------------------
+const ORIGEN_CAMBIO = { cliente: 'Cliente', personal: 'Personal', simulador: 'Simulación', sistema: 'Sistema' };
+const FLUJO_DETALLE = ['pendiente', 'confirmado', 'en_preparacion', 'en_camino', 'entregado'];
+
+let pedidoAbierto = null;
+let mapaDetalle = null;
+
+function abrirDetallePedido(id) {
+    pedidoAbierto = id;
+    const panel = document.getElementById('orderDetailModal');
+    if (!panel) return;
+    document.getElementById('orderDetailTitle').textContent = `Pedido #FJ${String(id).padStart(4, '0')}`;
+    document.getElementById('orderDetailBody').innerHTML = '<p class="text-muted">Cargando…</p>';
+    // El mapa no puede medirse mientras la ventana está oculta: se reencuadra
+    // cuando termina de abrirse.
+    panel.addEventListener('shown.bs.modal', () => mapaDetalle?.reencuadrar(), { once: true });
+    panel.addEventListener('hidden.bs.modal', () => {
+        pedidoAbierto = null;
+        mapaDetalle?.detener();
+    }, { once: true });
+    bootstrap.Modal.getOrCreateInstance(panel).show();
+    cargarDetallePedido(id);
+}
+
+async function cargarDetallePedido(id, { silencioso = false } = {}) {
+    const cuerpo = document.getElementById('orderDetailBody');
+    try {
+        const response = await fetch(`${API_URL}/orders/${id}`, {
+            headers: { 'Authorization': `Bearer ${window.authToken}` }
+        });
+        if (id !== pedidoAbierto) return;
+        if (!response.ok) {
+            if (!silencioso) cuerpo.innerHTML = '<p class="text-muted">No se pudo cargar el pedido. Cierra el panel y vuelve a abrirlo.</p>';
+            return;
+        }
+        const pedido = await response.json();
+        pintarDetallePedido(pedido);
+        mostrarMapaDetalle(pedido);
+    } catch (error) {
+        if (!silencioso) cuerpo.innerHTML = '<p class="text-muted">Sin conexión con el servidor.</p>';
+    }
+}
+
+/** El mapa vive fuera del cuerpo que se repinta, para no recrearlo en cada actualización. */
+async function mostrarMapaDetalle(pedido) {
+    const mapas = window.FoodJetMapas;
+    if (!mapas) return;
+
+    mapaDetalle = mapaDetalle || mapas.crearMapaSeguimiento({
+        lienzo: 'orderDetailMap', tarjeta: 'orderDetailMapCard', ruta: 'orderDetailRoute', tituloCasa: 'Entrega'
+    });
+    const { googleMapsApiKey } = await mapas.fetchConfigAPI();
+    if (pedido.id !== pedidoAbierto) return;
+    mapaDetalle.mostrar(pedido, googleMapsApiKey);
+}
+
+/** Nodos de la línea de tiempo: los que ya ocurrieron, con su duración, y los que faltan. */
+function etapasDelPedido(pedido, ahora) {
+    const reales = pedido.historial.map(h => ({ estado: h.estado, desde: new Date(h.fecha).getTime(), origen: h.origen }));
+    // El pedido nace en "pendiente" aunque ese primer cambio no se haya anotado.
+    if (!reales.some(r => r.estado === 'pendiente')) {
+        reales.unshift({ estado: 'pendiente', desde: new Date(pedido.fecha).getTime(), origen: 'cliente' });
+    }
+    const terminal = ['entregado', 'cancelado'].includes(pedido.estado);
+
+    const hechas = reales.map((r, i) => {
+        const siguiente = reales[i + 1];
+        const fin = siguiente ? siguiente.desde : (terminal ? null : ahora);
+        return { ...r, duracion: fin === null ? null : Math.max(0, fin - r.desde), enCurso: !siguiente && !terminal };
+    });
+
+    const pendientes = pedido.estado === 'cancelado'
+        ? []
+        : FLUJO_DETALLE.slice(FLUJO_DETALLE.indexOf(pedido.estado) + 1).map(estado => ({ estado, futuro: true }));
+
+    return { hechas, pendientes };
+}
+
+function pintarDetallePedido(pedido) {
+    const cuerpo = document.getElementById('orderDetailBody');
+    if (!cuerpo) return;
+
+    const resumen = pedidosOperaciones.find(o => o.id === pedido.id);
+    const ahora = Date.now() + (pedido.servidor_ahora ? new Date(pedido.servidor_ahora).getTime() - Date.now() : 0);
+    const { hechas, pendientes } = etapasDelPedido(pedido, ahora);
+
+    const conDuracion = hechas.filter(e => e.duracion !== null && e.duracion > 0);
+    const suma = conDuracion.reduce((t, e) => t + e.duracion, 0) || 1;
+    const barra = conDuracion.map(e => `<span class="linea__tramo estado-pedido--${e.estado}"
+            style="flex: ${e.duracion} 1 0" title="${ETIQUETA_ESTADO[e.estado]}: ${duracion(e.duracion)}"></span>`).join('');
+
+    const inicio = hechas[0].desde;
+    const terminal = ['entregado', 'cancelado'].includes(pedido.estado);
+    const total = (terminal ? hechas[hechas.length - 1].desde : ahora) - inicio;
+    const textoTotal = pedido.estado === 'entregado' ? `Entregado en ${duracion(total)}`
+        : pedido.estado === 'cancelado' ? `Cancelado a los ${duracion(total)}`
+        : `Lleva ${duracion(total)} desde que se pidió`;
+
+    const hora = (ms) => new Date(ms).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const pasos = hechas.map(e => `
+        <li class="linea__paso${e.enCurso ? ' is-actual' : ''}">
+            <span class="linea__punto estado-pedido--${e.estado}" aria-hidden="true"></span>
+            <div class="linea__titulo">${ETIQUETA_ESTADO[e.estado] || e.estado}
+                <span class="linea__hora">${hora(e.desde)}</span></div>
+            <div class="linea__detalle">${ORIGEN_CAMBIO[e.origen] || e.origen}${
+                e.duracion === null ? '' : ` · ${e.enCurso ? 'lleva ' : 'duró '}${duracion(e.duracion)}`}</div>
+        </li>`).join('') + pendientes.map(e => `
+        <li class="linea__paso is-futuro">
+            <span class="linea__punto" aria-hidden="true"></span>
+            <div class="linea__titulo">${ETIQUETA_ESTADO[e.estado]}</div>
+        </li>`).join('');
+
+    const siguiente = SIGUIENTE_ESTADO[pedido.estado];
+    const acciones = ESTADOS_EN_CURSO.includes(pedido.estado) ? `
+        <div class="d-flex gap-2 mt-3">
+            ${pedido.estado !== 'en_camino' ? `<button class="btn btn-outline-danger btn-cancel-order" data-order-id="${pedido.id}">Cancelar pedido</button>` : ''}
+            <button class="btn btn-primary flex-grow-1 btn-advance-order" data-order-id="${pedido.id}" data-next="${siguiente}">
+                Pasar a ${ETIQUETA_ESTADO[siguiente]}</button>
+        </div>` : '';
+
+    const items = (pedido.OrderItem || []).map(i => `
+        <li class="d-flex justify-content-between"><span>${i.cantidad} × ${escaparHtml(i.Product?.nombre || 'Producto')}</span></li>`).join('');
+    const dir = pedido.DeliveryAddress;
+    const recorrido = pedido.distancia_metros
+        ? `${(pedido.distancia_metros / 1000).toFixed(1)} km${pedido.eta_minutos ? ` · ${pedido.eta_minutos} min estimados` : ''}` : null;
+
+    cuerpo.innerHTML = `
+        <div class="d-flex align-items-center justify-content-between">
+            <span class="estado-pedido estado-pedido--${pedido.estado}">${ETIQUETA_ESTADO[pedido.estado]}</span>
+            <strong>S/ ${Number(pedido.total).toFixed(2)}</strong>
+        </div>
+        <p class="mt-3 mb-2 fw-semibold">${textoTotal}</p>
+        ${conDuracion.length ? `<div class="linea__barra" role="img"
+            aria-label="Reparto del tiempo entre etapas">${barra}</div>` : ''}
+        <ol class="linea">${pasos}</ol>
+        ${acciones}
+        <hr class="my-4">
+        <dl class="detalle__datos">
+            <dt>Cliente</dt><dd>${escaparHtml(resumen?.cliente || '')}</dd>
+            <dt>Local</dt><dd>${escaparHtml(pedido.Restaurant?.nombre || '')}</dd>
+            ${dir ? `<dt>Entrega</dt><dd>${escaparHtml(dir.direccion_detallada)}${dir.referencia ? `<div class="small text-muted">${escaparHtml(dir.referencia)}</div>` : ''}</dd>` : ''}
+            ${recorrido ? `<dt>Recorrido</dt><dd>${recorrido}</dd>` : ''}
+        </dl>
+        ${items ? `<ul class="list-unstyled mb-0 mt-3">${items}</ul>` : ''}`;
+}
+
 
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');

@@ -11,6 +11,8 @@ const {
     resolvePaymentStatus,
     resolveInitialOrderStatus
 } = require('../domain/payment');
+const { leerConfigSimulacion, crearPlan, progresoDelPedido } = require('../domain/simulacion');
+const { cambiarEstado, prepararRuta } = require('../services/estadoPedido');
 
 exports.createOrder = async (req, res) => {
     try {
@@ -118,7 +120,11 @@ exports.createOrder = async (req, res) => {
                     impuestos,
                     costo_envio: COSTO_ENVIO,
                     estado: estadoInicial,
-                    OrderItem: { create: orderItemsData }
+                    // Con la simulación apagada no hay plan y el pedido solo
+                    // avanza cuando lo mueve el personal.
+                    plan_tiempos: crearPlan(leerConfigSimulacion()) ?? undefined,
+                    OrderItem: { create: orderItemsData },
+                    OrderStatusHistory: { create: { estado: estadoInicial, origen: 'cliente' } }
                 },
                 include: { OrderItem: true }
             });
@@ -133,6 +139,13 @@ exports.createOrder = async (req, res) => {
             });
 
             return { order: newOrder, transaction: newTransaction };
+        });
+
+        // La ruta se calcula en segundo plano: depende de un servicio externo
+        // y el cliente no tiene por qué esperarla para ver su pedido creado.
+        // El seguimiento la recoge en su siguiente consulta.
+        prepararRuta(result.order.id).catch((error) => {
+            console.error(`No se pudo preparar la ruta del pedido #${result.order.id}:`, error);
         });
 
         res.status(201).json({
@@ -193,7 +206,9 @@ exports.getAllOrders = async (req, res) => {
         const orders = await prisma.order.findMany({
             include: {
                 User_Order_user_idToUser: { select: { id: true, nombre: true, email: true } },
-                Restaurant: { select: { id: true, nombre: true } }
+                Restaurant: { select: { id: true, nombre: true } },
+                // Solo el último cambio: de ahí sale "lleva X en este estado".
+                OrderStatusHistory: { orderBy: { fecha: 'desc' }, take: 1, select: { fecha: true } }
             },
             orderBy: { fecha: 'desc' },
             take: 50
@@ -204,6 +219,7 @@ exports.getAllOrders = async (req, res) => {
             estado: normalizeEstado(o.estado),
             total: o.total,
             fecha: o.fecha,
+            estado_desde: o.OrderStatusHistory[0]?.fecha || o.fecha,
             cliente: o.User_Order_user_idToUser?.nombre || 'Desconocido',
             restaurante: o.Restaurant?.nombre || '-'
         })));
@@ -229,12 +245,19 @@ exports.getOrderById = async (req, res) => {
             where: { id: orderId },
             include: {
                 Restaurant: {
-                    select: { id: true, nombre: true, tiempo_entrega: true, calificacion_promedio: true }
+                    select: {
+                        id: true, nombre: true, tiempo_entrega: true, calificacion_promedio: true,
+                        direccion: true, latitud: true, longitud: true
+                    }
                 },
                 OrderItem: { include: { Product: true } },
                 DeliveryAddress: true,
                 Transaction: true,
-                Review: true
+                Review: true,
+                OrderStatusHistory: {
+                    orderBy: { fecha: 'asc' },
+                    select: { estado: true, fecha: true, origen: true }
+                }
             }
         });
 
@@ -249,7 +272,18 @@ exports.getOrderById = async (req, res) => {
             return res.status(403).json({ error: 'No tienes permiso para ver este pedido.' });
         }
 
-        res.json({ ...order, estado: normalizeEstado(order.estado) });
+        const { OrderStatusHistory: historial, ...resto } = order;
+        const ahora = Date.now();
+
+        res.json({
+            ...resto,
+            estado: normalizeEstado(order.estado),
+            historial: historial.map((h) => ({ ...h, estado: normalizeEstado(h.estado) })),
+            seguimiento: progresoDelPedido(order, ahora),
+            // El navegador anima al repartidor con su propio reloj; con esto
+            // corrige la diferencia con el del servidor.
+            servidor_ahora: new Date(ahora).toISOString()
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error al obtener el pedido.' });
@@ -288,10 +322,11 @@ exports.updateOrderStatus = async (req, res) => {
             });
         }
 
-        const updatedOrder = await prisma.order.update({
-            where: { id: orderId },
-            data: { estado: nuevoEstado }
-        });
+        const updatedOrder = await cambiarEstado(orderId, nuevoEstado, 'personal', { desde: order.estado });
+
+        if (!updatedOrder) {
+            return res.status(409).json({ error: 'El pedido cambió de estado mientras tanto. Recarga y vuelve a intentarlo.' });
+        }
 
         res.json({ message: 'Estado del pedido actualizado', order: updatedOrder });
     } catch (error) {
@@ -321,10 +356,11 @@ exports.cancelOrder = async (req, res) => {
             return res.status(400).json({ error: 'El pedido no puede ser cancelado en su estado actual.' });
         }
 
-        const canceledOrder = await prisma.order.update({
-            where: { id: orderId },
-            data: { estado: "cancelado" }
-        });
+        const canceledOrder = await cambiarEstado(orderId, 'cancelado', 'cliente', { desde: order.estado });
+
+        if (!canceledOrder) {
+            return res.status(409).json({ error: 'El pedido cambió de estado mientras tanto y ya no se puede cancelar.' });
+        }
 
         res.json({ message: 'Pedido cancelado exitosamente', order: canceledOrder });
     } catch (error) {
@@ -342,19 +378,18 @@ exports.autoCancelUnconfirmedOrders = async (minutos = Number(process.env.AUTO_C
         const timeLimit = new Date();
         timeLimit.setMinutes(timeLimit.getMinutes() - minutos);
 
-        const result = await prisma.order.updateMany({
-            where: {
-                estado: "pendiente",
-                fecha: {
-                    lt: timeLimit
-                }
-            },
-            data: {
-                estado: "cancelado"
-            }
+        const vencidos = await prisma.order.findMany({
+            where: { estado: 'pendiente', fecha: { lt: timeLimit } },
+            select: { id: true, estado: true }
         });
 
-        console.log(`CronJob ejecutado: Se cancelaron automáticamente ${result.count} órdenes por falta de confirmación.`);
+        // Uno a uno y no con updateMany: cada cancelación deja su fila en el historial.
+        let cancelados = 0;
+        for (const pedido of vencidos) {
+            if (await cambiarEstado(pedido.id, 'cancelado', 'sistema', { desde: pedido.estado })) cancelados += 1;
+        }
+
+        console.log(`CronJob ejecutado: Se cancelaron automáticamente ${cancelados} órdenes por falta de confirmación.`);
     } catch (error) {
         console.error('Error en el CronJob de cancelación automática:', error);
     }

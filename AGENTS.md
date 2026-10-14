@@ -44,18 +44,47 @@ Cupones de prueba: `PruebaCupon` (10 %) y `FOODJET20` (20 %).
 
 ## 4. Ver el seguimiento en tiempo real
 
-La forma más clara de comprobar el monitoreo del pedido, y la mejor captura
-para el informe, es con dos ventanas del navegador:
+Con `SIMULAR_PEDIDOS=true` (el valor por defecto) cada pedido nuevo avanza
+solo por sus estados y el seguimiento lo enseña en un mapa:
 
-1. En una, inicia sesión como `cliente1@mail.com` y haz un pedido. Al
-   confirmarlo aparece la línea de tiempo, que consulta el estado real cada
-   4 segundos (se ve en la pestaña Red del navegador).
-2. En otra ventana, inicia sesión como `admin@foodjet.com` y abre el **Panel
-   de Operaciones**. Pulsa "Avanzar estado" sobre ese pedido.
-3. La línea de tiempo del cliente avanza sola, sin recargar.
+1. Inicia sesión como `cliente1@mail.com`, marca tu dirección en el mapa del
+   checkout y confirma el pedido.
+2. El seguimiento muestra el local, tu dirección y la ruta por calles. Cada
+   etapa (confirmación, preparación, en camino, entregado) lleva su hora: la
+   real cuando ya ocurrió y una estimada, con "aprox.", cuando aún no.
+3. Al salir a reparto el repartidor recorre la ruta y la cifra grande dice
+   cuánto falta. Con `SIM_ESCALA_TIEMPO=10` un pedido urbano tarda unos
+   3 minutos de principio a fin.
 
-Como alternativa sin intervención manual, pon `ENABLE_JOBS=true` en el `.env`
-y reinicia: los pedidos avanzan solos un estado cada 15 segundos.
+Para tener datos con los que ver el seguimiento y el panel de operaciones,
+`docker compose exec backend node src/scripts/sembrar-demo.js` **borra todos los
+pedidos** y crea otros nuevos: 8 clientes, 12 direcciones repartidas por Lima y
+pedidos en todos los estados (los que van en camino se mueven en el mapa). No
+toca usuarios, locales ni productos. Se puede repetir las veces que haga falta.
+
+Cómo funciona por dentro:
+
+- Cada pedido nace con un **plan de tiempos** (`Order.plan_tiempos`):
+  segundos que dura cada estado. `backend/src/jobs/simuladorPedidos.js` lo
+  revisa cada 2 segundos y avanza los que vencieron.
+- Al crear el pedido se pide la ruta a OSRM en segundo plano y se guarda en
+  `Order.ruta`; la duración del reparto sale de su longitud a
+  `REPARTIDOR_VELOCIDAD_KMH`, con el tope de `SIM_REPARTO_MAX_MIN`.
+- Todo cambio de estado, lo haga el simulador, el personal, el cliente o la
+  auto-cancelación, pasa por `backend/src/services/estadoPedido.js` y deja
+  una fila en **`OrderStatusHistory`** con la hora y el origen. De ahí salen
+  las horas de la línea de tiempo.
+- La posición del repartidor no se envía: se deriva del momento de salida y
+  la duración, en el servidor (`domain/simulacion.js`) y en el navegador
+  (`frontend/js/domain/seguimiento.js`), que la anima entre consultas.
+- El personal puede seguir moviendo pedidos desde el **Panel de
+  Operaciones**; el simulador continúa desde el estado en que lo deje.
+- Los pedidos anteriores a la simulación no tienen plan: no avanzan solos y
+  su línea de tiempo no inventa horas.
+
+El simulador antiguo (`ENABLE_JOBS=true`, un estado cada 15 s para todos los
+pedidos) sigue disponible para los pedidos sin plan, junto con la
+auto-cancelación.
 
 ## 5. Ejecutar las pruebas
 
@@ -98,6 +127,38 @@ requiere recargar el navegador.
 | `HTTP_BIND` | Quién alcanza el proxy. `127.0.0.1` deja a Cloudflare como única entrada; `0.0.0.0` lo abre a la red local |
 | `HTTP_PORT` | Puerto del proxy en el host (8081) |
 | `TUNNEL_TOKEN` | Credencial del túnel de Cloudflare. Vacío = el sitio no sale a internet |
+| `GOOGLE_MAPS_API_KEY` | Key del mapa del checkout. Vacía = checkout sin mapa (dirección escrita + GPS del navegador). Ver más abajo |
+| `OSRM_URL`, `OSRM_TIMEOUT_MS` | Servicio de rutas por calles para el reparto. Si no responde, la ruta cae a línea recta |
+| `REPARTIDOR_VELOCIDAD_KMH` | Velocidad media del repartidor para estimar el tiempo de entrega |
+| `SIMULAR_PEDIDOS` | `true` hace avanzar solos los pedidos nuevos y anima el reparto en el mapa |
+| `SIM_ESCALA_TIEMPO` | Cuántas veces más rápido que la realidad (10 por defecto; 1 = tiempo real) |
+| `SIM_CONFIRMACION_MIN`, `SIM_PREPARACION_MIN` | Minutos reales de esas etapas antes de aplicar la escala |
+| `SIM_REPARTO_MAX_MIN` | Tope del reparto en minutos reales: un destino lejano se recorre más rápido |
+
+### Key de Google Maps (mapa del checkout)
+
+En el checkout el cliente marca en un mapa el punto exacto de entrega: un pin
+fijo en el centro y el mapa se mueve debajo. El punto se guarda en
+`DeliveryAddress.latitud/longitud` y es el destino del recorrido del
+repartidor. Código en `frontend/js/mapaEntrega.js` y `frontend/js/domain/ubicacion.js`.
+
+1. En [Google Cloud Console](https://console.cloud.google.com/) crea un
+   proyecto con **facturación activada** (Google no sirve mapas sin ella; la
+   cuota gratuita mensual sobra para el curso).
+2. En *APIs y servicios → Biblioteca* activa **Maps JavaScript API** y
+   **Geocoding API**. Sin la segunda el mapa funciona pero no se pueden buscar
+   direcciones ni se rellena el texto al mover el pin.
+3. En *Credenciales → Crear credenciales → Clave de API*, restríngela:
+   - *Restricciones de aplicaciones*: **Sitios web**, con
+     `https://foodjet.asen.pe/*` y `http://localhost:8081/*`.
+   - *Restricciones de API*: solo las dos de arriba.
+4. Pégala en `.env` como `GOOGLE_MAPS_API_KEY=...` y recrea el backend para
+   que lea la variable: `docker compose up -d backend`.
+
+La key viaja al navegador por `GET /api/config`: Google exige cargarla en el
+cliente, y lo que la protege es la restricción por sitio web. Si Google la
+rechaza (dominio no autorizado, API sin activar, sin facturación) el mapa se
+retira solo y la consola del navegador dice por qué.
 
 ## 8. Tareas puntuales
 

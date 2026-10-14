@@ -9,6 +9,8 @@
 const prisma = require('../config/db');
 const { autoCancelUnconfirmedOrders } = require('../controllers/orderController');
 const { normalizeEstado, nextEstado, TERMINALES } = require('../domain/orderStatus');
+const { cambiarEstado } = require('../services/estadoPedido');
+const { startSimuladorPedidos } = require('./simuladorPedidos');
 
 const temporizadores = [];
 
@@ -16,19 +18,24 @@ const temporizadores = [];
  * Avanza un paso todos los pedidos que aún no han terminado.
  * Con el intervalo por defecto (15 s) un pedido nuevo llega a "entregado" en
  * torno a un minuto.
+ *
+ * Es el simulador antiguo, a ciegas. Los pedidos con plan de tiempos los lleva
+ * jobs/simuladorPedidos.js (SIMULAR_PEDIDOS=true) y aquí se saltan.
  */
 async function avanzarPedidos() {
     try {
-        const pedidos = await prisma.order.findMany({ select: { id: true, estado: true } });
+        const pedidos = await prisma.order.findMany({ select: { id: true, estado: true, plan_tiempos: true } });
 
         for (const pedido of pedidos) {
+            if (pedido.plan_tiempos) continue;
+
             const actual = normalizeEstado(pedido.estado);
             if (TERMINALES.includes(actual)) continue;
 
             const siguiente = nextEstado(actual);
             if (!siguiente) continue;
 
-            await prisma.order.update({ where: { id: pedido.id }, data: { estado: siguiente } });
+            await cambiarEstado(pedido.id, siguiente, 'simulador', { desde: pedido.estado });
             console.log(`⏩ Pedido #${pedido.id}: ${actual} → ${siguiente}`);
         }
     } catch (error) {
@@ -49,6 +56,10 @@ function startAutoCancelJob() {
 }
 
 function startJobs() {
+    if (process.env.SIMULAR_PEDIDOS === 'true') {
+        temporizadores.push(startSimuladorPedidos());
+    }
+
     if (process.env.ENABLE_JOBS !== 'true') return;
     startOrderSimulator();
     startAutoCancelJob();

@@ -7,12 +7,18 @@ import { getProductRestaurant, getCartRestaurant } from './domain/catalog.js';
 import { loadFavorites } from './favorites.js';
 import { sanitizePhone, validatePhone } from './domain/validation.js';
 import { isTokenExpired, isAuthFailure } from './domain/session.js';
+import { buscarDireccionGuardada, faltaMarcarUbicacion, coordenadasValidas } from './domain/ubicacion.js';
+import { crearMapaSeguimiento } from './mapaSeguimiento.js';
+import { iniciarMapaEntrega, obtenerUbicacion, enfocarMapa } from './mapaEntrega.js';
 
 // El cuerpo de este módulo se ejecuta antes de que se dispare
 // DOMContentLoaded, así que legacy.js —que es un script clásico y no puede
 // importar módulos— ya encuentra estos helpers, tanto al restaurar la sesión
 // como al registrar los listeners de los formularios.
 window.FoodJetSession = { isTokenExpired, isAuthFailure };
+// legacy.js es un script clásico y no puede importar módulos: el panel de
+// operaciones toma de aquí el mapa del reparto.
+window.FoodJetMapas = { crearMapaSeguimiento, fetchConfigAPI: api.fetchConfigAPI };
 window.FoodJetValidation = { sanitizePhone, validatePhone };
 
 // Inicializar aplicación (Punto de entrada)
@@ -136,7 +142,7 @@ function initEventListeners() {
     document.getElementById('backToMenuFromHistory')?.addEventListener('click', () => ui.showView('homeView'));
 
     // Ver Historial desde Tracking
-    const viewHistoryTrackingBtn = document.querySelector('#trackingView .btn-outline-secondary');
+    const viewHistoryTrackingBtn = document.getElementById('trackingHistoryBtn');
     if (viewHistoryTrackingBtn) {
         viewHistoryTrackingBtn.addEventListener('click', handleHistoryClick);
     }
@@ -203,7 +209,26 @@ function handleCheckoutNavigation() {
 
     if (typeof ui.renderCheckoutSummary === 'function') ui.renderCheckoutSummary();
     if (typeof ui.fillCheckoutUserData === 'function') ui.fillCheckoutUserData();
-    if (typeof ui.requestUserLocation === 'function') ui.requestUserLocation();
+    abrirMapaEntrega();
+}
+
+/**
+ * Abre el mapa para marcar el punto exacto de entrega.
+ *
+ * Si no puede usarse (sin key de Google Maps o con la key rechazada) se vuelve
+ * a lo de antes: el GPS del navegador rellena la dirección escrita.
+ */
+async function abrirMapaEntrega() {
+    const [config, guardadas] = await Promise.all([
+        api.fetchConfigAPI(),
+        api.fetchMyAddressesAPI(window.authToken)
+    ]);
+
+    await iniciarMapaEntrega({
+        apiKey: config.googleMapsApiKey,
+        guardadas,
+        alFallar: () => ui.requestUserLocation()
+    });
 }
 
 // ==========================================
@@ -248,7 +273,8 @@ async function handleCheckoutSubmit(e) {
  *
  * Antes se enviaba `direccion_entrega_id: 1` fijo, que apunta a la dirección
  * de otro usuario: cualquier pedido se entregaba allí. Ahora se reutiliza la
- * dirección guardada si coincide con lo escrito, y si no se crea.
+ * dirección guardada si coincide con lo escrito y con el punto del mapa, y si
+ * no se crea.
  */
 async function resolveDeliveryAddressId() {
     const input = document.getElementById('customerAddress');
@@ -260,22 +286,38 @@ async function resolveDeliveryAddressId() {
         return null;
     }
 
+    // El punto es el destino del recorrido del repartidor: con el mapa a la
+    // vista no se acepta un pedido sin él.
+    const { disponible, coords: marcadas } = obtenerUbicacion();
+    if (faltaMarcarUbicacion({ mapaDisponible: disponible, coords: marcadas })) {
+        ui.showToast('Marca en el mapa dónde entregamos tu pedido', 'warning');
+        enfocarMapa();
+        return null;
+    }
+
+    // Sin mapa, las coordenadas (si las hay) las dejó el GPS en el campo.
+    const coords = marcadas ?? coordenadasDelCampo(input);
     const referencia = document.getElementById('customerReference')?.value.trim() || null;
 
     const guardadas = await api.fetchMyAddressesAPI(window.authToken);
-    const existente = guardadas.find(
-        (d) => d.direccion_detallada.trim().toLowerCase() === texto.toLowerCase()
-    );
+    const existente = buscarDireccionGuardada(guardadas, texto, coords);
 
     if (existente) return existente.id;
 
     const resultado = await api.createAddressAPI({
         direccion_detallada: texto,
         referencia,
-        latitud: input.dataset.lat ? Number(input.dataset.lat) : null,
-        longitud: input.dataset.lon ? Number(input.dataset.lon) : null,
-        es_predeterminada: guardadas.length === 0
+        latitud: coords?.lat ?? null,
+        longitud: coords?.lng ?? null,
+        // La última dirección nueva pasa a ser la predeterminada: es donde
+        // abrirá el mapa en el próximo pedido.
+        es_predeterminada: true
     }, window.authToken);
+
+    if (isAuthFailure(resultado.status)) {
+        cerrarSesionCaducada('Tu sesión expiró. Inicia sesión de nuevo para completar la compra.');
+        return null;
+    }
 
     if (!resultado.ok) {
         ui.showToast(resultado.data?.error || 'No se pudo guardar la dirección', 'warning');
@@ -283,6 +325,14 @@ async function resolveDeliveryAddressId() {
     }
 
     return resultado.data.id;
+}
+
+/** Coordenadas que el GPS del navegador dejó en el campo, o null. */
+function coordenadasDelCampo(input) {
+    if (!input?.dataset.lat || !input?.dataset.lon) return null;
+    const lat = Number(input.dataset.lat);
+    const lng = Number(input.dataset.lon);
+    return coordenadasValidas(lat, lng) ? { lat, lng } : null;
 }
 
 // ==========================================
