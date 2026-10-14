@@ -226,6 +226,7 @@ async function abrirMapaEntrega() {
 
     await iniciarMapaEntrega({
         apiKey: config.googleMapsApiKey,
+        apiKeys: config.googleMapsApiKeys,
         guardadas,
         alFallar: () => ui.requestUserLocation()
     });

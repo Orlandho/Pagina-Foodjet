@@ -1,0 +1,25 @@
+flowchart TD
+    Inicio(["Cliente abre Checkout o Seguimiento"]) --> ReqConfig["GET /api/config"]
+    ReqConfig --> ResConfig["Respuesta: googleMapsApiKeys (Primaria, Secundaria)"]
+    ResConfig --> EvalKeys{"Hay API Keys configuradas?"}
+
+    EvalKeys -- "No (vacías)" --> ModoSinMapa["Modo Sin Mapa (Degradación Elegante)<br/>1. Checkout: Dirección manual + GPS Navegador<br/>2. Seguimiento: Línea de tiempo textual"]
+    
+    EvalKeys -- "Sí" --> Intento1["Intento 1: Clave Primaria (Compañero)"]
+    Intento1 --> Script1["Inyectar script Google Maps (async)"]
+    
+    Script1 --> Check1{"Resultado Clave Primaria"}
+    Check1 -- "Éxito (__foodjetMapsListo)" --> MapaActivo1["Google Maps Activo (Clave Primaria)"]
+    Check1 -- "Error (onerror o gm_authFailure)" --> Limpiar1["Limpiar script y window.google"]
+    
+    Limpiar1 --> EvalSec{"Existe Clave Secundaria?"}
+    EvalSec -- "Sí" --> Intento2["Intento 2: Clave Secundaria (Tuya)"]
+    EvalSec -- "No" --> NotificarRechazo["Notificar rechazo definitivo"]
+    
+    Intento2 --> Script2["Inyectar script Google Maps con Clave Secundaria"]
+    Script2 --> Check2{"Resultado Clave Secundaria"}
+    Check2 -- "Éxito (__foodjetMapsListo)" --> MapaActivo2["Google Maps Activo (Clave Secundaria)"]
+    Check2 -- "Error (onerror o gm_authFailure)" --> Limpiar2["Limpiar script y window.google"]
+    
+    Limpiar2 --> NotificarRechazo
+    NotificarRechazo --> ModoSinMapa

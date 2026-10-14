@@ -230,14 +230,18 @@ export function crearMapaSeguimiento(ids) {
         const casa = pedido?.DeliveryAddress;
         const ubicado = (p) => Number.isFinite(p?.latitud) && Number.isFinite(p?.longitud);
 
-        if (!apiKey || keyFueRechazada() || !$(ids.lienzo) || !ubicado(local) || !ubicado(casa)) {
+        const keys = Array.isArray(apiKey)
+            ? apiKey.filter((k) => typeof k === 'string' && k.trim())
+            : [apiKey].filter((k) => typeof k === 'string' && k.trim());
+
+        if (keys.length === 0 || keyFueRechazada() || !$(ids.lienzo) || !ubicado(local) || !ubicado(casa)) {
             detener();
             mostrarColumna(false);
             return false;
         }
 
         try {
-            await cargarGoogleMaps(apiKey);
+            await cargarGoogleMaps(keys);
             if (!estado.mapa) {
                 const { Map } = await google.maps.importLibrary('maps');
                 estado.MarcadorHtml = definirMarcador();
