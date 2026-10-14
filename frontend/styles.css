@@ -1533,3 +1533,62 @@ h1[tabindex="-1"]:focus {
         border-color: #1a1a1a;
     }
 }
+
+/* Panel de operaciones: filtros por estado y etiqueta de estado */
+.operaciones__filtros { display: flex; flex-wrap: wrap; gap: .5rem; }
+.operaciones__filtro {
+    background: transparent; color: inherit; cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, .2); border-radius: 999px;
+    padding: .25rem .75rem; font-size: .875rem;
+}
+.operaciones__filtro:hover { border-color: var(--bs-primary, #f4a04a); }
+.operaciones__filtro.is-active { background: var(--bs-primary, #f4a04a); border-color: var(--bs-primary, #f4a04a); color: #000; }
+.operaciones__conteo { opacity: .75; margin-left: .25rem; font-variant-numeric: tabular-nums; }
+.estado-pedido { display: inline-block; padding: .15rem .6rem; border-radius: 999px; font-size: .8rem; border: 1px solid currentColor; white-space: nowrap; }
+.estado-pedido--pendiente { color: #adb5bd; }
+.estado-pedido--confirmado { color: #6ea8fe; }
+.estado-pedido--en_preparacion { color: #ffc107; }
+.estado-pedido--en_camino { color: #f4a04a; }
+.estado-pedido--entregado { color: #75b798; }
+.estado-pedido--cancelado { color: #ea868f; }
+
+/* Detalle del pedido en el panel de operaciones */
+.detalle-abrir { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+.detalle-abrir:hover { color: var(--bs-primary, #f4a04a); }
+.linea__barra { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; margin-bottom: 1.25rem; }
+.linea__tramo { background: currentColor; min-width: 4px; }
+.linea { list-style: none; margin: 0; padding: 0 0 0 1.25rem; position: relative; }
+.linea::before { content: ""; position: absolute; left: 5px; top: .5rem; bottom: .5rem; width: 2px; background: rgba(255, 255, 255, .15); }
+.linea__paso { position: relative; padding-bottom: 1rem; }
+.linea__punto { position: absolute; left: -1.25rem; top: .3rem; width: 12px; height: 12px; border-radius: 50%; background: currentColor; }
+.linea__paso.is-futuro .linea__punto { background: var(--bs-body-bg, #212529); border: 2px solid rgba(255, 255, 255, .25); color: transparent; }
+.linea__paso.is-futuro .linea__titulo { opacity: .5; }
+.linea__paso.is-actual .linea__punto { box-shadow: 0 0 0 4px rgba(244, 160, 74, .25); }
+.linea__titulo { display: flex; justify-content: space-between; gap: 1rem; font-weight: 600; }
+.linea__hora { font-weight: 400; font-variant-numeric: tabular-nums; opacity: .7; }
+.linea__detalle { font-size: .85rem; opacity: .7; }
+.detalle__datos { display: grid; grid-template-columns: auto 1fr; gap: .4rem 1rem; margin: 0; }
+.detalle__datos dt { font-weight: 400; opacity: .6; }
+.detalle__datos dd { margin: 0; }
+@media (prefers-reduced-motion: no-preference) { .linea__paso.is-actual .linea__punto { transition: box-shadow .3s; } }
+
+.detalle__rejilla { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+/* Con mapa: el mapa ocupa la parte grande y el detalle una columna al lado. */
+.detalle__rejilla:has(.detalle__mapa-bloque:not([hidden])) { grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); }
+.detalle__mapa-bloque { position: sticky; top: 0; align-self: start; }
+.detalle__mapa { height: min(62vh, 560px); min-height: 320px; border-radius: 8px; overflow: hidden; background: rgba(255, 255, 255, .06); }
+@media (max-width: 991px) {
+    .detalle__rejilla:has(.detalle__mapa-bloque:not([hidden])) { grid-template-columns: 1fr; }
+    .detalle__mapa-bloque { position: static; }
+    .detalle__mapa { height: 320px; }
+}
+.detalle__ruta { margin: .5rem 0 0; font-size: .85rem; opacity: .75; }
+
+/* El repartidor late mientras va en camino, para que se note que está en movimiento. */
+@media (prefers-reduced-motion: no-preference) {
+    .marcador-seguimiento--repartidor { animation: repartidor-late 1.6s ease-out infinite; }
+    @keyframes repartidor-late {
+        0% { box-shadow: 0 0 0 0 rgba(244, 160, 74, .55); }
+        100% { box-shadow: 0 0 0 16px rgba(244, 160, 74, 0); }
+    }
+}

@@ -8,6 +8,7 @@ import { loadFavorites } from './favorites.js';
 import { sanitizePhone, validatePhone } from './domain/validation.js';
 import { isTokenExpired, isAuthFailure } from './domain/session.js';
 import { buscarDireccionGuardada, faltaMarcarUbicacion, coordenadasValidas } from './domain/ubicacion.js';
+import { crearMapaSeguimiento } from './mapaSeguimiento.js';
 import { iniciarMapaEntrega, obtenerUbicacion, enfocarMapa } from './mapaEntrega.js';
 
 // El cuerpo de este módulo se ejecuta antes de que se dispare
@@ -15,6 +16,9 @@ import { iniciarMapaEntrega, obtenerUbicacion, enfocarMapa } from './mapaEntrega
 // importar módulos— ya encuentra estos helpers, tanto al restaurar la sesión
 // como al registrar los listeners de los formularios.
 window.FoodJetSession = { isTokenExpired, isAuthFailure };
+// legacy.js es un script clásico y no puede importar módulos: el panel de
+// operaciones toma de aquí el mapa del reparto.
+window.FoodJetMapas = { crearMapaSeguimiento, fetchConfigAPI: api.fetchConfigAPI };
 window.FoodJetValidation = { sanitizePhone, validatePhone };
 
 // Inicializar aplicación (Punto de entrada)

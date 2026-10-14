@@ -56,6 +56,12 @@ solo por sus estados y el seguimiento lo enseña en un mapa:
    cuánto falta. Con `SIM_ESCALA_TIEMPO=10` un pedido urbano tarda unos
    3 minutos de principio a fin.
 
+Para tener datos con los que ver el seguimiento y el panel de operaciones,
+`docker compose exec backend node src/scripts/sembrar-demo.js` **borra todos los
+pedidos** y crea otros nuevos: 8 clientes, 12 direcciones repartidas por Lima y
+pedidos en todos los estados (los que van en camino se mueven en el mapa). No
+toca usuarios, locales ni productos. Se puede repetir las veces que haga falta.
+
 Cómo funciona por dentro:
 
 - Cada pedido nace con un **plan de tiempos** (`Order.plan_tiempos`):

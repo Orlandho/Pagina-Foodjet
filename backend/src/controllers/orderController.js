@@ -206,7 +206,9 @@ exports.getAllOrders = async (req, res) => {
         const orders = await prisma.order.findMany({
             include: {
                 User_Order_user_idToUser: { select: { id: true, nombre: true, email: true } },
-                Restaurant: { select: { id: true, nombre: true } }
+                Restaurant: { select: { id: true, nombre: true } },
+                // Solo el último cambio: de ahí sale "lleva X en este estado".
+                OrderStatusHistory: { orderBy: { fecha: 'desc' }, take: 1, select: { fecha: true } }
             },
             orderBy: { fecha: 'desc' },
             take: 50
@@ -217,6 +219,7 @@ exports.getAllOrders = async (req, res) => {
             estado: normalizeEstado(o.estado),
             total: o.total,
             fecha: o.fecha,
+            estado_desde: o.OrderStatusHistory[0]?.fecha || o.fecha,
             cliente: o.User_Order_user_idToUser?.nombre || 'Desconocido',
             restaurante: o.Restaurant?.nombre || '-'
         })));
