@@ -20,3 +20,22 @@ Feature: Filtrado avanzado de productos
     When ejecuto la funcion de filtrado
     Then el sistema omite el producto por discrepancia de categorias
     And la longitud del arreglo resultante es exactamente 0
+
+  Scenario: UT-REST-004 Exclusión por precio menor al rango mínimo
+    Given una lista con un producto de precio 5, tiempo "30 min" y categoria "Pizza"
+    And los parametros de filtro son minPrice 10, maxPrice 20, maxTime 45 y categoria "Pizza"
+    When ejecuto la funcion de filtrado
+    Then la longitud del arreglo resultante es exactamente 0
+
+  Scenario: UT-REST-005 Exclusión por precio mayor al rango máximo
+    Given una lista con un producto de precio 25, tiempo "30 min" y categoria "Pizza"
+    And los parametros de filtro son minPrice 10, maxPrice 20, maxTime 45 y categoria "Pizza"
+    When ejecuto la funcion de filtrado
+    Then la longitud del arreglo resultante es exactamente 0
+
+  Scenario: UT-REST-006 Filtrado exitoso con tiempo de entrega exacto de 60 minutos
+    Given una lista con un producto de precio 15, tiempo "1 hora" y categoria "Pizza"
+    And los parametros de filtro son minPrice 10, maxPrice 20, maxTime 60 y categoria "Pizza"
+    When ejecuto la funcion de filtrado
+    Then el producto es incluido de forma correcta en el arreglo
+    And la longitud del arreglo resultante es exactamente 1

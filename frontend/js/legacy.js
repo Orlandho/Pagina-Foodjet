@@ -84,6 +84,56 @@ function initializeLegacyEventListeners() {
         registerForm.addEventListener('submit', handleRegister);
     }
 
+    // Password visibility toggle
+    document.querySelectorAll('.foodjet-password-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.dataset.target;
+            const input = document.getElementById(targetId);
+            if (!input) return;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('bi-eye', !isPassword);
+                icon.classList.toggle('bi-eye-slash', isPassword);
+            }
+            btn.setAttribute('aria-label', isPassword ? 'Ocultar contraseña' : 'Mostrar contraseña');
+        });
+    });
+
+    // Quick test credentials buttons (Role-aware login helper)
+    document.querySelectorAll('.foodjet-quick-login-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const emailInput = document.getElementById('loginEmail');
+            const passwordInput = document.getElementById('loginPassword');
+            if (emailInput && btn.dataset.email) emailInput.value = btn.dataset.email;
+            if (passwordInput && btn.dataset.pass) passwordInput.value = btn.dataset.pass;
+            document.querySelectorAll('.foodjet-quick-login-btn').forEach(b => b.classList.remove('is-active'));
+            btn.classList.add('is-active');
+            const loginError = document.getElementById('loginError');
+            if (loginError) loginError.style.display = 'none';
+        });
+    });
+
+    // Clear inline errors on input
+    ['loginEmail', 'loginPassword'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', () => {
+            const loginError = document.getElementById('loginError');
+            if (loginError) loginError.style.display = 'none';
+        });
+    });
+
+    ['registerName', 'registerEmail', 'registerPhone', 'registerPassword'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', () => {
+            const registerError = document.getElementById('registerError');
+            if (registerError) registerError.style.display = 'none';
+            if (id === 'registerEmail') {
+                const emailErr = document.getElementById('registerEmailError');
+                if (emailErr) emailErr.style.display = 'none';
+            }
+        });
+    });
+
     document.getElementById('backToMenuFromDashboard')?.addEventListener('click', () => {
         if(window.app && window.app.showView) window.app.showView('homeView');
     });
@@ -132,6 +182,9 @@ async function handleLogin(e) {
             localStorage.setItem('token', window.authToken);
             localStorage.setItem('user', JSON.stringify(window.currentUser));
 
+            const loginError = document.getElementById('loginError');
+            if (loginError) loginError.style.display = 'none';
+
             updateUserUI(window.currentUser);
 
             const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
@@ -140,10 +193,22 @@ async function handleLogin(e) {
             showToast(`¡Bienvenido, ${window.currentUser.nombre}!`);
             document.getElementById('loginForm').reset();
         } else {
+            const loginError = document.getElementById('loginError');
+            const loginErrorText = document.getElementById('loginErrorText');
+            if (loginError && loginErrorText) {
+                loginErrorText.textContent = data.error || 'Credenciales inválidas.';
+                loginError.style.display = 'flex';
+            }
             showToast(data.error || 'Error al iniciar sesión', 'warning');
         }
     } catch (error) {
         console.error(error);
+        const loginError = document.getElementById('loginError');
+        const loginErrorText = document.getElementById('loginErrorText');
+        if (loginError && loginErrorText) {
+            loginErrorText.textContent = 'Error de conexión con el servidor.';
+            loginError.style.display = 'flex';
+        }
         showToast('Error de conexión con el servidor', 'warning');
     }
 }
@@ -178,6 +243,9 @@ async function handleRegister(e) {
         const data = await response.json();
 
         if (response.ok) {
+            const registerError = document.getElementById('registerError');
+            if (registerError) registerError.style.display = 'none';
+
             showToast('Usuario registrado exitosamente. Por favor, inicia sesión.');
 
             const registerModal = bootstrap.Modal.getInstance(document.getElementById('registerModal'));
@@ -197,10 +265,22 @@ async function handleRegister(e) {
                 showToast(data.error || 'El email ya está registrado.', 'warning');
             }
         } else {
+            const registerError = document.getElementById('registerError');
+            const registerErrorText = document.getElementById('registerErrorText');
+            if (registerError && registerErrorText) {
+                registerErrorText.textContent = data.error || 'Error al registrar el usuario.';
+                registerError.style.display = 'flex';
+            }
             showToast(data.error || 'Error al registrar el usuario', 'warning');
         }
     } catch (error) {
         console.error(error);
+        const registerError = document.getElementById('registerError');
+        const registerErrorText = document.getElementById('registerErrorText');
+        if (registerError && registerErrorText) {
+            registerErrorText.textContent = 'Error de conexión con el servidor.';
+            registerError.style.display = 'flex';
+        }
         showToast('Error de conexión con el servidor', 'warning');
     }
 }

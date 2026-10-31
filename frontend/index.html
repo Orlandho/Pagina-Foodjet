@@ -17,20 +17,28 @@
 <body>
     <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" role="navigation" aria-label="Navegación principal">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="#home">
-                <div class="logo-circle me-2">
-                    <span role="img" aria-label="Logo FoodJet">🚀</span>
-                </div>
-                <span class="fw-bold fs-4">FoodJet</span>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top foodjet-navbar" id="navbar" role="navigation" aria-label="Navegación principal">
+        <div class="container d-flex flex-wrap align-items-center justify-content-between">
+            <!-- 1. Brand -->
+            <a class="navbar-brand d-flex align-items-center foodjet-navbar-brand me-2 me-lg-3" href="#home">
+                <span class="foodjet-brand-text">FOODJET</span>
+                <i class="bi bi-lightning-charge-fill foodjet-brand-bolt ms-1" aria-hidden="true"></i>
             </a>
+
+            <!-- 2. Real vs Neutral Delivery Address Bar (Accessible Button) -->
+            <div class="foodjet-address-bar d-flex align-items-center cursor-pointer" id="headerAddressBar" role="button" tabindex="0" aria-label="Dirección de entrega actual">
+                <i class="bi bi-geo-alt-fill foodjet-address-bar__icon me-2" aria-hidden="true"></i>
+                <span class="foodjet-address-bar__text text-truncate" id="headerAddressText">Ingresar dirección de entrega</span>
+                <i class="bi bi-chevron-down foodjet-address-bar__chevron ms-1" aria-hidden="true"></i>
+            </div>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+            <!-- 3. Mobile Hamburger Toggler -->
+            <button class="navbar-toggler foodjet-navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
                     aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menú de navegación">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
+            <!-- 4. Navigation Menu & Actions -->
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-lg-center">
                     <li class="nav-item">
@@ -45,32 +53,41 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#contact" aria-label="Contacto">Contacto</a>
                     </li>
+                    
+                    <!-- Favorites Action Button with Reactive Counter -->
                     <li class="nav-item ms-lg-3" id="favoritesNav" style="display: none;">
-                        <button class="btn position-relative me-2 text-danger" id="favoritesBtn" aria-label="Productos Favoritos" data-bs-toggle="offcanvas" data-bs-target="#favoritesOffcanvas">
-                            <i class="bi bi-heart-fill fs-5" aria-hidden="true"></i>
+                        <button type="button" class="btn foodjet-icon-btn position-relative" id="favoritesBtn" aria-label="Productos Favoritos" data-bs-toggle="offcanvas" data-bs-target="#favoritesOffcanvas">
+                            <i class="bi bi-heart fs-5 text-danger" aria-hidden="true"></i>
+                            <span class="foodjet-badge-counter foodjet-badge-counter--primary" id="favoritesCount" style="display: none;">0</span>
                         </button>
                     </li>
-                    <li class="nav-item ms-lg-3">
-                        <button type="button" class="btn position-relative me-2" id="cartBtn" aria-label="Carrito de compras" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
-                            <i class="bi bi-cart3 fs-5" aria-hidden="true"></i>
-                            <span class="cart-badge" id="cartCount" style="display: none;">0</span>
+                    
+                    <!-- Cart Action Button with Reactive Counter -->
+                    <li class="nav-item ms-lg-2">
+                        <button type="button" class="btn foodjet-cart-btn position-relative" id="cartBtn" aria-label="Carrito de compras" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+                            <i class="bi bi-bag-fill fs-5 text-white" aria-hidden="true"></i>
+                            <span class="cart-badge foodjet-badge-counter foodjet-badge-counter--dark" id="cartCount" style="display: none;">0</span>
                         </button>
                     </li>
-                    <li class="nav-item dropdown" id="userMenu" style="display: none;">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle me-2" aria-hidden="true"></i>
-                            <span id="userNameDropdown"></span>
+                    
+                    <!-- User Dropdown (Authenticated) -->
+                    <li class="nav-item dropdown ms-lg-3" id="userMenu" style="display: none;">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center foodjet-user-chip" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle me-2 fs-5 text-primary" aria-hidden="true"></i>
+                            <span id="userNameDropdown" class="fw-semibold"></span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><a class="dropdown-item" href="#" id="dashboardBtn" style="display: none;"><i class="bi bi-speedometer2 me-2"></i>Admin Dashboard</a></li>
-                            <li><a class="dropdown-item" href="#" id="historyBtn"><i class="bi bi-clock-history me-2"></i>Historial de Pedidos</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 foodjet-dropdown-menu" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item py-2" href="#" id="dashboardBtn" style="display: none;"><i class="bi bi-speedometer2 me-2 text-primary"></i>Admin Dashboard</a></li>
+                            <li><a class="dropdown-item py-2" href="#" id="historyBtn"><i class="bi bi-clock-history me-2 text-primary"></i>Historial de Pedidos</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" id="miCuentaBtn"><i class="bi bi-person-circle me-2"></i>Mi Cuenta</a></li>
-                            <li><a class="dropdown-item" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
+                            <li><a class="dropdown-item py-2" href="#" id="miCuentaBtn"><i class="bi bi-person me-2 text-primary"></i>Mi Cuenta</a></li>
+                            <li><a class="dropdown-item py-2 text-danger" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
                         </ul>
                     </li>
-                    <li class="nav-item" id="loginNav">
-                        <button class="btn btn-primary" id="loginBtn" data-bs-toggle="modal" data-bs-target="#loginModal">
+                    
+                    <!-- Login Button (Guest) -->
+                    <li class="nav-item ms-lg-3" id="loginNav">
+                        <button class="btn foodjet-btn-primary foodjet-login-btn" id="loginBtn" data-bs-toggle="modal" data-bs-target="#loginModal">
                             <i class="bi bi-person" aria-hidden="true"></i>
                             <span id="userNameBtn">Ingresar</span>
                         </button>
@@ -82,50 +99,100 @@
 
     <main id="main-content">
         <div id="homeView">
-            <section aria-label="Promociones destacadas">
-                <div id="heroCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">
-                    <div class="carousel-indicators">
-                        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
-                        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
-                        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+            <section class="foodjet-hero-section py-3 py-lg-4" aria-label="Promociones destacadas">
+                <div class="container">
+                    <div id="heroCarousel" class="carousel slide carousel-fade foodjet-hero-carousel" data-bs-ride="carousel" data-bs-interval="5000">
+                        <!-- Pager Indicators (Matching Compose HorizontalPager) -->
+                        <div class="carousel-indicators foodjet-hero-indicators">
+                            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                        </div>
+                        
+                        <div class="carousel-inner">
+                            <!-- Slide 1: Combos Estudiantiles -->
+                            <div class="carousel-item active">
+                                <div class="foodjet-hero-slide row g-0 align-items-center h-100">
+                                    <div class="col-7 col-md-7 d-flex flex-column justify-content-center foodjet-hero-content">
+                                        <div class="foodjet-hero-badge-wrap mb-2 mb-md-3">
+                                            <span class="foodjet-hero-badge">POCO PRESUPUESTO. MUCHO SABOR.</span>
+                                        </div>
+                                        <h1 class="foodjet-hero-title fw-bold mb-2" tabindex="-1">Combos Estudiantiles</h1>
+                                        <p class="foodjet-hero-subtitle mb-3 mb-md-4">Tu antojo. Sin escalas. Descuentos universitarios y entrega rápida en toda la ciudad.</p>
+                                        <div>
+                                            <a href="#menu" class="btn foodjet-hero-cta-btn">
+                                                <span>Ordenar ahora</span>
+                                                <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="col-5 col-md-5 d-flex align-items-end justify-content-end h-100 position-relative foodjet-hero-image-col">
+                                        <div class="foodjet-hero-image-wrapper">
+                                            <img src="https://elcomercio.pe/resizer/v2/55QLUH7SV5E53AFZHMYNTJ4TTE.jpg?auth=bdffd2a0f4da7a109fb83ad9b94fcf63e5ca1c345be580dc898152c14dac10a0&width=1200&height=675&quality=75&smart=true" class="foodjet-hero-image" alt="Combos estudiantiles de comida peruana a domicilio">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Slide 2: Las mejores hamburguesas -->
+                            <div class="carousel-item">
+                                <div class="foodjet-hero-slide row g-0 align-items-center h-100">
+                                    <div class="col-7 col-md-7 d-flex flex-column justify-content-center foodjet-hero-content">
+                                        <div class="foodjet-hero-badge-wrap mb-2 mb-md-3">
+                                            <span class="foodjet-hero-badge">POCO PRESUPUESTO. MUCHO SABOR.</span>
+                                        </div>
+                                        <h1 class="foodjet-hero-title fw-bold mb-2" tabindex="-1">Las mejores hamburguesas</h1>
+                                        <p class="foodjet-hero-subtitle mb-3 mb-md-4">Jugosas, frescas y entregadas en minutos directo a tu puerta o campus.</p>
+                                        <div>
+                                            <a href="#menu" class="btn foodjet-hero-cta-btn">
+                                                <span>Ver menú</span>
+                                                <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="col-5 col-md-5 d-flex align-items-end justify-content-end h-100 position-relative foodjet-hero-image-col">
+                                        <div class="foodjet-hero-image-wrapper">
+                                            <img src="https://images.unsplash.com/photo-1651843465180-5965076f7368?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1920" class="foodjet-hero-image" alt="Hamburguesas artesanales frescas preparadas para delivery">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Slide 3: Pizza caliente, directo a ti -->
+                            <div class="carousel-item">
+                                <div class="foodjet-hero-slide row g-0 align-items-center h-100">
+                                    <div class="col-7 col-md-7 d-flex flex-column justify-content-center foodjet-hero-content">
+                                        <div class="foodjet-hero-badge-wrap mb-2 mb-md-3">
+                                            <span class="foodjet-hero-badge">POCO PRESUPUESTO. MUCHO SABOR.</span>
+                                        </div>
+                                        <h1 class="foodjet-hero-title fw-bold mb-2" tabindex="-1">Pizza caliente, directo a ti</h1>
+                                        <p class="foodjet-hero-subtitle mb-3 mb-md-4">Tu pizza favorita en 30 minutos o menos, con queso derretido y masa crujiente.</p>
+                                        <div>
+                                            <a href="#menu" class="btn foodjet-hero-cta-btn">
+                                                <span>Pedir pizza</span>
+                                                <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="col-5 col-md-5 d-flex align-items-end justify-content-end h-100 position-relative foodjet-hero-image-col">
+                                        <div class="foodjet-hero-image-wrapper">
+                                            <img src="https://images.unsplash.com/photo-1678443238947-e58d71bf2e23?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1920" class="foodjet-hero-image" alt="Pizza recién horneada lista para entrega rápida">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Carousel Nav Controls -->
+                        <button class="carousel-control-prev foodjet-hero-control" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Anterior</span>
+                        </button>
+                        <button class="carousel-control-next foodjet-hero-control" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Siguiente</span>
+                        </button>
                     </div>
-                    <div class="carousel-inner">
-                        <div class="carousel-item active">
-                            <img src="https://elcomercio.pe/resizer/v2/55QLUH7SV5E53AFZHMYNTJ4TTE.jpg?auth=bdffd2a0f4da7a109fb83ad9b94fcf63e5ca1c345be580dc898152c14dac10a0&width=1200&height=675&quality=75&smart=true" class="d-block w-100" alt="Plato de comida peruana servido a domicilio por FoodJet">
-                            <div class="carousel-overlay"></div>
-                            <div class="carousel-caption">
-                                <h1 class="display-4 fw-bold mb-3" tabindex="-1">¡Comida deliciosa a tu puerta!</h1>
-                                <p class="fs-5 mb-4">Entrega rápida y confiable en toda la ciudad</p>
-                                <a href="#menu" class="btn btn-primary btn-lg">Ordenar ahora</a>
-                            </div>
-                        </div>
-                        <div class="carousel-item">
-                            <img src="https://images.unsplash.com/photo-1651843465180-5965076f7368?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1920" class="d-block w-100" alt="Hamburguesas jugosas con ingredientes frescos preparadas para delivery">
-                            <div class="carousel-overlay"></div>
-                            <div class="carousel-caption">
-                                <h1 class="display-4 fw-bold mb-3" tabindex="-1">Las mejores hamburguesas</h1>
-                                <p class="fs-5 mb-4">Jugosas, frescas y entregadas en minutos</p>
-                                <a href="#menu" class="btn btn-primary btn-lg">Ver menú</a>
-                            </div>
-                        </div>
-                        <div class="carousel-item">
-                            <img src="https://images.unsplash.com/photo-1678443238947-e58d71bf2e23?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1920" class="d-block w-100" alt="Pizza caliente recién horneada lista para entrega a domicilio">
-                            <div class="carousel-overlay"></div>
-                            <div class="carousel-caption">
-                                <h1 class="display-4 fw-bold mb-3" tabindex="-1">Pizza caliente, directo a ti</h1>
-                                <p class="fs-5 mb-4">Tu pizza favorita en 30 minutos o menos</p>
-                                <a href="#menu" class="btn btn-primary btn-lg">Pedir pizza</a>
-                            </div>
-                        </div>
-                    </div>
-                    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Anterior</span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
-                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Siguiente</span>
-                    </button>
                 </div>
             </section>
 
@@ -172,71 +239,99 @@
                 </div>
             </section>
 
-            <section id="menu" class="py-5 bg-light" aria-label="Menú de productos">
+            <section id="menu" class="py-5" aria-label="Menú de productos">
                 <div class="container">
-                    <div class="text-center mb-5">
-                        <h2 class="display-5 mb-3">Nuestro Menú</h2>
-                        <p class="text-muted">Descubre nuestra deliciosa selección de platos preparados con ingredientes frescos y mucho amor</p>
+                    <!-- Titular & Subtítulo estilo Compose HomeScreen -->
+                    <div class="text-center mb-4">
+                        <h2 class="display-5 fw-bold mb-2">Tu antojo. Sin escalas.</h2>
+                        <p class="text-muted fs-6">Lo mejor del barrio, directo a tu puerta.</p>
                     </div>
-                    
+
+                    <!-- Buscador funcional integrado -->
+                    <div class="foodjet-search-container mb-4">
+                        <div class="foodjet-search-bar position-relative">
+                            <i class="bi bi-search foodjet-search-icon" aria-hidden="true"></i>
+                            <input type="text" id="catalogSearchInput" class="foodjet-search-input" 
+                                   placeholder="¿Qué se te antoja hoy?" 
+                                   autocomplete="off" 
+                                   aria-label="Buscar comida, platos o restaurantes">
+                            <button type="button" id="catalogSearchClear" class="foodjet-search-clear d-none" 
+                                    aria-label="Limpiar búsqueda" title="Limpiar búsqueda">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Fila de Categorías (Pills) -->
+                    <div class="mb-4">
+                        <div id="filter-food-type-container">
+                            <!-- Renderizado dinámico con ui.renderFoodTypeFilters() -->
+                        </div>
+                    </div>
+
+                    <!-- Cuadrícula Principal con Filtros y Productos -->
                     <div class="row">
+                        <!-- Sidebar de Filtros (Desktop: col-lg-3, Mobile: col-12) -->
                         <div class="col-lg-3 mb-4">
-                            <div class="card border-0 shadow-sm">
-                                <div class="card-body">
-                                    <h4 class="card-title mb-4">Filtros</h4>
+                            <div class="foodjet-card p-4">
+                                <div class="d-flex align-items-center gap-2 mb-3">
+                                    <i class="bi bi-sliders2 fs-5 text-primary" aria-hidden="true"></i>
+                                    <h4 class="h5 fw-bold mb-0">Filtros</h4>
+                                </div>
 
-                                    <div class="mb-4">
-                                        <h5 class="fs-6 fw-bold mb-3">Tipo de comida</h5>
-                                        <div id="filter-food-type-container">
-                                            </div>
+                                <hr class="my-3">
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-muted text-uppercase mb-2">Rango de precio (S/)</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-muted small">S/</span>
+                                        <input type="number" id="filter-price-min" class="form-control form-control-sm foodjet-input py-1" placeholder="Mín" min="0" aria-label="Precio mínimo">
+                                        <span class="text-muted small">-</span>
+                                        <span class="text-muted small">S/</span>
+                                        <input type="number" id="filter-price-max" class="form-control form-control-sm foodjet-input py-1" placeholder="Máx" min="0" aria-label="Precio máximo">
                                     </div>
+                                </div>
 
-                                    <hr>
+                                <hr class="my-3">
 
-                                    <div class="mb-4">
-                                        <h5 class="fs-6 fw-bold mb-3">Rango de precio</h5>
-                                        <div class="d-flex align-items-center mb-3">
-                                            <span class="me-2">$</span>
-                                            <input type="number" id="filter-price-min" class="form-control form-control-sm me-2" placeholder="Min" min="0" aria-label="Precio mínimo">
-                                            <span class="me-2">-</span>
-                                            <span class="me-2">$</span>
-                                            <input type="number" id="filter-price-max" class="form-control form-control-sm" placeholder="Max" min="0" aria-label="Precio máximo">
-                                        </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-muted text-uppercase mb-2">Tiempo de entrega</label>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input filter-delivery-time" type="radio" name="deliveryTimeFilter" id="time-30" value="30 minutos">
+                                        <label class="form-check-label text-muted small" for="time-30">
+                                            30 minutos o menos
+                                        </label>
                                     </div>
-
-                                    <hr>
-
-                                    <div class="mb-4">
-                                        <h5 class="fs-6 fw-bold mb-3">Tiempo de entrega</h5>
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input filter-delivery-time" type="radio" name="deliveryTimeFilter" id="time-30" value="30 minutos">
-                                            <label class="form-check-label text-muted" for="time-30">
-                                                30 minutos
-                                            </label>
-                                        </div>
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input filter-delivery-time" type="radio" name="deliveryTimeFilter" id="time-60" value="1 hora">
-                                            <label class="form-check-label text-muted" for="time-60">
-                                                1 hora
-                                            </label>
-                                        </div>
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input filter-delivery-time" type="radio" name="deliveryTimeFilter" id="time-more" value="Más de 1 hora">
-                                            <label class="form-check-label text-muted" for="time-more">
-                                                Más de 1 hora
-                                            </label>
-                                        </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input filter-delivery-time" type="radio" name="deliveryTimeFilter" id="time-60" value="1 hora">
+                                        <label class="form-check-label text-muted small" for="time-60">
+                                            Hasta 1 hora
+                                        </label>
                                     </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input filter-delivery-time" type="radio" name="deliveryTimeFilter" id="time-more" value="Más de 1 hora">
+                                        <label class="form-check-label text-muted small" for="time-more">
+                                            Más de 1 hora
+                                        </label>
+                                    </div>
+                                </div>
 
-                                    <button class="btn btn-primary w-100 mt-2" id="btn-apply-filters">Aplicar filtros</button>
-                                    <button class="btn btn-outline-secondary w-100 mt-2" id="btn-clear-filters">Limpiar filtros</button>
+                                <div class="d-flex flex-column gap-2 mt-4">
+                                    <button class="btn foodjet-btn-primary w-100" id="btn-apply-filters">Aplicar filtros</button>
+                                    <button class="btn foodjet-btn-secondary w-100" id="btn-clear-filters">Limpiar filtros</button>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Grid de Productos -->
                         <div class="col-lg-9">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h3 class="h4 fw-bold mb-0">Los favoritos del barrio</h3>
+                                <span id="catalogResultsCount" class="text-muted small"></span>
+                            </div>
                             <div class="row g-4" id="productsGrid">
-                                </div>
+                                <!-- Renderizado dinámico con ui.renderProducts() -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -296,63 +391,91 @@
                     </div>
                 </div>
             </section>
-        </div> <section id="orderHistoryView" class="py-5" style="display: none;">
+        </div> <section id="orderHistoryView" class="py-4 py-lg-5" style="display: none;" aria-label="Historial de pedidos">
             <div class="container">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1 class="display-6" tabindex="-1">Mi Historial de Pedidos</h1>
-                    <button class="btn btn-outline-primary" id="backToMenuFromHistory">
-                        <i class="bi bi-arrow-left me-2"></i>Volver al Menú
-                    </button>
-                </div>
-                <div class="row" id="orderHistoryContainer">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                    <div>
+                        <button class="btn btn-link text-decoration-none p-0 mb-2 foodjet-back-link" id="backToMenuFromHistory" type="button">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Volver al Menú
+                        </button>
+                        <h1 class="display-6 fw-extrabold mb-1" tabindex="-1" style="color: var(--color-text-primary);">Mi Historial de Pedidos</h1>
+                        <p class="text-secondary small mb-0">Revisa tus compras anteriores y califica tus experiencias.</p>
                     </div>
+                </div>
+                <div class="row g-4" id="orderHistoryContainer">
+                </div>
             </div>
         </section>
 
         <section id="checkoutView" style="display: none;" aria-label="Finalizar pedido">
-            <div class="container py-5">
-                <button class="btn btn-link text-decoration-none mb-4" id="backToMenuBtn">
-                    <i class="bi bi-arrow-left"></i> Volver al carrito
-                </button>
-                <h1 class="mb-4">Finalizar Pedido</h1>
+            <div class="container py-4 py-lg-5">
+                <!-- Back Navigation & Title -->
+                <div class="mb-4">
+                    <button class="btn btn-link text-decoration-none p-0 mb-3 foodjet-back-link" id="backToMenuBtn" type="button">
+                        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Volver al carrito
+                    </button>
+                    <h1 class="display-6 fw-extrabold mb-1" id="checkoutPageTitle" style="color: var(--color-text-primary);">A un paso del antojo.</h1>
+                    <p class="text-secondary small mb-0">Confirma tus datos de entrega y elige cómo pagar.</p>
+                </div>
                 
-                <form id="checkoutForm">
-                    <div class="row g-4">
-                        <div class="col-lg-7">
-                            <div class="card mb-4">
-                                <div class="card-body">
-                                    <h2 class="h4 mb-4">Información de Entrega</h2>
-                                    <div class="mb-3">
-                                        <label for="customerName" class="form-label">
-                                            <i class="bi bi-person me-2"></i>Nombre completo
-                                        </label>
-                                        <input type="text" class="form-control" id="customerName" placeholder="" required>
+                <form id="checkoutForm" novalidate>
+                    <div class="row g-4 align-items-start">
+                        <!-- Left Column: Delivery & Payment Details -->
+                        <div class="col-12 col-lg-7">
+                            <!-- Card 1: Delivery Information -->
+                            <div class="card foodjet-card mb-4" id="deliveryAddressCard">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center mb-4">
+                                        <span class="foodjet-icon-pill me-2" aria-hidden="true">
+                                            <i class="bi bi-geo-alt-fill text-primary"></i>
+                                        </span>
+                                        <h2 class="h5 fw-bold mb-0">¿Dónde lo llevamos?</h2>
                                     </div>
+
+                                    <!-- Customer Name -->
                                     <div class="mb-3">
-                                        <label for="customerPhone" class="form-label">
-                                            <i class="bi bi-telephone me-2"></i>Teléfono
+                                        <label for="customerName" class="form-label fw-semibold small">
+                                            <i class="bi bi-person me-1 text-secondary" aria-hidden="true"></i>Nombre completo
                                         </label>
-                                        <input type="tel" class="form-control" id="customerPhone" placeholder="987654321"
+                                        <input type="text" class="form-control foodjet-input" id="customerName" 
+                                               placeholder="Tu nombre y apellido" autocomplete="name" required>
+                                    </div>
+
+                                    <!-- Customer Phone -->
+                                    <div class="mb-3">
+                                        <label for="customerPhone" class="form-label fw-semibold small">
+                                            <i class="bi bi-telephone me-1 text-secondary" aria-hidden="true"></i>Teléfono de contacto (9 dígitos)
+                                        </label>
+                                        <input type="tel" class="form-control foodjet-input" id="customerPhone" placeholder="987654321"
                                                inputmode="numeric" autocomplete="tel" maxlength="9" pattern="\d{9}"
                                                title="Debe contener exactamente 9 dígitos numéricos"
                                                aria-describedby="customerPhoneError" required>
                                         <div id="customerPhoneError" class="invalid-feedback"></div>
                                     </div>
+
+                                    <!-- Saved Addresses Chips -->
+                                    <div id="savedAddressesContainer" class="mb-3" hidden>
+                                        <label class="form-label small text-secondary fw-semibold">Tus direcciones guardadas</label>
+                                        <div class="d-flex gap-2 overflow-x-auto pb-1" id="savedAddressesList" role="radiogroup" aria-label="Direcciones guardadas"></div>
+                                    </div>
+
+                                    <!-- Delivery Address -->
                                     <div class="mb-3">
-                                        <label for="customerAddress" class="form-label">
-                                            <i class="bi bi-geo-alt me-2"></i>Dirección de entrega
+                                        <label for="customerAddress" class="form-label fw-semibold small">
+                                            <i class="bi bi-geo-alt me-1 text-secondary" aria-hidden="true"></i>Dirección de entrega
                                         </label>
                                         <div class="input-group">
-                                            <input type="text" class="form-control" id="customerAddress"
+                                            <input type="text" class="form-control foodjet-input" id="customerAddress"
                                                    placeholder="Calle, número y distrito" autocomplete="street-address"
                                                    aria-describedby="deliveryMapStatus" required>
-                                            <button type="button" class="btn btn-outline-secondary" id="deliveryAddressSearch"
-                                                    aria-label="Buscar la dirección en el mapa" hidden>
-                                                <i class="bi bi-search"></i>
+                                            <button type="button" class="btn btn-outline-secondary foodjet-input-action-btn" id="deliveryAddressSearch"
+                                                    aria-label="Buscar la dirección en el mapa" title="Buscar dirección en el mapa" hidden>
+                                                <i class="bi bi-search" aria-hidden="true"></i>
                                             </button>
                                         </div>
-                                        <!-- Se muestra solo si hay key de Google Maps (ver js/mapaEntrega.js) -->
-                                        <div class="mapa-entrega mt-2" id="deliveryMapWrapper" hidden>
+                                        
+                                        <!-- Interactive Map Canvas Container -->
+                                        <div class="mapa-entrega mt-3" id="deliveryMapWrapper" hidden>
                                             <div id="deliveryMap" class="mapa-entrega__lienzo"
                                                  role="application" aria-label="Mapa para marcar el punto de entrega"></div>
                                             <div class="mapa-entrega__pin" aria-hidden="true">
@@ -363,126 +486,214 @@
                                                 <i class="bi bi-crosshair"></i>
                                             </button>
                                         </div>
-                                        <div id="deliveryMapStatus" class="mapa-entrega__estado form-text" aria-live="polite"></div>
+                                        <div id="deliveryMapStatus" class="mapa-entrega__estado form-text mt-2" aria-live="polite"></div>
                                     </div>
-                                    <div class="mb-3">
-                                        <label for="customerReference" class="form-label">Referencia (opcional)</label>
-                                        <input type="text" class="form-control" id="customerReference" placeholder="">
+
+                                    <!-- Delivery Reference -->
+                                    <div class="mb-0">
+                                        <label for="customerReference" class="form-label fw-semibold small text-secondary">Referencia (opcional)</label>
+                                        <input type="text" class="form-control foodjet-input" id="customerReference" 
+                                               placeholder="Piso, dpto, timbre o color de reja">
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="card">
-                                <div class="card-body">
-                                    <h2 class="h4 mb-4">Método de Pago</h2>
+                            <!-- Card 2: Payment Method Selection -->
+                            <div class="card foodjet-card mb-4" id="paymentMethodCard">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center mb-4">
+                                        <span class="foodjet-icon-pill me-2" aria-hidden="true">
+                                            <i class="bi bi-credit-card-2-front-fill text-primary"></i>
+                                        </span>
+                                        <h2 class="h5 fw-bold mb-0">¿Cómo quieres pagar?</h2>
+                                    </div>
                                     
-                                    <div class="payment-option mb-3" data-payment="cash">
-                                        <input type="radio" class="btn-check" name="paymentMethod" id="payCash" value="cash" checked>
-                                        <label class="btn btn-outline-primary w-100 text-start p-3" for="payCash">
-                                            <i class="bi bi-cash-stack fs-4 me-3"></i>
-                                            <div class="d-inline-block">
-                                                <div class="fw-bold">Pago en Efectivo</div>
-                                                <small class="text-muted">Paga cuando recibas tu pedido</small>
-                                            </div>
-                                        </label>
+                                    <div class="payment-options-grid mb-3" id="paymentOptionsGrid" role="radiogroup" aria-label="Métodos de pago">
+                                        <!-- Yape / Plin -->
+                                        <div class="payment-option" data-payment="wallet" id="paymentWallet">
+                                            <input type="radio" class="btn-check" name="paymentMethod" id="payWallet" value="wallet">
+                                            <label class="foodjet-payment-tile w-100 p-3 text-start" for="payWallet">
+                                                <i class="bi bi-qr-code-scan foodjet-payment-tile__icon" aria-hidden="true"></i>
+                                                <span class="foodjet-payment-tile__title">Yape / Plin</span>
+                                                <span class="foodjet-payment-tile__subtitle">Escanea el QR</span>
+                                            </label>
+                                        </div>
+
+                                        <!-- Tarjeta -->
+                                        <div class="payment-option" data-payment="card" id="paymentCard">
+                                            <input type="radio" class="btn-check" name="paymentMethod" id="payCard" value="card">
+                                            <label class="foodjet-payment-tile w-100 p-3 text-start" for="payCard">
+                                                <i class="bi bi-credit-card-2-front-fill foodjet-payment-tile__icon" aria-hidden="true"></i>
+                                                <span class="foodjet-payment-tile__title">Tarjeta</span>
+                                                <span class="foodjet-payment-tile__subtitle">Crédito o débito</span>
+                                            </label>
+                                        </div>
+
+                                        <!-- Efectivo -->
+                                        <div class="payment-option" data-payment="cash" id="paymentCash">
+                                            <input type="radio" class="btn-check" name="paymentMethod" id="payCash" value="cash" checked>
+                                            <label class="foodjet-payment-tile w-100 p-3 text-start" for="payCash">
+                                                <i class="bi bi-cash-stack foodjet-payment-tile__icon" aria-hidden="true"></i>
+                                                <span class="foodjet-payment-tile__title">Efectivo</span>
+                                                <span class="foodjet-payment-tile__subtitle">Paga al recibir</span>
+                                            </label>
+                                        </div>
                                     </div>
 
-                                    <div class="payment-option" data-payment="card">
-                                        <input type="radio" class="btn-check" name="paymentMethod" id="payCard" value="card">
-                                        <label class="btn btn-outline-primary w-100 text-start p-3" for="payCard">
-                                            <i class="bi bi-credit-card fs-4 me-3"></i>
-                                            <div class="d-inline-block">
-                                                <div class="fw-bold">Tarjeta de Crédito/Débito</div>
-                                                <small class="text-muted">Visa &middot; Mastercard &middot; American Express</small>
-                                            </div>
-                                        </label>
+                                    <!-- Cash Info Callout -->
+                                    <div id="paymentCashInfo" class="payment-info-box p-3 rounded-3 mb-3">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-info-circle-fill text-primary me-2 fs-5" aria-hidden="true"></i>
+                                            <span class="small text-muted">Paga contraentrega en efectivo cuando el repartidor llegue a tu puerta.</span>
+                                        </div>
                                     </div>
 
-                                    <div class="payment-option mt-3" data-payment="wallet">
-                                        <input type="radio" class="btn-check" name="paymentMethod" id="payWallet" value="wallet">
-                                        <label class="btn btn-outline-primary w-100 text-start p-3" for="payWallet">
-                                            <i class="bi bi-phone fs-4 me-3"></i>
-                                            <div class="d-inline-block">
-                                                <div class="fw-bold">Billetera Digital (Yape/Plin)</div>
-                                                <small class="text-muted">Paga escaneando un código QR</small>
-                                            </div>
-                                        </label>
+                                    <!-- Wallet Info Callout -->
+                                    <div id="paymentWalletInfo" class="payment-info-box payment-info-box--wallet p-3 rounded-4 text-center mb-3" style="display: none;">
+                                        <div class="badge foodjet-badge--student mb-2">
+                                            <i class="bi bi-lightning-charge-fill me-1"></i>Pago Rápido
+                                        </div>
+                                        <h6 class="fw-bold mb-1 text-primary-dark">Paga con Yape o Plin</h6>
+                                        <div class="fs-3 fw-bolder mb-1 text-primary" id="walletAmountDisplay">S/ 0.00</div>
+                                        <p class="small text-muted mb-0">Al confirmar tu pedido, se abrirá el código QR del restaurante para escanear y pagar desde tu app.</p>
                                     </div>
 
-                                    <div id="cardDetails" class="mt-3" style="display: none;">
-                                        <hr>
+                                    <!-- Card Details Drawer -->
+                                    <div id="cardDetails" class="mt-3 p-3 rounded-3 bg-light border" style="display: none;">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <span class="fw-bold small text-secondary">Datos de la tarjeta</span>
+                                            <div class="d-flex gap-1" id="cardBrandIcons">
+                                                <span id="cardBrandBadge" class="badge bg-white text-dark fw-bold border" aria-live="polite">
+                                                    <i class="bi bi-credit-card fs-6 text-muted" id="detectedBrandIcon"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+
                                         <div class="mb-3">
-                                            <label for="cardNumber" class="form-label">Número de tarjeta</label>
-                                            <input type="text" class="form-control" id="cardNumber"
+                                            <label for="cardNumber" class="form-label small fw-semibold">Número de tarjeta</label>
+                                            <input type="text" class="form-control foodjet-input" id="cardNumber"
                                                    placeholder="1234 5678 9012 3456" maxlength="19"
                                                    inputmode="numeric" autocomplete="cc-number"
                                                    aria-describedby="cardNumberError">
                                             <div class="invalid-feedback" id="cardNumberError"></div>
                                         </div>
-                                        <div class="row">
-                                            <div class="col-md-6 mb-3">
-                                                <label for="cardExpiry" class="form-label">Fecha de expiración</label>
-                                                <input type="text" class="form-control" id="cardExpiry"
+
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-6">
+                                                <label for="cardExpiry" class="form-label small fw-semibold">Vencimiento</label>
+                                                <input type="text" class="form-control foodjet-input" id="cardExpiry"
                                                        placeholder="MM/AA" maxlength="5"
                                                        inputmode="numeric" autocomplete="cc-exp"
                                                        aria-describedby="cardExpiryError">
                                                 <div class="invalid-feedback" id="cardExpiryError"></div>
                                             </div>
-                                            <div class="col-md-6 mb-3">
-                                                <label for="cardCvc" class="form-label">CVC</label>
-                                                <input type="text" class="form-control" id="cardCvc"
+                                            <div class="col-6">
+                                                <label for="cardCvc" class="form-label small fw-semibold">CVC / CVV</label>
+                                                <input type="text" class="form-control foodjet-input" id="cardCvc"
                                                        placeholder="123" maxlength="4"
                                                        inputmode="numeric" autocomplete="cc-csc"
                                                        aria-describedby="cardCvcError">
                                                 <div class="invalid-feedback" id="cardCvcError"></div>
                                             </div>
                                         </div>
-                                        <p class="small text-muted mb-0">
-                                            <i class="bi bi-shield-lock me-1" aria-hidden="true"></i>
+
+                                        <p class="small text-muted mb-0 d-flex align-items-center gap-1">
+                                            <i class="bi bi-shield-lock-fill text-success" aria-hidden="true"></i>
                                             Los datos de tu tarjeta no se almacenan ni se envían a nuestros servidores.
                                         </p>
+                                    </div>
+
+                                    <!-- Protected Guarantee Footer -->
+                                    <div class="d-flex align-items-center mt-3 pt-2 text-muted small border-top">
+                                        <i class="bi bi-lock-fill me-2 text-secondary" aria-hidden="true"></i>
+                                        <span>Tus pagos y datos personales están protegidos con cifrado seguro.</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="col-lg-5">
-                            <div class="card sticky-top" style="top: 100px;">
-                                <div class="card-body">
-                                    <h2 class="h4 mb-4">Resumen del Pedido</h2>
-                                    <div id="checkoutItems" class="mb-4"></div>
-                                    <hr>
-                                    <div class="mb-3">
-                                        <label for="couponCode" class="form-label text-muted">¿Tienes un código de cupón?</label>
-                                        <div class="input-group">
-                                            <input type="text" class="form-control" id="couponCode" placeholder="Ejem: PruebaCupon">
-                                            <button class="btn btn-outline-secondary" type="button" id="applyCouponBtn">Aplicar</button>
-                                        </div>
-                                        <div id="couponMessage" class="small mt-1"></div>
+                        <!-- Right Column: Order Summary (Sticky Desktop / Static Mobile) -->
+                        <div class="col-12 col-lg-5">
+                            <div class="card foodjet-card checkout-summary-sticky" id="orderSummaryCard">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <span class="foodjet-icon-pill me-2" aria-hidden="true">
+                                            <i class="bi bi-bag-check-fill text-primary"></i>
+                                        </span>
+                                        <h2 class="h5 fw-bold mb-0">Tu pedido</h2>
                                     </div>
 
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Subtotal</span>
-                                        <span id="checkoutSubtotal">S/ 0.00</span>
+                                    <!-- Items Container -->
+                                    <div id="checkoutCartItems" class="checkout-items-list mb-3"></div>
+                                    <!-- Fallback ID for backward-compatibility -->
+                                    <div id="checkoutItems" class="mb-3" style="display: none;"></div>
+
+                                    <!-- Coupon Code -->
+                                    <div class="mb-3 pt-3 border-top">
+                                        <label for="couponCode" class="form-label small fw-semibold text-secondary">¿Tienes un cupón?</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control foodjet-input" id="couponCode" 
+                                                   placeholder="Ejem: PruebaCupon" autocomplete="off" autocapitalize="characters">
+                                            <button class="btn btn-primary foodjet-btn-primary" type="button" id="applyCouponBtn">
+                                                Aplicar
+                                            </button>
+                                            <button class="btn btn-outline-secondary" type="button" id="removeCouponBtn" style="display: none;" title="Quitar cupón">
+                                                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
+                                        <div id="couponMessage" class="small mt-1" role="status" aria-live="polite"></div>
                                     </div>
-                                    <div class="d-flex justify-content-between mb-2" id="checkoutDiscountRow" style="display: none !important;">
-                                        <span class="text-success">Descuento</span>
-                                        <span class="text-success" id="checkoutDiscount">-S/ 0.00</span>
+
+                                    <!-- Financial Breakdown -->
+                                    <div class="finance-breakdown pt-2 border-top">
+                                        <div class="d-flex justify-content-between mb-2 small text-secondary">
+                                            <span>Subtotal</span>
+                                            <span id="checkoutSubtotal" class="fw-semibold text-dark">S/ 0.00</span>
+                                        </div>
+
+                                        <!-- Student Discount Row -->
+                                        <div class="d-flex justify-content-between mb-2 small text-success" id="studentDiscountRow" style="display: none;">
+                                            <span><i class="bi bi-mortarboard-fill me-1" aria-hidden="true"></i>Descuento Estudiante</span>
+                                            <span id="studentDiscountAmount" class="fw-bold">-S/ 0.00</span>
+                                        </div>
+
+                                        <!-- Coupon Discount Row -->
+                                        <div class="d-flex justify-content-between mb-2 small text-success" id="checkoutDiscountRow" style="display: none;">
+                                            <span><i class="bi bi-tag-fill me-1" aria-hidden="true"></i>Descuento Cupón (<span id="couponDiscountRate">0%</span>)</span>
+                                            <span id="checkoutDiscount" class="fw-bold">-S/ 0.00</span>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between mb-2 small text-secondary">
+                                            <span>Impuestos (18% IGV)</span>
+                                            <span id="checkoutTaxes" class="fw-semibold text-dark">S/ 0.00</span>
+                                        </div>
+                                        <!-- Fallback ID -->
+                                        <span id="checkoutTax" hidden></span>
+
+                                        <div class="d-flex justify-content-between mb-3 small text-secondary">
+                                            <span>Costo de envío</span>
+                                            <span id="checkoutDelivery" class="fw-semibold text-dark">S/ 5.00</span>
+                                        </div>
+                                        <!-- Fallback ID -->
+                                        <span id="checkoutDeliveryFee" hidden></span>
+
+                                        <hr class="my-3">
+
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <span class="h5 fw-bold mb-0">Total a Pagar</span>
+                                            <span class="h3 fw-extrabold mb-0 text-primary" id="checkoutTotal">S/ 0.00</span>
+                                        </div>
+                                        <p class="small text-muted mb-4" style="font-size: 0.75rem;">
+                                            El servidor confirma el importe final al registrar el pedido.
+                                        </p>
+
+                                        <!-- Confirm Order Submit Button -->
+                                        <button type="submit" class="btn btn-primary foodjet-btn-primary foodjet-btn-cta w-100 py-3 fw-bold fs-5 shadow-sm" id="confirmOrderBtn">
+                                            <span class="spinner-border spinner-border-sm me-2 d-none" id="confirmOrderSpinner" role="status" aria-hidden="true"></span>
+                                            <span id="confirmOrderText">Confirmar Pedido</span>
+                                            <i class="bi bi-arrow-right ms-2" id="confirmOrderArrow" aria-hidden="true"></i>
+                                        </button>
                                     </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Impuestos (18%)</span>
-                                        <span id="checkoutTaxes">S/ 0.00</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-3">
-                                        <span class="text-muted">Delivery</span>
-                                        <span id="checkoutDelivery">S/ 5.00</span>
-                                    </div>
-                                    <hr>
-                                    <div class="d-flex justify-content-between mb-4">
-                                        <span class="fw-bold">Total</span>
-                                        <span class="fs-3 fw-bold" id="checkoutTotal">S/ 0.00</span>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary w-100 py-3">Confirmar Pedido</button>
                                 </div>
                             </div>
                         </div>
@@ -492,61 +703,78 @@
         </section>
 
         <section id="dashboardView" style="display: none;" aria-label="Panel de operaciones">
-            <div class="container py-5">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1 class="mb-0" tabindex="-1">Panel de Operaciones</h1>
-                    <button class="btn btn-outline-secondary" id="backToMenuFromDashboard">
-                        <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al Menú
-                    </button>
+            <div class="container py-4 py-lg-5">
+                <!-- Navigation & View Header -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                    <div>
+                        <button class="btn btn-link text-decoration-none p-0 mb-2 foodjet-back-link" id="backToMenuFromDashboard" type="button">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Volver al Menú
+                        </button>
+                        <h1 class="display-6 fw-extrabold mb-1" tabindex="-1" style="color: var(--color-text-primary);">Panel de Operaciones</h1>
+                        <p class="text-secondary small mb-0">Gestión de flujo y avance en vivo de pedidos.</p>
+                    </div>
+                    <div>
+                        <button type="button" class="btn foodjet-btn-primary d-inline-flex align-items-center" id="refreshOperationsBtn">
+                            <i class="bi bi-arrow-clockwise me-2" aria-hidden="true"></i> Actualizar pedidos
+                        </button>
+                    </div>
                 </div>
 
                 <div class="row g-4">
-                    <div class="col-lg-3">
-                        <div class="card mb-4">
-                            <div class="card-body text-center">
-                                <i class="bi bi-person-gear display-1 text-primary" aria-hidden="true"></i>
-                                <h2 class="h4 mt-3 mb-1" id="dashboardUserName">Admin</h2>
-                                <p class="text-muted mb-0" id="dashboardUserEmail">admin@foodjet.com</p>
+                    <!-- Left Column: Admin Profile Card & Actions -->
+                    <div class="col-12 col-lg-3">
+                        <div class="card foodjet-card mb-4 text-center p-4">
+                            <div class="foodjet-admin-avatar mx-auto mb-3">
+                                <i class="bi bi-person-gear text-primary" aria-hidden="true"></i>
                             </div>
+                            <h2 class="h5 fw-bold mb-1" id="dashboardUserName" style="color: var(--color-text-primary);">Admin</h2>
+                            <p class="text-secondary small mb-3" id="dashboardUserEmail">admin@foodjet.com</p>
+                            <span class="badge rounded-pill bg-dark text-white px-3 py-2 small fw-semibold mx-auto">Administrador</span>
                         </div>
-                        <div class="card">
-                            <div class="list-group list-group-flush">
-                                <button type="button" class="list-group-item list-group-item-action" id="refreshOperationsBtn">
-                                    <i class="bi bi-arrow-clockwise me-2" aria-hidden="true"></i> Actualizar pedidos
-                                </button>
-                                <a href="#" class="list-group-item list-group-item-action text-danger" id="logoutBtnDashboard">
+
+                        <div class="card foodjet-card overflow-hidden">
+                            <div class="list-group list-group-flush foodjet-list-group">
+                                <a href="#" class="list-group-item list-group-item-action text-danger py-3" id="logoutBtnDashboard">
                                     <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i> Cerrar Sesión
                                 </a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-lg-9">
-                        <div class="card">
-                            <div class="card-header">
-                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                    <h2 class="h5 mb-0">Pedidos</h2>
-                                    <small class="text-muted" id="operationsUpdated" role="status" aria-live="off"></small>
+                    <!-- Right Column: Operational Orders Table & Filter Tabs -->
+                    <div class="col-12 col-lg-9">
+                        <div class="card foodjet-card">
+                            <div class="card-header bg-white border-bottom p-3 p-md-4">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                    <h2 class="h5 fw-bold mb-0" style="color: var(--color-text-primary);">
+                                        <i class="bi bi-list-check text-primary me-2" aria-hidden="true"></i>Cola de Pedidos
+                                    </h2>
+                                    <small class="text-secondary" id="operationsUpdated" role="status" aria-live="off"></small>
                                 </div>
-                                <div class="operaciones__filtros mt-3" id="operationsFilters" role="group" aria-label="Filtrar pedidos por estado"></div>
+                                
+                                <!-- Filter Chips: Scrollable on mobile -->
+                                <div class="operaciones__filtros-wrapper">
+                                    <div class="operaciones__filtros" id="operationsFilters" role="group" aria-label="Filtrar pedidos por estado"></div>
+                                </div>
                             </div>
-                            <div class="card-body">
+                            
+                            <div class="card-body p-0">
                                 <div class="table-responsive">
-                                    <table class="table align-middle mb-0">
+                                    <table class="table align-middle mb-0 foodjet-operations-table">
                                         <caption class="visually-hidden">Pedidos y su estado actual</caption>
                                         <thead>
                                             <tr>
-                                                <th scope="col">Pedido</th>
+                                                <th scope="col" class="ps-3 ps-md-4">Pedido</th>
                                                 <th scope="col">Cliente y local</th>
                                                 <th scope="col">Total</th>
                                                 <th scope="col">Estado</th>
-                                                <th scope="col" class="text-end">Acción</th>
+                                                <th scope="col" class="text-end pe-3 pe-md-4">Acción</th>
                                             </tr>
                                         </thead>
                                         <tbody id="operationsTableBody"></tbody>
                                     </table>
                                 </div>
-                                <div class="mt-3" role="status" aria-live="polite" id="operationsNotice"></div>
+                                <div class="p-3" role="status" aria-live="polite" id="operationsNotice"></div>
                             </div>
                         </div>
                     </div>
@@ -556,98 +784,143 @@
 
         <section id="trackingView" style="display: none;" aria-label="Seguimiento de pedido">
             <div class="container py-4 py-lg-5">
-                <!-- seguimiento--con-mapa se añade cuando el pedido tiene local y destino ubicados -->
+                <!-- Modern Compose Header Bar -->
+                <div class="tracking-header mb-4">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div class="min-w-0">
+                            <h1 class="tracking-headline fw-extrabold mb-1" id="trackingHeadline">Sigue tu pedido</h1>
+                            <p class="tracking-subtitle text-secondary small mb-0" id="trackingSubtitle">
+                                Sigue cada parte del viaje en tiempo real.
+                            </p>
+                        </div>
+                        <!-- Accessible Live Connection Indicator Pill -->
+                        <div id="liveIndicator" class="foodjet-badge foodjet-badge--live" role="status" aria-live="polite">
+                            <span class="foodjet-badge__dot" aria-hidden="true"></span>
+                            <span id="liveIndicatorText">Actualizando en vivo</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Tracking Layout Grid (2 cols on desktop, 1 col on mobile) -->
                 <div class="seguimiento" id="trackingLayout">
-                    <div class="seguimiento__mapa" id="trackingMapCard" hidden>
+                    <!-- Map Card Column -->
+                    <div class="seguimiento__mapa foodjet-card" id="trackingMapCard" hidden>
                         <div id="trackingMap" class="seguimiento__lienzo" role="region"
                              aria-label="Mapa del reparto: el local, tu dirección y el repartidor"></div>
                         <p class="seguimiento__ruta" id="trackingRoute"></p>
                     </div>
 
+                    <!-- Tracking Status & Timeline Panel -->
                     <div class="seguimiento__panel">
-                        <div class="card">
-                            <div class="card-body p-4">
-                                <div class="seguimiento__estado" role="status" aria-live="polite" aria-atomic="true">
-                                    <div class="order-status-icon" id="statusIcon">
-                                        <i class="bi bi-hourglass-split fs-2" aria-hidden="true"></i>
+                        <!-- Status & Progress Card -->
+                        <div class="card foodjet-card mb-3" id="statusCard">
+                            <div class="card-body foodjet-card__body p-4">
+                                <div class="seguimiento__estado mb-3" role="status" aria-live="polite" aria-atomic="true">
+                                    <div class="order-status-icon me-3" id="statusIcon">
+                                        <i class="bi bi-hourglass-split fs-2 text-primary" aria-hidden="true"></i>
                                     </div>
-                                    <div>
-                                        <h1 class="h4 mb-1" id="statusTitle" tabindex="-1">Confirmando tu pedido</h1>
-                                        <p class="text-muted mb-0" id="statusDescription">Estamos confirmando tu pedido con el restaurante.</p>
+                                    <div class="min-w-0">
+                                        <h2 class="h4 mb-1 fw-bold" id="statusTitle" tabindex="-1">Confirmando tu pedido</h2>
+                                        <p class="text-secondary mb-0 small" id="statusDescription">Estamos confirmando tu pedido con el restaurante.</p>
                                     </div>
                                 </div>
 
+                                <!-- Big ETA Counter -->
                                 <div class="seguimiento__llegada" id="estimatedTime" hidden>
                                     <span class="seguimiento__llegada-cifra" id="etaValue"></span>
                                     <span class="seguimiento__llegada-texto" id="etaText"></span>
                                 </div>
+                                
+                                <!-- Diagnostic Notice -->
                                 <div class="small text-muted mt-2" id="trackingConnection"></div>
 
+                                <!-- Chronological 4-Step Timeline -->
                                 <ol class="linea-tiempo" aria-label="Progreso del pedido">
                                     <li class="linea-tiempo__etapa" id="step1">
                                         <span class="linea-tiempo__marca" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
-                                        <span class="linea-tiempo__nombre">Confirmación</span>
+                                        <div class="linea-tiempo__contenido">
+                                            <span class="linea-tiempo__nombre">Confirmación</span>
+                                            <span class="foodjet-badge foodjet-badge--pill linea-tiempo__ahora-badge" aria-hidden="true">Ahora</span>
+                                        </div>
                                         <span class="linea-tiempo__hora" id="stepTime1"></span>
                                     </li>
                                     <li class="linea-tiempo__etapa" id="step2">
                                         <span class="linea-tiempo__marca" aria-hidden="true"><i class="bi bi-box-seam"></i></span>
-                                        <span class="linea-tiempo__nombre">Preparación</span>
+                                        <div class="linea-tiempo__contenido">
+                                            <span class="linea-tiempo__nombre">Preparación</span>
+                                            <span class="foodjet-badge foodjet-badge--pill linea-tiempo__ahora-badge" aria-hidden="true">Ahora</span>
+                                        </div>
                                         <span class="linea-tiempo__hora" id="stepTime2"></span>
                                     </li>
                                     <li class="linea-tiempo__etapa" id="step3">
                                         <span class="linea-tiempo__marca" aria-hidden="true"><i class="bi bi-bicycle"></i></span>
-                                        <span class="linea-tiempo__nombre">En camino</span>
+                                        <div class="linea-tiempo__contenido">
+                                            <span class="linea-tiempo__nombre">En camino</span>
+                                            <span class="foodjet-badge foodjet-badge--pill linea-tiempo__ahora-badge" aria-hidden="true">Ahora</span>
+                                        </div>
                                         <span class="linea-tiempo__hora" id="stepTime3"></span>
                                     </li>
                                     <li class="linea-tiempo__etapa" id="step4">
                                         <span class="linea-tiempo__marca" aria-hidden="true"><i class="bi bi-house-door"></i></span>
-                                        <span class="linea-tiempo__nombre">Entregado</span>
+                                        <div class="linea-tiempo__contenido">
+                                            <span class="linea-tiempo__nombre">Entregado</span>
+                                            <span class="foodjet-badge foodjet-badge--pill linea-tiempo__ahora-badge" aria-hidden="true">Ahora</span>
+                                        </div>
                                         <span class="linea-tiempo__hora" id="stepTime4"></span>
                                     </li>
                                 </ol>
                             </div>
                         </div>
 
-                        <div class="card mt-3">
-                            <div class="card-body p-4">
-                                <h2 class="h5 mb-3">Detalles del pedido</h2>
+                        <!-- Order Details Card -->
+                        <div class="card foodjet-card mt-3">
+                            <div class="card-body foodjet-card__body p-4">
+                                <h3 class="h5 mb-3 fw-bold">Detalles del pedido</h3>
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Número de orden:</span>
-                                    <span class="fw-bold" id="orderNumber">#FJ0000</span>
+                                    <span class="text-secondary small">Número de orden:</span>
+                                    <span class="fw-bold small" id="orderNumber">#FJ0000</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Método de pago:</span>
-                                    <span class="fw-bold" id="orderPayment">-</span>
+                                    <span class="text-secondary small">Método de pago:</span>
+                                    <span class="fw-bold small" id="orderPayment">-</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Fecha:</span>
-                                    <span class="fw-bold" id="orderDate">-</span>
+                                    <span class="text-secondary small">Fecha:</span>
+                                    <span class="fw-bold small" id="orderDate">-</span>
                                 </div>
-                                <hr>
+                                <hr class="my-3 border-secondary-subtle">
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Subtotal:</span>
-                                    <span class="fw-bold" id="orderSubtotal">-</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Impuestos:</span>
-                                    <span class="fw-bold" id="orderTaxes">-</span>
+                                    <span class="text-secondary small">Subtotal:</span>
+                                    <span class="fw-bold small" id="orderSubtotal">-</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Envío:</span>
-                                    <span class="fw-bold" id="orderDelivery">-</span>
+                                    <span class="text-secondary small">Impuestos:</span>
+                                    <span class="fw-bold small" id="orderTaxes">-</span>
                                 </div>
-                                <div class="d-flex justify-content-between">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-secondary small">Envío:</span>
+                                    <span class="fw-bold small" id="orderDelivery">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between pt-2 border-top">
                                     <span class="fw-bold">Total Final:</span>
-                                    <span class="fw-bold fs-5" id="orderTotalFinal">-</span>
+                                    <span class="fw-extrabold fs-5 text-dark" id="orderTotalFinal">-</span>
                                 </div>
 
-                                <p class="small text-muted mt-4 mb-3">
-                                    <i class="bi bi-telephone me-1" aria-hidden="true"></i>¿Tienes alguna pregunta? Llámanos al <strong>01 234 5678</strong>
+                                <p class="small text-secondary mt-4 mb-3 d-flex align-items-center">
+                                    <i class="bi bi-telephone me-2 text-primary" aria-hidden="true"></i>¿Tienes alguna pregunta? Llámanos al <strong class="ms-1">01 234 5678</strong>
                                 </p>
 
-                                <div class="d-grid gap-2">
-                                    <button class="btn btn-primary" id="backToMenuFromTracking" style="display: none;">Volver al Menú</button>
-                                    <button class="btn btn-outline-secondary" id="trackingHistoryBtn">Ver Historial</button>
+                                <div class="d-grid gap-2 mt-4">
+                                    <!-- Cancel order button (visible only in cancelable state) -->
+                                    <button class="btn btn-outline-danger foodjet-btn-secondary foodjet-btn-secondary--danger" id="cancelOrderBtn" style="display: none;">
+                                        <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Cancelar Pedido
+                                    </button>
+                                    <button class="btn btn-primary foodjet-btn-primary" id="backToMenuFromTracking">
+                                        Volver al Menú
+                                    </button>
+                                    <button class="btn btn-outline-secondary foodjet-btn-secondary" id="trackingHistoryBtn">
+                                        Ver Historial de Pedidos
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -673,10 +946,10 @@
 
     <div class="modal fade detalle-pedido" id="orderDetailModal" tabindex="-1" aria-labelledby="orderDetailTitle" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="orderDetailTitle">Pedido</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            <div class="modal-content foodjet-modal-content">
+                <div class="modal-header bg-white border-bottom px-4 py-3">
+                    <h5 class="modal-title fw-bold" id="orderDetailTitle" style="color: var(--color-text-primary);">Pedido</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body detalle__rejilla" id="orderDetailGrid">
                     <!-- Solo se muestra si el pedido tiene local y destino ubicados y hay key de Google Maps -->
@@ -691,222 +964,447 @@
         </div>
     </div>
 
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="cartOffcanvas" aria-labelledby="cartOffcanvasLabel">
-        <div class="offcanvas-header">
-            <h5 class="offcanvas-title" id="cartOffcanvasLabel">
-                <i class="bi bi-bag-check-fill me-2"></i>Mi Carrito
-                <span class="badge bg-primary ms-2" id="cartItemCount">0</span>
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    <div class="offcanvas offcanvas-end foodjet-offcanvas" tabindex="-1" id="cartOffcanvas" aria-labelledby="cartOffcanvasLabel">
+        <div class="offcanvas-header border-bottom">
+            <div class="d-flex align-items-center">
+                <h5 class="offcanvas-title mb-0 fw-bold" id="cartOffcanvasLabel">
+                    <i class="bi bi-bag-check-fill me-2 text-primary"></i>Tu carrito
+                </h5>
+                <span class="foodjet-badge foodjet-badge--pill ms-2" id="cartItemCount">0</span>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar carrito"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column">
+            <!-- Banner de restaurante activo -->
+            <div id="cartRestaurantBanner" class="mb-3" style="display: none;"></div>
+
             <div id="cartItemsContainer" class="flex-grow-1 overflow-auto">
                 <div id="emptyCart" class="text-center py-5">
-                    <i class="bi bi-cart-x display-1 text-muted"></i>
-                    <p class="text-muted mt-3">Tu carrito está vacío</p>
-                    <p class="text-muted small">¡Agrega productos deliciosos!</p>
+                    <div class="empty-cart-icon mb-3">
+                        <i class="bi bi-cart-x display-1 text-muted"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mt-2">Tu carrito está vacío</h5>
+                    <p class="text-muted small mb-4">¡Agrega productos deliciosos desde el menú!</p>
+                    <button type="button" class="btn btn-outline-primary rounded-pill px-4" data-bs-dismiss="offcanvas">
+                        Explorar el menú
+                    </button>
                 </div>
                 <div id="cartItems"></div>
             </div>
             <div id="cartFooter" class="border-top pt-3 mt-3" style="display: none;">
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="fs-5">Total:</span>
-                    <span class="fs-4 fw-bold" id="cartTotal">S/ 0.00</span>
+                <div id="cartSubtotalRow" class="d-flex justify-content-between mb-1 small text-muted">
+                    <span>Subtotal estimado:</span>
+                    <span id="cartSubtotal" class="fw-semibold text-dark">S/ 0.00</span>
                 </div>
-                <button class="btn btn-primary w-100 py-3" id="checkoutBtn">Proceder al pago</button>
+                <div id="cartStudentSavingsRow" class="d-flex justify-content-between mb-2 small text-success" style="display: none;">
+                    <span class="fw-semibold"><i class="bi bi-tag-fill me-1"></i>Ahorro estudiante:</span>
+                    <span id="cartStudentSavings" class="fw-bold">-S/ 0.00</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fs-5 fw-bold">Total:</span>
+                    <span class="fs-4 fw-bold text-primary" id="cartTotal">S/ 0.00</span>
+                </div>
+                <p class="small text-muted mb-3" style="font-size: 0.75rem;">El envío, IGV y cupones se calculan al pagar.</p>
+                <button class="btn btn-primary foodjet-btn-primary w-100 py-3 fw-bold rounded-pill d-flex align-items-center justify-content-center" id="checkoutBtn">
+                    <span>Proceder al pago</span>
+                    <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+                <div class="text-center mt-2">
+                    <small class="text-muted d-inline-flex align-items-center" style="font-size: 0.75rem;">
+                        <i class="bi bi-shield-lock-fill me-1 text-secondary"></i>Pago seguro · Antojos garantizados
+                    </small>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+    <!-- Modal de advertencia de cambio de restaurante -->
+    <div class="modal fade" id="restaurantChangeModal" tabindex="-1" aria-labelledby="restaurantChangeModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title w-100 text-center" id="loginModalLabel">
-                        <i class="bi bi-person-circle me-2"></i>
-                        Iniciar Sesión
+            <div class="modal-content border-0 shadow-lg" style="border-radius: var(--radius-xl, 20px);">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold d-flex align-items-center text-warning" id="restaurantChangeModalLabel">
+                        <i class="bi bi-exclamation-triangle-fill me-2 fs-4 text-warning"></i>
+                        ¿Cambiar de restaurante?
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
-                <div class="modal-body">
-                    <form id="loginForm">
-                        <div class="mb-3">
-                            <label for="loginEmail" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="loginEmail" placeholder="tu@email.com" required>
+                <div class="modal-body py-3">
+                    <p class="mb-2">
+                        Tu carrito actualmente contiene productos de <strong id="restaurantChangeCurrentName">otro restaurante</strong>.
+                    </p>
+                    <p class="text-muted small mb-0">
+                        Solo puedes pedir de un restaurante a la vez. Si continúas y agregas este producto de <strong id="restaurantChangeNewName">este restaurante</strong>, se vaciará tu carrito actual.
+                    </p>
+                </div>
+                <div class="modal-footer border-0 pt-0 d-flex flex-column flex-sm-row gap-2 justify-content-end">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal" id="restaurantChangeCancelBtn">
+                        Conservar pedido actual
+                    </button>
+                    <button type="button" class="btn btn-primary foodjet-btn-primary rounded-pill px-3" id="restaurantChangeConfirmBtn">
+                        Vaciar y agregar nuevo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal fade foodjet-modal" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content foodjet-modal-content border-0">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    <div class="foodjet-modal-avatar" aria-hidden="true">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <h2 class="modal-title foodjet-modal-title" id="loginModalLabel">Iniciar Sesión</h2>
+                    <p class="foodjet-modal-subtitle">Ingresa a tu cuenta para pedir tus antojos sin escalas.</p>
+                </div>
+                <div class="modal-body pt-2 px-4 pb-4">
+                    <!-- Quick Test Credentials Helper (Role-Aware Testing) -->
+                    <div class="foodjet-auth-quick-fill mb-3 text-center" aria-label="Cuentas de prueba">
+                        <span class="foodjet-auth-quick-label">Acceso rápido de prueba:</span>
+                        <div class="d-flex justify-content-center gap-2 mt-1 flex-wrap">
+                            <button type="button" class="foodjet-quick-login-btn"
+                                    data-email="cliente1@mail.com" data-pass="Cliente123!" data-role="Estudiante"
+                                    title="Cliente con descuento de estudiante">
+                                <i class="bi bi-mortarboard-fill text-warning me-1" aria-hidden="true"></i>Estudiante
+                            </button>
+                            <button type="button" class="foodjet-quick-login-btn"
+                                    data-email="cliente2@mail.com" data-pass="Cliente123!" data-role="Cliente"
+                                    title="Cliente regular">
+                                <i class="bi bi-person-fill text-primary me-1" aria-hidden="true"></i>Cliente
+                            </button>
+                            <button type="button" class="foodjet-quick-login-btn"
+                                    data-email="admin@foodjet.com" data-pass="Admin123!" data-role="Admin"
+                                    title="Administrador de operaciones">
+                                <i class="bi bi-shield-lock-fill text-danger me-1" aria-hidden="true"></i>Admin
+                            </button>
                         </div>
+                    </div>
+
+                    <!-- Inline Error Banner (Matches Compose errorContainer) -->
+                    <div id="loginError" class="foodjet-inline-alert foodjet-inline-alert--danger mb-3" role="alert" style="display: none;">
+                        <i class="bi bi-exclamation-circle-fill me-2" aria-hidden="true"></i>
+                        <span id="loginErrorText">Credenciales inválidas.</span>
+                    </div>
+
+                    <form id="loginForm" novalidate>
+                        <!-- Email Input -->
                         <div class="mb-3">
-                            <label for="loginPassword" class="form-label">
-                                <i class="bi bi-lock me-2"></i>Contraseña
+                            <label for="loginEmail" class="form-label fw-semibold small text-secondary">
+                                <i class="bi bi-envelope me-1" aria-hidden="true"></i>Email
                             </label>
-                            <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required>
+                            <div class="position-relative">
+                                <input type="email" class="form-control foodjet-input" id="loginEmail"
+                                       placeholder="tu@email.com" required autocomplete="email">
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Ingresar</button>
+
+                        <!-- Password Input with Visibility Toggle -->
+                        <div class="mb-4">
+                            <label for="loginPassword" class="form-label fw-semibold small text-secondary">
+                                <i class="bi bi-lock me-1" aria-hidden="true"></i>Contraseña
+                            </label>
+                            <div class="position-relative">
+                                <input type="password" class="form-control foodjet-input pe-5" id="loginPassword"
+                                       placeholder="••••••••" required autocomplete="current-password">
+                                <button type="button" class="foodjet-password-toggle position-absolute top-50 end-0 translate-middle-y me-2"
+                                        aria-label="Mostrar contraseña" data-target="loginPassword">
+                                    <i class="bi bi-eye" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn foodjet-btn-primary w-100 py-3 fw-bold rounded-pill" id="loginSubmitBtn">
+                            Ingresar
+                        </button>
                     </form>
-                    <div class="text-center mt-3">
-                        <small class="text-muted">¿No tienes cuenta? <a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#registerModal">Regístrate aquí</a></small>
+
+                    <div class="foodjet-modal-footer-link">
+                        ¿No tienes cuenta?
+                        <a href="#" class="fw-semibold" data-bs-toggle="modal" data-bs-target="#registerModal">Regístrate aquí</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
+    <!-- Register Modal -->
+    <div class="modal fade foodjet-modal" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title w-100 text-center" id="registerModalLabel">
-                        <i class="bi bi-person-plus-fill me-2"></i>
-                        Crear Cuenta
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-content foodjet-modal-content border-0">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    <div class="foodjet-modal-avatar" aria-hidden="true">
+                        <i class="bi bi-person-plus-fill"></i>
+                    </div>
+                    <h2 class="modal-title foodjet-modal-title" id="registerModalLabel">Crear Cuenta</h2>
+                    <p class="foodjet-modal-subtitle">Únete a FoodJet y disfruta de delivery rápido y promociones.</p>
                 </div>
-                <div class="modal-body">
-                    <form id="registerForm">
+                <div class="modal-body pt-2 px-4 pb-4">
+                    <!-- Inline General Error Banner -->
+                    <div id="registerError" class="foodjet-inline-alert foodjet-inline-alert--danger mb-3" role="alert" style="display: none;">
+                        <i class="bi bi-exclamation-circle-fill me-2" aria-hidden="true"></i>
+                        <span id="registerErrorText">Error al registrar el usuario.</span>
+                    </div>
+
+                    <form id="registerForm" novalidate>
+                        <!-- Name Input -->
                         <div class="mb-3">
-                            <label for="registerName" class="form-label">
-                                <i class="bi bi-person me-2"></i>Nombre completo
+                            <label for="registerName" class="form-label fw-semibold small text-secondary">
+                                <i class="bi bi-person me-1" aria-hidden="true"></i>Nombre completo
                             </label>
-                            <input type="text" class="form-control" id="registerName" placeholder="" required>
+                            <input type="text" class="form-control foodjet-input" id="registerName"
+                                   placeholder="Juan Pérez" required autocomplete="name">
                         </div>
+
+                        <!-- Email Input with Duplicate Feedback -->
                         <div class="mb-3">
-                            <label for="registerEmail" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="registerEmail" placeholder="tu@email.com" required>
-                            <div id="registerEmailError" class="text-danger mt-1" style="display: none; font-size: 0.875em;">Una cuenta con este correo ya existe</div>                        </div>
-                        <div class="mb-3">                            <label for="registerPhone" class="form-label">
-                                <i class="bi bi-telephone me-2"></i>Teléfono
+                            <label for="registerEmail" class="form-label fw-semibold small text-secondary">
+                                <i class="bi bi-envelope me-1" aria-hidden="true"></i>Email
                             </label>
-                            <input type="tel" class="form-control" id="registerPhone" placeholder="987654321"
+                            <input type="email" class="form-control foodjet-input" id="registerEmail"
+                                   placeholder="tu@email.com" required autocomplete="email">
+                            <div id="registerEmailError" class="text-danger mt-1" style="display: none; font-size: 0.875em;">Una cuenta con este correo ya existe</div>
+                        </div>
+
+                        <!-- Phone Input with Sanitize & Length Validation -->
+                        <div class="mb-3">
+                            <label for="registerPhone" class="form-label fw-semibold small text-secondary">
+                                <i class="bi bi-telephone me-1" aria-hidden="true"></i>Teléfono
+                            </label>
+                            <input type="tel" class="form-control foodjet-input" id="registerPhone" placeholder="987654321"
                                    inputmode="numeric" autocomplete="tel" maxlength="9" pattern="\d{9}"
                                    title="Debe contener exactamente 9 dígitos numéricos"
                                    aria-describedby="registerPhoneAyuda registerPhoneError" required>
                             <div id="registerPhoneAyuda" class="form-text">9 dígitos, solo números.</div>
                             <div id="registerPhoneError" class="invalid-feedback"></div>
                         </div>
-                        <div class="mb-3">
-                            <label for="registerPassword" class="form-label">
-                                <i class="bi bi-lock me-2"></i>Contraseña
+
+                        <!-- Password Input with Visibility Toggle -->
+                        <div class="mb-4">
+                            <label for="registerPassword" class="form-label fw-semibold small text-secondary">
+                                <i class="bi bi-lock me-1" aria-hidden="true"></i>Contraseña (mínimo 6 caracteres)
                             </label>
-                            <input type="password" class="form-control" id="registerPassword" placeholder="••••••••" required>
+                            <div class="position-relative">
+                                <input type="password" class="form-control foodjet-input pe-5" id="registerPassword"
+                                       placeholder="••••••••" minlength="6" required autocomplete="new-password">
+                                <button type="button" class="foodjet-password-toggle position-absolute top-50 end-0 translate-middle-y me-2"
+                                        aria-label="Mostrar contraseña" data-target="registerPassword">
+                                    <i class="bi bi-eye" aria-hidden="true"></i>
+                                </button>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Registrarse</button>
+
+                        <button type="submit" class="btn foodjet-btn-primary w-100 py-3 fw-bold rounded-pill" id="registerSubmitBtn">
+                            Registrarse
+                        </button>
                     </form>
-                    <div class="text-center mt-3">
-                        <small class="text-muted">¿Ya tienes cuenta? <a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#loginModal">Inicia sesión aquí</a></small>
+
+                    <div class="foodjet-modal-footer-link">
+                        ¿Ya tienes cuenta?
+                        <a href="#" class="fw-semibold" data-bs-toggle="modal" data-bs-target="#loginModal">Inicia sesión aquí</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Review Modal -->
     <div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title w-100 text-center" id="reviewModalLabel">
-                        <i class="bi bi-star-fill text-warning me-2"></i>
-                        Calificar Pedido
+            <div class="modal-content foodjet-modal-content border-0">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title w-100 text-center fw-bold" id="reviewModalLabel" style="color: var(--color-text-primary);">
+                        <i class="bi bi-star-fill text-warning me-2" aria-hidden="true"></i>Calificar Pedido
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
-                <div class="modal-body text-center">
-                    <p class="mb-2" id="reviewRestaurantName">Restaurante</p>
-                    <p class="text-muted small mb-4" id="reviewOrderDate">Fecha</p>
+                <div class="modal-body text-center p-4">
+                    <p class="mb-1 fw-bold fs-6" id="reviewRestaurantName" style="color: var(--color-text-primary);">Restaurante</p>
+                    <p class="text-secondary small mb-4" id="reviewOrderDate">Fecha</p>
 
-                    <form id="reviewForm">
+                    <form id="reviewForm" novalidate>
                         <input type="hidden" id="reviewOrderId">
 
                         <div class="mb-4">
-                            <label class="form-label d-block">Tu Calificación</label>
-                            <div class="fs-2 text-warning" id="starRatingContainer" role="radiogroup" aria-label="Calificación de 1 a 5 estrellas" style="cursor: pointer;">
-                                <i class="bi bi-star" data-rating="1" role="radio" aria-checked="false" aria-label="1 estrella" tabindex="0"></i>
-                                <i class="bi bi-star" data-rating="2" role="radio" aria-checked="false" aria-label="2 estrellas" tabindex="0"></i>
-                                <i class="bi bi-star" data-rating="3" role="radio" aria-checked="false" aria-label="3 estrellas" tabindex="0"></i>
-                                <i class="bi bi-star" data-rating="4" role="radio" aria-checked="false" aria-label="4 estrellas" tabindex="0"></i>
-                                <i class="bi bi-star" data-rating="5" role="radio" aria-checked="false" aria-label="5 estrellas" tabindex="0"></i>
+                            <label class="form-label d-block fw-semibold small text-secondary">Tu Calificación</label>
+                            <div class="foodjet-star-rating-container d-inline-flex justify-content-center gap-2 p-2"
+                                 id="starRatingContainer" role="radiogroup" aria-label="Calificación de 1 a 5 estrellas">
+                                <i class="bi bi-star foodjet-star-icon" data-rating="1" role="radio" aria-checked="false" aria-label="1 estrella" tabindex="0"></i>
+                                <i class="bi bi-star foodjet-star-icon" data-rating="2" role="radio" aria-checked="false" aria-label="2 estrellas" tabindex="0"></i>
+                                <i class="bi bi-star foodjet-star-icon" data-rating="3" role="radio" aria-checked="false" aria-label="3 estrellas" tabindex="0"></i>
+                                <i class="bi bi-star foodjet-star-icon" data-rating="4" role="radio" aria-checked="false" aria-label="4 estrellas" tabindex="0"></i>
+                                <i class="bi bi-star foodjet-star-icon" data-rating="5" role="radio" aria-checked="false" aria-label="5 estrellas" tabindex="0"></i>
                             </div>
                             <input type="hidden" id="reviewRating" required>
                         </div>
 
-                        <div class="mb-3 text-start">
-                            <label for="reviewComment" class="form-label">Comentario (Opcional)</label>
-                            <textarea class="form-control" id="reviewComment" rows="3" placeholder="¿Qué te pareció tu pedido?"></textarea>
+                        <div class="mb-4 text-start">
+                            <label for="reviewComment" class="form-label fw-semibold small text-secondary">Comentario (Opcional)</label>
+                            <textarea class="form-control foodjet-input" id="reviewComment" rows="3" placeholder="¿Qué te pareció tu pedido?"></textarea>
                         </div>
 
-                        <button type="submit" class="btn btn-primary w-100" id="submitReviewBtn">Enviar Calificación</button>
+                        <button type="submit" class="btn foodjet-btn-primary w-100 py-3 fw-bold rounded-pill" id="submitReviewBtn">
+                            Enviar Calificación
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Digital Wallet QR Modal -->
     <div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="qrModalLabel">Pago con Billetera Digital</h5>
-                </div>
-                <div class="modal-body text-center">
-                    <p class="mb-3">Escanea el código QR de <strong id="qrRestaurantName"></strong> para pagar.</p>
-                    <img id="qrPaymentImage" src="" alt="Código QR para pago con billetera digital" class="img-fluid rounded border p-2 mb-3" style="max-width: 250px;">
-
-                    <div class="d-flex align-items-center justify-content-center mb-2">
-                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
-                            <span class="visually-hidden">Cargando...</span>
-                        </div>
-                        <p class="mb-0 text-muted" id="qrTimerText">Esperando confirmación de pago... (5s)</p>
+            <div class="modal-content foodjet-modal-content border-0">
+                <div class="modal-header border-0 pb-0 justify-content-center">
+                    <div class="foodjet-modal-icon-badge mb-2">
+                        <i class="bi bi-qr-code text-primary" aria-hidden="true"></i>
                     </div>
                 </div>
-                <div class="modal-footer justify-content-center">
-                    <button type="button" class="btn btn-outline-danger" id="cancelQrPaymentBtn">Cancelar Pago</button>
+                <div class="modal-body text-center pt-0 px-4 pb-4">
+                    <h5 class="modal-title fw-bold mb-2" id="qrModalLabel" style="color: var(--color-text-primary);">Pago con Billetera Digital</h5>
+                    <p class="text-secondary small mb-3">
+                        Escanea el código QR de <strong id="qrRestaurantName" class="text-dark"></strong> para pagar con Yape o Plin.
+                    </p>
+
+                    <!-- Dedicated QR Card Frame (matches Compose BorderStroke(2.dp, FoodJetPrimary)) -->
+                    <div class="foodjet-qr-frame mb-3">
+                        <img id="qrPaymentImage" src="" alt="Código QR para pago con billetera digital" class="img-fluid foodjet-qr-img">
+                    </div>
+
+                    <!-- Timer pill status -->
+                    <div class="foodjet-timer-pill d-inline-flex align-items-center justify-content-center mb-3" role="status" aria-live="polite">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mb-0 small fw-medium" id="qrTimerText">Esperando confirmación de pago... (5s)</p>
+                    </div>
+
+                    <div class="d-grid mt-2">
+                        <button type="button" class="btn btn-outline-danger foodjet-btn-pill py-2" id="cancelQrPaymentBtn">
+                            <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Cancelar Pago
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="miCuentaModal" tabindex="-1" aria-labelledby="miCuentaModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="miCuentaModalLabel"><i class="bi bi-person-circle me-2"></i>Mi Cuenta</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- Modal Mi Cuenta & Verificación de Estudiante -->
+    <div class="modal fade foodjet-modal" id="miCuentaModal" tabindex="-1" aria-labelledby="miCuentaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content foodjet-modal-content border-0">
+                <!-- Header -->
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar modal"></button>
+                    <h5 class="modal-title fw-bold d-flex align-items-center" id="miCuentaModalLabel">
+                        <i class="bi bi-person-circle text-primary me-2 fs-5" aria-hidden="true"></i>
+                        <span>Mi Cuenta</span>
+                    </h5>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-4">
-                        <h6>Estado de Estudiante</h6>
-                        <div id="studentStatusContainer" class="alert alert-secondary" role="alert">
-                            Cargando...
+
+                <div class="modal-body pt-2 pb-4 px-4">
+                    <!-- Profile Header (Compose Avatar & User Details) -->
+                    <div class="foodjet-account-profile text-center mb-3">
+                        <div class="foodjet-account-avatar mx-auto mb-2" id="accountAvatar" aria-hidden="true">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <h5 class="foodjet-account-name fw-bold mb-0" id="accountNombre">Cargando usuario...</h5>
+                        <p class="foodjet-account-email text-muted small mb-2" id="accountEmail">cargando@foodjet.com</p>
+                        
+                        <!-- Badges Row -->
+                        <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+                            <span class="badge rounded-pill bg-light text-dark border px-2 py-1 small fw-semibold" id="accountRol">Cliente</span>
+                            <span class="foodjet-badge foodjet-badge--student" id="accountEstudianteBadge" style="display: none;">
+                                <i class="bi bi-mortarboard-fill me-1" aria-hidden="true"></i>Estudiante
+                            </span>
+                        </div>
+
+                        <!-- Phone Details (Optional display if present) -->
+                        <p class="text-muted small mb-0" id="accountTelefonoContainer" style="display: none;">
+                            <i class="bi bi-telephone me-1" aria-hidden="true"></i>
+                            <span id="accountTelefono"></span>
+                        </p>
+                    </div>
+
+                    <!-- Student Status Banner -->
+                    <div class="mb-3">
+                        <div id="studentStatusContainer" class="alert alert-secondary d-flex align-items-center" role="alert">
+                            <i class="bi bi-info-circle-fill me-2 fs-5" aria-hidden="true"></i>
+                            <div>Cargando estado...</div>
                         </div>
                     </div>
 
+                    <!-- Student Verification Form Container -->
                     <div id="verifyStudentFormContainer" style="display: none;">
-                        <h6>Verificar Carnet Universitario</h6>
-                        <p class="text-muted small">Sube una foto de tu carnet para acceder a descuentos exclusivos.</p>
-                        <form id="verifyStudentForm">
-                            <div class="mb-3">
-                                <label for="carnetImage" class="form-label">Foto del Carnet</label>
-                                <input class="form-control" type="file" id="carnetImage" accept="image/*" required>
+                        <div class="card foodjet-card p-3 mb-3 border">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="foodjet-section-header__icon me-2">
+                                    <i class="bi bi-mortarboard" aria-hidden="true"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">Verificar Carnet Universitario</h6>
+                                    <p class="text-muted small mb-0">Accede a hasta 20% de descuento en el menú.</p>
+                                </div>
                             </div>
-                            <button type="submit" class="btn btn-primary w-100" id="verifyStudentSubmitBtn">
-                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                                Verificar
-                            </button>
-                        </form>
+                            
+                            <form id="verifyStudentForm" novalidate>
+                                <div class="mb-3">
+                                    <label for="carnetImage" class="form-label small fw-semibold text-secondary mb-1">
+                                        Foto legible del carnet (frente)
+                                    </label>
+                                    <div class="foodjet-file-upload-zone text-center p-3">
+                                        <i class="bi bi-cloud-arrow-up-fill fs-2 text-primary d-block mb-1" aria-hidden="true"></i>
+                                        <span class="small fw-semibold d-block text-dark mb-1">Selecciona una imagen de tu carnet</span>
+                                        <span class="small text-muted d-block mb-2" style="font-size: 0.75rem;">Formatos: JPG, PNG o WebP (máx. 5 MB)</span>
+                                        <input class="form-control form-control-sm foodjet-input" type="file" id="carnetImage" accept="image/*" required aria-describedby="carnetImageHelp">
+                                        <div id="carnetImageHelp" class="visually-hidden">Sube una foto de tu carnet universitario en formato imagen</div>
+                                    </div>
+                                    <div id="carnetImageFeedback" class="small text-primary mt-1 fw-semibold" style="display: none;"></div>
+                                </div>
+
+                                <button type="submit" class="btn foodjet-btn-primary w-100 py-3 fw-bold rounded-pill d-flex align-items-center justify-content-center" id="verifyStudentSubmitBtn">
+                                    <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
+                                    <i class="bi bi-patch-check-fill me-2" aria-hidden="true"></i>
+                                    <span>Verificar Carnet</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Shortcut Actions (Admin & Logout) -->
+                    <div class="foodjet-account-actions pt-2 border-top">
+                        <button type="button" class="btn foodjet-btn-admin w-100 py-2 mb-2 rounded-pill fw-semibold d-flex align-items-center justify-content-center" id="accountAdminBtn" style="display: none;">
+                            <i class="bi bi-speedometer2 me-2" aria-hidden="true"></i>
+                            <span>Panel de Operaciones Admin</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger w-100 py-2 rounded-pill fw-semibold d-flex align-items-center justify-content-center" id="accountLogoutBtn">
+                            <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>
+                            <span>Cerrar Sesión</span>
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>    
 
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="favoritesOffcanvas" aria-labelledby="favoritesOffcanvasLabel">
+    <div class="offcanvas offcanvas-end foodjet-offcanvas" tabindex="-1" id="favoritesOffcanvas" aria-labelledby="favoritesOffcanvasLabel">
         <div class="offcanvas-header border-bottom">
-            <h5 class="offcanvas-title text-danger" id="favoritesOffcanvasLabel">
-                <i class="bi bi-heart-fill me-2"></i>Mis Favoritos
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            <div class="d-flex align-items-center">
+                <h5 class="offcanvas-title mb-0 fw-bold text-danger d-flex align-items-center" id="favoritesOffcanvasLabel">
+                    <i class="bi bi-heart-fill me-2"></i>Mis Favoritos
+                </h5>
+                <span class="badge rounded-pill bg-danger-subtle text-danger ms-2 fw-bold" id="favoritesCountBadge" style="display: none;">0</span>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar favoritos"></button>
         </div>
-        <div class="offcanvas-body d-flex flex-column bg-light">
+        <div class="offcanvas-body d-flex flex-column">
             <div id="favoritesItemsContainer" class="flex-grow-1 overflow-auto">
-                </div>
+            </div>
         </div>
     </div>
 
@@ -921,14 +1419,21 @@
     <div class="modal fade" id="cardAuthModal" tabindex="-1" aria-labelledby="cardAuthModalLabel" aria-hidden="true"
          data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="cardAuthModalLabel">Autorizando el pago</h5>
-                </div>
-                <div class="modal-body text-center py-4" role="status" aria-live="polite">
-                    <div class="spinner-border text-primary mb-3" aria-hidden="true"></div>
-                    <p class="mb-1">Estamos autorizando el pago con tu banco…</p>
-                    <p class="small text-muted mb-0" id="cardAuthBrand"></p>
+            <div class="modal-content foodjet-modal-content text-center py-4 px-3 border-0">
+                <div class="modal-body text-center p-3" role="status" aria-live="polite">
+                    <div class="foodjet-modal-icon-badge mb-3">
+                        <i class="bi bi-shield-check text-primary fs-2" aria-hidden="true"></i>
+                    </div>
+                    <h5 class="modal-title fw-bold mb-2" id="cardAuthModalLabel" style="color: var(--color-text-primary);">Autorizando el pago</h5>
+                    
+                    <div class="my-3">
+                        <div class="spinner-border text-primary" style="width: 2.5rem; height: 2.5rem;" aria-hidden="true"></div>
+                    </div>
+
+                    <p class="mb-2 text-secondary">Estamos autorizando el pago con tu banco…</p>
+                    <div class="d-inline-block">
+                        <span class="foodjet-badge foodjet-badge--card-brand small" id="cardAuthBrand"></span>
+                    </div>
                 </div>
             </div>
         </div>

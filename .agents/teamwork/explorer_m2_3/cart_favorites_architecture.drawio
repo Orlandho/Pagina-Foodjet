@@ -1,0 +1,136 @@
+<mxfile host="app.diagrams.net" modified="2026-10-30T00:45:00Z" agent="FoodJet Teamwork Explorer" version="21.0.0" type="device">
+  <diagram id="cart-favorites-flow" name="Cart and Favorites Offcanvas Architecture">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Header Banner -->
+        <mxCell id="title" value="FoodJet — Arquitectura de Carrito, Favoritos y Regla Monorrestaurante" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#F4511E;" vertex="1" parent="1">
+          <mxGeometry x="180" y="20" width="800" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Triggers -->
+        <mxCell id="trigger_catalog" value="Usuario pulsa '+' en Catálogo&#xa;(.add-to-cart)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCF0E4;strokeColor=#F4511E;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="100" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="trigger_fav" value="Usuario pulsa 'Agregar' en Favoritos&#xa;(.add-to-cart-from-fav)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCF0E4;strokeColor=#F4511E;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="300" y="100" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- addToCart Decision -->
+        <mxCell id="add_action" value="state.addToCart(productId)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8F8F4;strokeColor=#6B6B66;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="190" y="200" width="180" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="trigger_catalog" target="add_action">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="trigger_fav" target="add_action">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Restaurant Check -->
+        <mxCell id="check_rest" value="¿Mismo Restaurante o Carrito Vacío?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#FCD460;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="170" y="290" width="220" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="add_action" target="check_rest">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Success Flow -->
+        <mxCell id="success_box" value="success: true&#xa;Incrementa cantidad en cart[productId]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECF4EC;strokeColor=#1E7B4F;fontStyle=1;fontColor=#1E7B4F;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="430" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_yes" value="SÍ" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontStyle=1;fontColor=#1E7B4F;" edge="1" parent="1" source="check_rest" target="success_box">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="170" y="335" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="render_cart" value="ui.renderCartOffcanvas()&#xa;- Banner Restaurante Activo&#xa;- Stepper (+ / - / eliminar)&#xa;- Desglose Ahorro Estudiante&#xa;- Botón 'Proceder al pago'" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#F4511E;fontStyle=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="540" width="180" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_render" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="success_box" target="render_cart">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Conflict Flow -->
+        <mxCell id="conflict_box" value="error: DIFFERENT_RESTAURANT&#xa;Dispara showRestaurantChangeModal()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#D94310;fontStyle=1;fontColor=#D94310;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="320" y="430" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_no" value="NO (Conflicto)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontStyle=1;fontColor=#D94310;" edge="1" parent="1" source="check_rest" target="conflict_box">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="390" y="335" />
+              <mxPoint x="430" y="335" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Modal Dialog -->
+        <mxCell id="modal_dialog" value="#restaurantChangeModal&#xa;¿Cambiar de restaurante?&#xa;Muestra actual vs nuevo restaurante" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E6E4DC;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="320" y="530" width="220" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_modal" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="conflict_box" target="modal_dialog">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Modal Options -->
+        <mxCell id="opt_keep" value="Conservar Carrito&#xa;(Cierra modal sin cambios)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8F8F4;strokeColor=#6B6B66;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="270" y="650" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="opt_clear" value="Vaciar y Agregar Nuevo&#xa;state.clearCart()&#xa;state.addToCart(newId)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCF0E4;strokeColor=#F4511E;fontStyle=1;fontSize=11;fontColor=#D94310;" vertex="1" parent="1">
+          <mxGeometry x="430" y="650" width="150" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_k" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="modal_dialog" target="opt_keep">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_c" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="modal_dialog" target="opt_clear">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_c_render" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="opt_clear" target="render_cart">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="505" y="730" />
+              <mxPoint x="170" y="730" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Right Box: Offcanvas Details & A11y Remediation -->
+        <mxCell id="box_components" value="Arquitectura de Offcanvas y Corrección A11y" style="swimlane;whiteSpace=wrap;html=1;fillColor=#F8F8F4;strokeColor=#E6E4DC;fontStyle=1;fontSize=13;startSize=30;" vertex="1" parent="1">
+          <mxGeometry x="640" y="100" width="480" height="600" as="geometry" />
+        </mxCell>
+
+        <mxCell id="comp_cart" value="1. Carrito Offcanvas (#cartOffcanvas)&#xa;• Cabecera: 'Tu carrito' con #cartItemCount reactivo.&#xa;• Banner Restaurante: #cartRestaurantBanner con icono tienda y tiempo entrega.&#xa;• Accion rápida: Botón #clearCartBtn 'Vaciar' directo.&#xa;• Filas de items: Miniatura 60x60, título, badge estudiante, stepper (.minus-btn, qty, .plus-btn), total fila, .remove-item-btn.&#xa;• Footer: Subtotal estimado (#cartSubtotal), fila ahorro estudiante (#cartStudentSavingsRow, #cartStudentSavings), total (#cartTotal), checkout CTA (#checkoutBtn) y sello seguridad." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fillColor=#FFFFFF;strokeColor=#E6E4DC;fontSize=11;spacing=6;" vertex="1" parent="box_components">
+          <mxGeometry x="15" y="45" width="450" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="comp_fav" value="2. Favoritos Offcanvas (#favoritesOffcanvas)&#xa;• Cabecera: 'Mis Favoritos' con contador reactivo #favoritesCountBadge.&#xa;• Estado vacío: Ilustración corazón, texto amigable, botón 'Explorar el menú'.&#xa;• Tarjetas: .foodjet-card con miniatura, nombre, tienda, precio dinámico con descuento estudiante, .remove-favorite (quitar) y .add-to-cart-from-fav (agregar rápido)." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fillColor=#FFFFFF;strokeColor=#E6E4DC;fontSize=11;spacing=6;" vertex="1" parent="box_components">
+          <mxGeometry x="15" y="210" width="450" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="comp_a11y" value="3. Subsanación Accesibilidad Challenger M1_1&#xa;• Defecto 1 (Badge Amarillo):&#xa;  .foodjet-badge--student, .foodjet-badge--yellow { color: #1C1C1C !important; }&#xa;  Contraste en modo oscuro sobre #FCD460 pasa de 1.16:1 a 11.95:1 (AAA).&#xa;• Defecto 2 (Pill Activo en Modo Oscuro):&#xa;  En @media (prefers-color-scheme: dark):&#xa;  .foodjet-pill--active { background-color: #E8E8E8 !important; color: #121212 !important; }&#xa;  Contraste sobre fondo claro en modo oscuro pasa de 1.23:1 a 13.9:1 (AAA)." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fillColor=#ECF4EC;strokeColor=#1E7B4F;fontSize=11;spacing=6;fontColor=#1E7B4F;" vertex="1" parent="box_components">
+          <mxGeometry x="15" y="335" width="450" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="comp_compat" value="4. Compatibilidad Estricta de Contratos DOM&#xa;• Preserva todos los IDs existentes: #cartOffcanvas, #cartOffcanvasLabel, #cartItemCount, #cartItemsContainer, #emptyCart, #cartItems, #cartFooter, #cartTotal, #checkoutBtn, #favoritesOffcanvas, #favoritesOffcanvasLabel, #favoritesItemsContainer.&#xa;• Clases preservadas: .minus-btn, .plus-btn, .add-to-cart, .remove-favorite, .add-to-cart-from-fav." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fillColor=#FFF8E1;strokeColor=#FCD460;fontSize=11;spacing=6;" vertex="1" parent="box_components">
+          <mxGeometry x="15" y="495" width="450" height="90" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

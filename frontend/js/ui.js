@@ -17,6 +17,7 @@ import {
 } from './domain/catalog.js';
 import { lineaDeTiempo, formatearRestante } from './domain/seguimiento.js';
 import { mostrarMapaSeguimiento, detenerMapaSeguimiento } from './mapaSeguimiento.js';
+import { direccionInicial } from './domain/ubicacion.js';
 
 // UTILIDADES GENERALES DE UI
 export function showToast(message, type = 'success') {
@@ -120,8 +121,269 @@ function etiquetaEstadoPago(estado) {
     return etiquetas[estado] || 'No registrado';
 }
 
+// ==========================================
+// CABECERA: DIRECCIÓN DE ENTREGA (REAL VS NEUTRAL)
+// ==========================================
+
+export function updateHeaderAddress(addressText) {
+    const headerAddressText = document.getElementById('headerAddressText');
+    if (headerAddressText) {
+        headerAddressText.textContent = addressText || 'Ingresar dirección de entrega';
+    }
+}
+
+export async function syncHeaderAddress() {
+    const headerAddressText = document.getElementById('headerAddressText');
+    if (!headerAddressText) return;
+
+    const token = typeof window !== 'undefined' ? window.authToken : null;
+    const user = typeof window !== 'undefined' ? window.currentUser : null;
+
+    if (!token || !user) {
+        updateHeaderAddress('Ingresar dirección de entrega');
+        return;
+    }
+
+    try {
+        const guardadas = await api.fetchMyAddressesAPI(token);
+        const inicial = direccionInicial(guardadas);
+        if (inicial && inicial.direccion_detallada) {
+            updateHeaderAddress(inicial.direccion_detallada);
+        } else {
+            updateHeaderAddress('Ingresar dirección de entrega');
+        }
+    } catch (err) {
+        updateHeaderAddress('Ingresar dirección de entrega');
+    }
+}
+
+export function initHeaderAddress() {
+    const addressBar = document.getElementById('headerAddressBar');
+    if (addressBar && !addressBar.dataset.initialized) {
+        addressBar.dataset.initialized = 'true';
+        addressBar.addEventListener('click', () => {
+            if (window.authToken && typeof bootstrap !== 'undefined') {
+                const modalEl = document.getElementById('miCuentaModal');
+                if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            } else if (typeof bootstrap !== 'undefined') {
+                const modalEl = document.getElementById('loginModal');
+                if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }
+        });
+        addressBar.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                addressBar.click();
+            }
+        });
+    }
+    syncHeaderAddress();
+}
+
+// ==========================================
+// MODAL DE CONFLICTO DE RESTAURANTE
+// ==========================================
+
+let pendingProductIdForRestaurantChange = null;
+
+export function showRestaurantChangeModal(productId) {
+    pendingProductIdForRestaurantChange = productId;
+    const currentRest = getCartRestaurant(state.getCart(), state.getProductById);
+    const newProduct = state.getProductById(productId);
+    const newRest = getProductRestaurant(newProduct);
+
+    const currentNameEl = document.getElementById('restaurantChangeCurrentName');
+    const newNameEl = document.getElementById('restaurantChangeNewName');
+
+    if (currentNameEl) {
+        currentNameEl.textContent = currentRest?.nombre || 'otro restaurante';
+    }
+    if (newNameEl) {
+        newNameEl.textContent = newRest?.nombre || newProduct?.nombre || 'este restaurante';
+    }
+
+    const modalEl = document.getElementById('restaurantChangeModal');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    } else {
+        showToast(mensajeRestauranteDistinto(), 'warning');
+    }
+}
+
+export function initRestaurantChangeModal() {
+    const confirmBtn = document.getElementById('restaurantChangeConfirmBtn');
+    if (confirmBtn && !confirmBtn.dataset.initialized) {
+        confirmBtn.dataset.initialized = 'true';
+        confirmBtn.addEventListener('click', () => {
+            if (pendingProductIdForRestaurantChange) {
+                state.clearCart();
+                const res = state.addToCart(pendingProductIdForRestaurantChange);
+                if (res.success) {
+                    renderCartOffcanvas();
+                    renderProducts();
+                    if (typeof renderCheckoutCart === 'function') renderCheckoutCart();
+                    
+                    const modalEl = document.getElementById('restaurantChangeModal');
+                    if (modalEl && typeof bootstrap !== 'undefined') {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }
+                    const cartOffcanvasEl = document.getElementById('cartOffcanvas');
+                    if (cartOffcanvasEl && typeof bootstrap !== 'undefined') {
+                        const cartOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(cartOffcanvasEl);
+                        cartOffcanvas.show();
+                    }
+                    showToast('Se cambió de restaurante y se agregó el producto');
+                }
+                pendingProductIdForRestaurantChange = null;
+            }
+        });
+    }
+}
+
+// ==========================================
+// BUSCADOR Y ESTADOS DE FEEDBACK DEL CATÁLOGO
+// ==========================================
+
+export function initCatalogSearch() {
+    const searchInput = document.getElementById('catalogSearchInput');
+    const clearBtn = document.getElementById('catalogSearchClear');
+    if (!searchInput) return;
+
+    if (!searchInput.dataset.initialized) {
+        searchInput.dataset.initialized = 'true';
+        searchInput.addEventListener('input', () => {
+            if (clearBtn) {
+                if (searchInput.value.trim().length > 0) {
+                    clearBtn.classList.remove('d-none');
+                } else {
+                    clearBtn.classList.add('d-none');
+                }
+            }
+            renderProducts();
+        });
+    }
+
+    if (clearBtn && !clearBtn.dataset.initialized) {
+        clearBtn.dataset.initialized = 'true';
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            clearBtn.classList.add('d-none');
+            renderProducts();
+            searchInput.focus();
+        });
+    }
+}
+
+export function resetAllCatalogFilters() {
+    const searchInput = document.getElementById('catalogSearchInput');
+    if (searchInput) {
+        searchInput.value = '';
+        document.getElementById('catalogSearchClear')?.classList.add('d-none');
+    }
+    document.querySelectorAll('.filter-food-type, .filter-delivery-time').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#filter-food-type-container label.foodjet-pill').forEach(l => l.classList.remove('foodjet-pill--active'));
+    document.getElementById('filter-cat-all')?.classList.add('foodjet-pill--active');
+
+    const minPrice = document.getElementById('filter-price-min');
+    if (minPrice) minPrice.value = '';
+    const maxPrice = document.getElementById('filter-price-max');
+    if (maxPrice) maxPrice.value = '';
+
+    renderProducts();
+}
+
+export function renderCatalogLoading() {
+    const menuContainer = document.getElementById('productsGrid');
+    if (!menuContainer) return;
+
+    menuContainer.innerHTML = Array.from({ length: 6 }).map(() => `
+        <div class="col-md-4 col-sm-6 mb-4">
+            <div class="foodjet-card--skeleton">
+                <div class="foodjet-skeleton-box foodjet-skeleton-img"></div>
+                <div class="p-3">
+                    <div class="foodjet-skeleton-box foodjet-skeleton-line foodjet-skeleton-line--title"></div>
+                    <div class="foodjet-skeleton-box foodjet-skeleton-line foodjet-skeleton-line--meta"></div>
+                    <div class="foodjet-skeleton-box foodjet-skeleton-line foodjet-skeleton-line--desc"></div>
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2">
+                        <div class="foodjet-skeleton-box foodjet-skeleton-line foodjet-skeleton-line--price"></div>
+                        <div class="foodjet-skeleton-box foodjet-skeleton-btn"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+export function renderCatalogZeroResults(menuContainer) {
+    if (!menuContainer) return;
+    menuContainer.innerHTML = `
+        <div class="col-12 py-5 text-center">
+            <div class="foodjet-empty-state mx-auto" style="max-width: 440px;">
+                <div class="foodjet-empty-state__icon mb-3">
+                    <i class="bi bi-search-heart fs-1"></i>
+                </div>
+                <h4 class="h5 fw-bold mb-2">No encontramos antojos con esos filtros</h4>
+                <p class="text-muted small mb-4">Prueba ajustando el texto de búsqueda, cambiando el rango de precio o explorando todas las categorías.</p>
+                <button type="button" class="btn foodjet-btn-primary btn-sm px-4 rounded-pill" id="btn-zero-clear-filters">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar filtros
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('btn-zero-clear-filters')?.addEventListener('click', () => {
+        resetAllCatalogFilters();
+    });
+}
+
+export function renderCatalogError(message) {
+    const menuContainer = document.getElementById('productsGrid');
+    if (!menuContainer) return;
+
+    menuContainer.innerHTML = `
+        <div class="col-12 py-5 text-center">
+            <div class="foodjet-error-state mx-auto" style="max-width: 460px;">
+                <div class="foodjet-error-state__icon mb-3">
+                    <i class="bi bi-exclamation-triangle fs-1"></i>
+                </div>
+                <h4 class="h5 fw-bold mb-2 text-danger">No pudimos cargar los antojos</h4>
+                <p class="text-muted small mb-4">${message || 'Ocurrió un inconveniente al conectar con el servidor.'}</p>
+                <button type="button" class="btn foodjet-btn-primary px-4 rounded-pill" id="btn-catalog-retry">
+                    <i class="bi bi-arrow-repeat me-1"></i>Reintentar
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('btn-catalog-retry')?.addEventListener('click', () => {
+        loadProducts();
+    });
+}
+
+export async function loadProducts() {
+    renderCatalogLoading();
+    try {
+        const products = await api.fetchProductsAPI();
+        if (!products || products.length === 0) {
+            renderCatalogError('El catálogo de productos está vacío o no respondió el servicio.');
+            return;
+        }
+        state.setProducts(products);
+        renderFoodTypeFilters();
+        renderProducts();
+    } catch (err) {
+        console.error('Error al cargar productos:', err);
+        renderCatalogError(err?.message || 'Error de conexión con el servidor.');
+    }
+}
+
 // RENDERIZADO DE PRODUCTOS EN EL INICIO
 export function renderProducts() {
+    initCatalogSearch();
+    initHeaderAddress();
+
     const products = state.getProducts();
     const menuContainer = document.getElementById('productsGrid');
     if (!menuContainer) return;
@@ -132,6 +394,7 @@ export function renderProducts() {
     const maxPriceInput = document.getElementById('filter-price-max');
     const timeFilterInput = document.querySelector('input[name="deliveryTimeFilter"]:checked');
     const foodTypeCheckboxes = document.querySelectorAll('.filter-food-type:checked');
+    const searchInput = document.getElementById('catalogSearchInput');
 
     let minPrice = 0;
     let maxPrice = 999999;
@@ -151,16 +414,32 @@ export function renderProducts() {
 
     const selectedCategories = Array.from(foodTypeCheckboxes).map(cb => cb.value);
 
-    const filteredProducts = filterProducts(
-    products,
-    minPrice,
-    maxPrice,
-    maxTime,
-    selectedCategories
+    let filteredProducts = filterProducts(
+        products,
+        minPrice,
+        maxPrice,
+        maxTime,
+        selectedCategories
     );
 
+    const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    if (searchQuery) {
+        filteredProducts = filteredProducts.filter(product => {
+            const nameMatch = product.nombre && product.nombre.toLowerCase().includes(searchQuery);
+            const descMatch = product.descripcion && product.descripcion.toLowerCase().includes(searchQuery);
+            const restName = product.Restaurant?.nombre || product.restaurante?.nombre || '';
+            const restMatch = restName && restName.toLowerCase().includes(searchQuery);
+            return nameMatch || descMatch || restMatch;
+        });
+    }
+
+    const resultsCountEl = document.getElementById('catalogResultsCount');
+    if (resultsCountEl) {
+        resultsCountEl.textContent = `${filteredProducts.length} ${filteredProducts.length === 1 ? 'producto' : 'productos'}`;
+    }
+
     if (filteredProducts.length === 0) {
-        menuContainer.innerHTML = '<p class="col-12 text-center text-muted">No se encontraron productos con los filtros seleccionados.</p>';
+        renderCatalogZeroResults(menuContainer);
         return;
     }
 
@@ -168,36 +447,46 @@ export function renderProducts() {
         const isFav = state.isFavorite(product.id);
         const iconClass = isFav ? 'bi-heart-fill text-danger' : 'bi-heart text-muted';
 
+        const isStudent = window.currentUser && window.currentUser.es_estudiante && product.descuento_estudiante > 0;
+        let badgeHtml = '';
+        if (!product.disponibilidad) {
+            badgeHtml = '<span class="foodjet-badge foodjet-badge--soldout">AGOTADO</span>';
+        } else if (isStudent) {
+            badgeHtml = '<span class="foodjet-badge foodjet-badge--student">PRECIO ESTUDIANTE</span>';
+        }
+
         const priceHtml = renderProductPrice(product, window.currentUser);
 
-        const btnClass = product.disponibilidad ? 'btn-primary' : 'btn-secondary disabled';
-        const btnText = product.disponibilidad ? 'Agregar' : 'Agotado';
+        const btnClass = product.disponibilidad ? '' : 'disabled';
+        const isAvailable = Boolean(product.disponibilidad);
 
         const col = document.createElement('div');
-        col.className = 'col-md-4 mb-4';
+        col.className = 'col-md-4 col-sm-6 mb-4';
         col.innerHTML = `
-            <div class="card product-card h-100 shadow-sm border-0">
-                <div class="position-absolute top-0 end-0 p-2">
-                    <button class="btn btn-sm btn-light rounded-circle shadow-sm favorite-toggle" data-id="${product.id}" aria-label="Marcar como favorito">
+            <div class="product-card foodjet-card h-100">
+                <div class="product-card__img-container">
+                    ${badgeHtml ? `<div class="product-card__badge-container">${badgeHtml}</div>` : ''}
+                    <button type="button" class="product-card__fav-btn favorite-toggle" data-id="${product.id}" aria-label="Marcar ${product.nombre} como favorito">
                         <i class="bi ${iconClass}"></i>
                     </button>
+                    <img src="${product.imagen_url || product.imagen || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'}" class="product-card__img" alt="${product.nombre}" loading="lazy">
                 </div>
-                <img src="${product.imagen_url}" class="card-img-top" alt="${product.nombre}" style="height: 200px; object-fit: cover;">
-                <div class="card-body d-flex flex-column">
+                <div class="product-card__body">
                     <div class="d-flex justify-content-between align-items-start mb-1">
-                        <h5 class="card-title mb-0 fw-bold">${product.nombre}</h5>
-                        <span class="badge bg-light text-dark shadow-sm border"><i class="bi bi-clock me-1"></i>${product.Restaurant.tiempo_entrega}</span>
+                        <h5 class="product-card__title text-truncate" title="${product.nombre}">${product.nombre}</h5>
                     </div>
-                    <p class="card-text text-muted small mb-2">
-                        <i class="bi bi-shop me-1" aria-hidden="true"></i>${product.Restaurant?.nombre || 'Restaurante'}
-                    </p>
-                    <p class="card-text text-muted small flex-grow-1">${product.descripcion || 'Delicioso plato preparado con los mejores ingredientes.'}</p>
-                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                    <div class="product-card__meta">
+                        <span><i class="bi bi-clock me-1" aria-hidden="true"></i>${product.Restaurant?.tiempo_entrega || '30 min'}</span>
+                        <span>•</span>
+                        <span class="text-truncate" style="max-width: 140px;"><i class="bi bi-shop me-1" aria-hidden="true"></i>${product.Restaurant?.nombre || product.restaurante?.nombre || 'Restaurante'}</span>
+                    </div>
+                    <p class="product-card__desc">${product.descripcion || 'Delicioso plato preparado con los mejores ingredientes.'}</p>
+                    <div class="product-card__footer">
                         <div class="price-container">
-                            <span class="fs-5 fw-bold text-dark">${priceHtml}</span>
+                            ${priceHtml}
                         </div>
-                        <button class="btn ${btnClass} btn-sm add-to-cart px-3 rounded-pill" data-id="${product.id}">
-                            ${btnText}
+                        <button type="button" class="product-card__add-btn add-to-cart ${btnClass}" data-id="${product.id}" ${!isAvailable ? 'disabled' : ''} aria-label="Agregar ${product.nombre} al carrito" title="Agregar al carrito">
+                            <i class="bi bi-plus-lg"></i>
                         </button>
                     </div>
                 </div>
@@ -207,19 +496,24 @@ export function renderProducts() {
     });
 
     // Event listeners para 'add to cart'
-    document.querySelectorAll('.add-to-cart').forEach(button => {
+    menuContainer.querySelectorAll('.add-to-cart').forEach(button => {
         button.addEventListener('click', (e) => {
-            if (e.target.classList.contains('disabled')) return;
-            const productId = parseInt(e.target.dataset.id);
+            const btn = e.currentTarget;
+            if (btn.disabled || btn.classList.contains('disabled')) return;
+            const productId = parseInt(btn.dataset.id);
             const result = state.addToCart(productId);
             if (result.success) {
                 renderCartOffcanvas();
-                // eslint-disable-next-line no-undef
-                const cartOffcanvas = new bootstrap.Offcanvas(document.getElementById('cartOffcanvas'));
-                cartOffcanvas.show();
+                if (typeof bootstrap !== 'undefined') {
+                    const cartEl = document.getElementById('cartOffcanvas');
+                    if (cartEl) {
+                        const cartOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(cartEl);
+                        cartOffcanvas.show();
+                    }
+                }
             } else {
                 if (result.error === 'DIFFERENT_RESTAURANT') {
-                    showToast(mensajeRestauranteDistinto(), 'warning');
+                    showRestaurantChangeModal(productId);
                 } else if (result.error === 'UNAVAILABLE') {
                     showToast('Este producto no está disponible.', 'warning');
                 }
@@ -228,13 +522,17 @@ export function renderProducts() {
     });
 
     // Event listeners para favoritos
-    document.querySelectorAll('.favorite-toggle').forEach(button => {
+    menuContainer.querySelectorAll('.favorite-toggle').forEach(button => {
         button.addEventListener('click', async (e) => {
             if (!window.authToken) {
                 showToast('Inicia sesión para guardar favoritos', 'warning');
-                // eslint-disable-next-line no-undef
-                const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-                loginModal.show();
+                if (typeof bootstrap !== 'undefined') {
+                    const loginModalEl = document.getElementById('loginModal');
+                    if (loginModalEl) {
+                        const loginModal = bootstrap.Modal.getOrCreateInstance(loginModalEl);
+                        loginModal.show();
+                    }
+                }
                 return;
             }
 
@@ -258,7 +556,6 @@ export function renderProducts() {
             const result = await api.toggleFavoriteAPI(productId, window.authToken);
             if (!result.ok) {
                 showToast('Error al actualizar favorito en el servidor', 'warning');
-                // Revertir estado si falló
                 if (window.app && window.app.loadFavorites) {
                     window.app.loadFavorites();
                 }
@@ -266,7 +563,7 @@ export function renderProducts() {
                 if (window.app && window.app.loadFavorites) {
                     window.app.loadFavorites();
                 }
-                if(result.data.isFavorite) {
+                if (result.data?.isFavorite) {
                     showToast('Añadido a favoritos');
                 } else {
                     showToast('Eliminado de favoritos');
@@ -274,42 +571,72 @@ export function renderProducts() {
             }
         });
     });
+
+    initRestaurantChangeModal();
 }
 
 // RENDERIZADO DEL OFFCANVAS DE FAVORITOS
 export function renderFavoritesOffcanvas() {
+    initHeaderAddress();
+
     const favorites = state.getFavorites();
     const container = document.getElementById('favoritesItemsContainer');
-    if (!container) return;
+    const badgeNavbar = document.getElementById('favoritesCount');
+    const badgeDrawer = document.getElementById('favoritesCountBadge');
 
+    const count = Array.isArray(favorites) ? favorites.length : 0;
+    if (badgeNavbar) {
+        badgeNavbar.textContent = count.toString();
+        badgeNavbar.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+    if (badgeDrawer) {
+        badgeDrawer.textContent = count.toString();
+        badgeDrawer.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+
+    if (!container) return;
     container.innerHTML = '';
 
-    if (favorites.length === 0) {
+    if (count === 0) {
         container.innerHTML = `
-            <div class="text-center text-muted p-4">
-                <i class="bi bi-heart fs-1 mb-3 d-block"></i>
-                <p>No tienes productos favoritos aún.</p>
-                <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-bs-dismiss="offcanvas">Explorar el menú</button>
+            <div class="text-center py-5 px-3">
+                <div class="rounded-circle bg-danger-subtle d-inline-flex p-4 mb-3 text-danger">
+                    <i class="bi bi-heart fs-1"></i>
+                </div>
+                <h5 class="fw-bold text-dark">No tienes productos favoritos aún</h5>
+                <p class="text-muted small mb-4">Guarda tus platos preferidos tocando el corazón en el menú para encontrarlos rápidamente.</p>
+                <button type="button" class="btn btn-primary foodjet-btn-primary rounded-pill px-4" data-bs-dismiss="offcanvas">
+                    Explorar el menú
+                </button>
             </div>`;
         return;
     }
 
     favorites.forEach(product => {
         const item = document.createElement('div');
-        item.className = 'card mb-3 shadow-sm border-0';
+        item.className = 'card mb-3 border rounded-3 shadow-sm foodjet-card';
         item.innerHTML = `
-            <div class="row g-0 align-items-center">
-                <div class="col-4">
-                    <img src="${product.imagen_url}" class="img-fluid rounded-start h-100 object-fit-cover" alt="${product.nombre}">
+            <div class="row g-0 align-items-center p-2">
+                <div class="col-3 col-sm-3">
+                    <img src="${product.imagen_url || product.imagen || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'}" class="img-fluid rounded-3 object-fit-cover w-100" style="height: 72px;" alt="${product.nombre}">
                 </div>
-                <div class="col-8">
-                    <div class="card-body py-2 px-3 position-relative">
-                        <button class="btn btn-sm btn-link text-danger position-absolute top-0 end-0 p-1 remove-favorite" data-id="${product.id}">
-                            <i class="bi bi-x-circle-fill"></i>
+                <div class="col-9 col-sm-9 ps-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="overflow-hidden pe-2">
+                            <h6 class="card-title fw-bold mb-0 text-truncate" title="${product.nombre}">${product.nombre}</h6>
+                            <small class="text-muted d-block text-truncate" style="font-size: 0.75rem;">
+                                <i class="bi bi-shop me-1"></i>${product.Restaurant?.nombre || product.restaurante?.nombre || 'Restaurante'}
+                            </small>
+                        </div>
+                        <button class="btn btn-sm btn-link text-danger p-0 remove-favorite flex-shrink-0" data-id="${product.id}" aria-label="Quitar de favoritos" title="Quitar de favoritos">
+                            <i class="bi bi-x-circle-fill fs-5"></i>
                         </button>
-                        <h6 class="card-title fw-bold mb-1 pe-4 text-truncate">${product.nombre}</h6>
-                        <p class="card-text text-success fw-bold mb-2 small">S/ ${product.precio.toFixed(2)}</p>
-                        <button class="btn btn-sm btn-primary add-to-cart-from-fav w-100 rounded-pill" data-id="${product.id}" ${!product.disponibilidad ? 'disabled' : ''}>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div class="price-box">
+                            ${renderProductPrice(product, window.currentUser)}
+                        </div>
+                        <button class="btn btn-sm btn-primary add-to-cart-from-fav rounded-pill px-3 py-1" data-id="${product.id}" ${!product.disponibilidad ? 'disabled' : ''}>
                             ${product.disponibilidad ? '<i class="bi bi-cart-plus me-1"></i>Agregar' : 'Agotado'}
                         </button>
                     </div>
@@ -319,7 +646,7 @@ export function renderFavoritesOffcanvas() {
         container.appendChild(item);
     });
 
-    // Remover de favoritos desde el offcanvas
+    // Event listeners para remover favorito
     container.querySelectorAll('.remove-favorite').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const productId = parseInt(e.currentTarget.dataset.id);
@@ -335,29 +662,39 @@ export function renderFavoritesOffcanvas() {
         });
     });
 
-    // Agregar al carrito desde favoritos
+    // Event listeners para agregar al carrito desde favoritos
     container.querySelectorAll('.add-to-cart-from-fav').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            if (e.target.disabled || e.currentTarget.disabled) return;
-            const productId = parseInt(e.currentTarget.dataset.id);
+            const button = e.currentTarget;
+            if (button.disabled || button.classList.contains('disabled')) return;
+            const productId = parseInt(button.dataset.id);
             const result = state.addToCart(productId);
 
             if (result.success) {
-                // eslint-disable-next-line no-undef
-                bootstrap.Offcanvas.getInstance(document.getElementById('favoritesOffcanvas')).hide();
-                renderCartOffcanvas();
-                // eslint-disable-next-line no-undef
-                const cartOffcanvas = new bootstrap.Offcanvas(document.getElementById('cartOffcanvas'));
-                cartOffcanvas.show();
+                if (typeof bootstrap !== 'undefined') {
+                    const favOffcanvasEl = document.getElementById('favoritesOffcanvas');
+                    if (favOffcanvasEl) {
+                        const favOffcanvas = bootstrap.Offcanvas.getInstance(favOffcanvasEl);
+                        if (favOffcanvas) favOffcanvas.hide();
+                    }
+                    renderCartOffcanvas();
+                    const cartOffcanvasEl = document.getElementById('cartOffcanvas');
+                    if (cartOffcanvasEl) {
+                        const cartOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(cartOffcanvasEl);
+                        cartOffcanvas.show();
+                    }
+                }
             } else {
                 if (result.error === 'DIFFERENT_RESTAURANT') {
-                    showToast(mensajeRestauranteDistinto(), 'warning');
+                    showRestaurantChangeModal(productId);
                 } else if (result.error === 'UNAVAILABLE') {
                     showToast('Este producto no está disponible.', 'warning');
                 }
             }
         });
     });
+
+    initRestaurantChangeModal();
 }
 
 // RENDERIZADO DEL CARRITO (OFFCANVAS)
@@ -368,9 +705,11 @@ export function renderCartOffcanvas() {
     const checkoutBtn = document.getElementById('checkoutBtn');
     const cartFooter = document.getElementById('cartFooter');
     const emptyCart = document.getElementById('emptyCart');
-    // Son DOS insignias: la de la barra superior y la del propio panel. Con un
-    // || solo se actualizaba la primera, así que la del panel se quedaba
-    // clavada en 0 aunque el carrito tuviera productos.
+    const restaurantBanner = document.getElementById('cartRestaurantBanner');
+    const cartSubtotalEl = document.getElementById('cartSubtotal');
+    const cartSavingsRow = document.getElementById('cartStudentSavingsRow');
+    const cartSavingsEl = document.getElementById('cartStudentSavings');
+
     const cartCountBadges = ['cartCount', 'cartItemCount']
         .map((id) => document.getElementById(id))
         .filter(Boolean);
@@ -380,7 +719,10 @@ export function renderCartOffcanvas() {
     cartItemsContainer.innerHTML = '';
 
     if (state.isCartEmpty()) {
-        cartItemsContainer.innerHTML = '<div class="text-center p-4 text-muted"><i class="bi bi-cart-x fs-1 d-block mb-3"></i>Tu carrito está vacío</div>';
+        if (restaurantBanner) {
+            restaurantBanner.style.display = 'none';
+            restaurantBanner.innerHTML = '';
+        }
         cartTotalElement.textContent = 'S/ 0.00';
         if (checkoutBtn) checkoutBtn.disabled = true;
         if (cartFooter) cartFooter.style.display = 'none';
@@ -388,8 +730,6 @@ export function renderCartOffcanvas() {
 
         cartCountBadges.forEach((badge) => {
             badge.textContent = '0';
-            // La del panel acompaña al título y debe verse siempre; la de la
-            // barra superior solo cuando hay algo dentro.
             if (badge.id === 'cartCount') badge.style.display = 'none';
         });
         return;
@@ -399,11 +739,55 @@ export function renderCartOffcanvas() {
     if (cartFooter) cartFooter.style.display = 'block';
     if (emptyCart) emptyCart.style.display = 'none';
 
+    // Banner de restaurante activo
+    const restaurant = getCartRestaurant(cart, state.getProductById);
+    if (restaurant && restaurantBanner) {
+        restaurantBanner.style.display = 'block';
+        restaurantBanner.innerHTML = `
+            <div class="foodjet-cart-restaurant card border-0 p-3 mb-2">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="foodjet-restaurant-icon-box me-3">
+                            <i class="bi bi-shop fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold" id="cartRestaurantName">${restaurant.nombre}</h6>
+                            <small class="text-muted" style="font-size: 0.75rem;">Preparado al momento</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-pill px-2 py-1 small" id="clearCartBtn" title="Vaciar carrito" aria-label="Vaciar todo el carrito">
+                        <i class="bi bi-trash3 me-1"></i>Vaciar
+                    </button>
+                </div>
+                ${restaurant.tiempo_entrega ? `
+                <div class="mt-2 pt-2 border-top d-flex align-items-center text-success small" style="font-size: 0.8rem;">
+                    <i class="bi bi-bicycle me-2 fs-6"></i>
+                    <span class="fw-semibold">En tu puerta en ${restaurant.tiempo_entrega.replace(" minutos", " min")}</span>
+                </div>` : ''}
+            </div>
+        `;
+
+        document.getElementById('clearCartBtn')?.addEventListener('click', () => {
+            state.clearCart();
+            renderCartOffcanvas();
+            renderProducts();
+            if (typeof renderCheckoutCart === 'function') renderCheckoutCart();
+            showToast('Carrito vaciado', 'info');
+        });
+    } else if (restaurantBanner) {
+        restaurantBanner.style.display = 'none';
+        restaurantBanner.innerHTML = '';
+    }
+
+    let subtotalOriginal = 0;
+
     Object.entries(cart).forEach(([productId, quantity]) => {
         const product = state.getProductById(productId);
         if (!product) return;
 
         let price = product.precio;
+        subtotalOriginal += product.precio * quantity;
+
         let isDiscounted = false;
         if (window.currentUser && window.currentUser.es_estudiante && product.descuento_estudiante > 0) {
             price = price - (price * (product.descuento_estudiante / 100));
@@ -413,21 +797,29 @@ export function renderCartOffcanvas() {
         const itemTotal = price * quantity;
 
         const cartItem = document.createElement('div');
-        cartItem.className = 'd-flex justify-content-between align-items-center border-bottom py-3';
+        cartItem.className = 'cart-item d-flex align-items-center justify-content-between p-3 mb-2 rounded-3 border';
         cartItem.innerHTML = `
-            <div class="d-flex align-items-center w-75">
-                <img src="${product.imagen_url}" alt="${product.nombre}" class="rounded me-3 object-fit-cover" style="width: 60px; height: 60px;">
-                <div>
-                    <h6 class="mb-0 fw-bold text-truncate" style="max-width: 150px;">${product.nombre}</h6>
-                    <small class="text-muted">${isDiscounted ? '<span class="badge bg-warning text-dark me-1">Estudiante</span>' : ''}S/ ${price.toFixed(2)} x ${quantity}</small>
+            <div class="d-flex align-items-center flex-grow-1 me-2 overflow-hidden">
+                <img src="${product.imagen_url || product.imagen || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'}" alt="${product.nombre}" class="rounded-3 me-3 object-fit-cover flex-shrink-0" style="width: 60px; height: 60px;">
+                <div class="overflow-hidden">
+                    <h6 class="mb-1 fw-bold text-truncate" title="${product.nombre}">${product.nombre}</h6>
+                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                        ${isDiscounted ? '<span class="foodjet-badge foodjet-badge--student me-1">Estudiante</span>' : ''}
+                        <small class="text-muted">S/ ${price.toFixed(2)}</small>
+                    </div>
                 </div>
             </div>
-            <div class="text-end w-25">
-                <span class="fw-bold d-block mb-2">S/ ${itemTotal.toFixed(2)}</span>
-                <div class="btn-group btn-group-sm bg-light rounded-pill p-1">
-                    <button class="btn btn-sm btn-link text-dark text-decoration-none minus-btn" data-id="${product.id}"><i class="bi bi-dash"></i></button>
-                    <span class="px-2 d-flex align-items-center">${quantity}</span>
-                    <button class="btn btn-sm btn-link text-dark text-decoration-none plus-btn" data-id="${product.id}"><i class="bi bi-plus"></i></button>
+            <div class="d-flex flex-column align-items-end flex-shrink-0">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="fw-bold text-dark">S/ ${itemTotal.toFixed(2)}</span>
+                    <button type="button" class="btn btn-sm text-danger p-0 remove-item-btn" data-id="${product.id}" title="Eliminar producto" aria-label="Eliminar ${product.nombre} del carrito">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+                <div class="btn-group btn-group-sm bg-light rounded-pill p-1 border">
+                    <button class="btn btn-sm btn-link text-dark text-decoration-none minus-btn px-2 py-0" data-id="${product.id}" aria-label="Reducir cantidad de ${product.nombre}"><i class="bi bi-dash"></i></button>
+                    <span class="px-2 d-flex align-items-center fw-bold small">${quantity}</span>
+                    <button class="btn btn-sm btn-link text-dark text-decoration-none plus-btn px-2 py-0" data-id="${product.id}" aria-label="Aumentar cantidad de ${product.nombre}"><i class="bi bi-plus"></i></button>
                 </div>
             </div>
         `;
@@ -435,6 +827,19 @@ export function renderCartOffcanvas() {
     });
 
     const total = state.getCartTotal();
+    const studentSavings = subtotalOriginal - total;
+
+    if (cartSubtotalEl) {
+        cartSubtotalEl.textContent = `S/ ${subtotalOriginal.toFixed(2)}`;
+    }
+    if (cartSavingsRow && cartSavingsEl) {
+        if (studentSavings > 0.009) {
+            cartSavingsRow.style.display = 'flex';
+            cartSavingsEl.textContent = `-S/ ${studentSavings.toFixed(2)}`;
+        } else {
+            cartSavingsRow.style.display = 'none';
+        }
+    }
     cartTotalElement.textContent = `S/ ${total.toFixed(2)}`;
 
     const count = state.getCartItemCount();
@@ -459,112 +864,174 @@ export function renderCartOffcanvas() {
             renderCartOffcanvas();
         });
     });
+
+    document.querySelectorAll('.remove-item-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const productId = parseInt(e.currentTarget.dataset.id);
+            state.removeItemCompletely(productId);
+            renderCartOffcanvas();
+            renderProducts();
+            if (typeof renderCheckoutCart === 'function') renderCheckoutCart();
+        });
+    });
+
+    initRestaurantChangeModal();
+}
+
+// Auto-inicialización si el DOM ya está listo
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            initHeaderAddress();
+            initCatalogSearch();
+        });
+    } else {
+        initHeaderAddress();
+        initCatalogSearch();
+    }
 }
 
 // RENDERIZADO DEL CARRITO (VISTA CHECKOUT)
 export function renderCheckoutCart() {
     const cart = state.getCart();
     const checkoutCartItems = document.getElementById('checkoutCartItems') || document.getElementById('checkoutItems');
+    const fallbackCheckoutItems = document.getElementById('checkoutItems');
     const checkoutSubtotal = document.getElementById('checkoutSubtotal');
     const checkoutTotal = document.getElementById('checkoutTotal');
     const checkoutDiscount = document.getElementById('checkoutDiscount');
     const checkoutDiscountRow = document.getElementById('checkoutDiscountRow');
+    const couponDiscountRate = document.getElementById('couponDiscountRate');
+    const studentDiscountRow = document.getElementById('studentDiscountRow');
+    const studentDiscountAmount = document.getElementById('studentDiscountAmount');
     const checkoutTax = document.getElementById('checkoutTax') || document.getElementById('checkoutTaxes');
+    const checkoutTaxesEl = document.getElementById('checkoutTaxes');
     const checkoutDeliveryFee = document.getElementById('checkoutDeliveryFee') || document.getElementById('checkoutDelivery');
+    const checkoutDeliveryEl = document.getElementById('checkoutDelivery');
+    const walletAmountDisplay = document.getElementById('walletAmountDisplay');
 
     if (!checkoutCartItems) return;
 
     checkoutCartItems.innerHTML = '';
+    if (fallbackCheckoutItems && fallbackCheckoutItems !== checkoutCartItems) {
+        fallbackCheckoutItems.innerHTML = '';
+    }
 
     if (state.isCartEmpty()) {
-        checkoutCartItems.innerHTML = '<div class="text-center text-muted py-4">Tu carrito está vacío</div>';
+        const emptyMsg = '<div class="text-center text-muted py-4">Tu carrito está vacío</div>';
+        checkoutCartItems.innerHTML = emptyMsg;
+        if (fallbackCheckoutItems && fallbackCheckoutItems !== checkoutCartItems) {
+            fallbackCheckoutItems.innerHTML = emptyMsg;
+        }
         if (checkoutSubtotal) checkoutSubtotal.textContent = 'S/ 0.00';
         if (checkoutTotal) checkoutTotal.textContent = 'S/ 0.00';
         if (checkoutDiscount) checkoutDiscount.textContent = '-S/ 0.00';
         if (checkoutTax) checkoutTax.textContent = 'S/ 0.00';
+        if (checkoutTaxesEl) checkoutTaxesEl.textContent = 'S/ 0.00';
         if (checkoutDeliveryFee) checkoutDeliveryFee.textContent = 'S/ 5.00';
+        if (checkoutDeliveryEl) checkoutDeliveryEl.textContent = 'S/ 5.00';
         if (checkoutDiscountRow) checkoutDiscountRow.style.display = 'none';
+        if (studentDiscountRow) studentDiscountRow.style.display = 'none';
+        if (walletAmountDisplay) walletAmountDisplay.textContent = 'S/ 0.00';
         return;
     }
 
-    let subtotal = 0;
+    let subtotalRegular = 0;
+    let subtotalEffective = 0;
+    let studentSavings = 0;
+    const isStudent = Boolean(window.currentUser && window.currentUser.es_estudiante);
 
     Object.entries(cart).forEach(([productId, quantity]) => {
         const product = state.getProductById(productId);
         if (!product) return;
 
-        let price = product.precio;
-        let isDiscounted = false;
-        if (window.currentUser && window.currentUser.es_estudiante && product.descuento_estudiante > 0) {
-            price = price - (price * (product.descuento_estudiante / 100));
-            isDiscounted = true;
+        const regularPrice = product.precio;
+        let effectivePrice = regularPrice;
+        let hasStudentDiscount = false;
+
+        if (isStudent && product.descuento_estudiante > 0) {
+            effectivePrice = regularPrice - (regularPrice * (product.descuento_estudiante / 100));
+            hasStudentDiscount = true;
         }
 
-        const itemTotal = price * quantity;
-        subtotal += itemTotal;
+        const regularItemTotal = regularPrice * quantity;
+        const effectiveItemTotal = effectivePrice * quantity;
+
+        subtotalRegular += regularItemTotal;
+        subtotalEffective += effectiveItemTotal;
+        if (hasStudentDiscount) {
+            studentSavings += (regularItemTotal - effectiveItemTotal);
+        }
 
         const itemRow = document.createElement('div');
-        itemRow.className = 'd-flex justify-content-between align-items-start py-3 border-bottom';
+        itemRow.className = 'd-flex justify-content-between align-items-center py-2 border-bottom';
         itemRow.innerHTML = `
-            <div class="d-flex w-100">
-                <img src="${product.imagen_url}" alt="${product.nombre}" class="rounded me-3 object-fit-cover" style="width: 50px; height: 50px;">
-                <div class="flex-grow-1">
-                    <h6 class="my-0 fw-bold">${product.nombre} <span class="badge bg-secondary rounded-pill ms-1">x${quantity}</span></h6>
-                    <small class="text-muted d-block mt-1">${getProductRestaurant(product)?.nombre || 'Restaurante'}</small>
-                    ${isDiscounted ? '<small class="text-warning fw-bold"><i class="bi bi-star-fill me-1"></i>Descuento estudiante aplicado</small>' : ''}
+            <div class="d-flex align-items-center flex-grow-1 min-w-0 me-3">
+                <img src="${product.imagen_url || product.imagen || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'}" alt="${product.nombre}" class="rounded-3 me-3 object-fit-cover flex-shrink-0" style="width: 50px; height: 50px;">
+                <div class="min-w-0">
+                    <h6 class="my-0 fw-bold text-truncate" style="font-size: 0.95rem;">${product.nombre}</h6>
+                    <small class="text-muted d-block">${getProductRestaurant(product)?.nombre || 'Restaurante'} · <span class="badge bg-secondary-subtle text-dark rounded-pill">x${quantity}</span></small>
+                    ${hasStudentDiscount ? '<small class="text-success fw-semibold"><i class="bi bi-mortarboard-fill me-1"></i>Precio estudiante</small>' : ''}
                 </div>
-                <span class="text-muted fw-bold">S/ ${itemTotal.toFixed(2)}</span>
             </div>
+            <span class="fw-bold flex-shrink-0 text-nowrap">S/ ${effectiveItemTotal.toFixed(2)}</span>
         `;
         checkoutCartItems.appendChild(itemRow);
+        if (fallbackCheckoutItems && fallbackCheckoutItems !== checkoutCartItems) {
+            fallbackCheckoutItems.appendChild(itemRow.cloneNode(true));
+        }
     });
 
+    // Student Discount Row
+    if (studentDiscountRow) {
+        if (isStudent && studentSavings > 0) {
+            studentDiscountRow.style.display = 'flex';
+            if (studentDiscountAmount) studentDiscountAmount.textContent = `-S/ ${studentSavings.toFixed(2)}`;
+        } else {
+            studentDiscountRow.style.display = 'none';
+        }
+    }
+
+    // Coupon Discount
     const activeCoupon = state.getActiveCoupon();
-    let discount = 0;
+    let couponDiscount = 0;
 
     if (activeCoupon) {
         if (activeCoupon.tipo === 'porcentaje') {
-            discount = subtotal * (activeCoupon.valor / 100);
+            couponDiscount = subtotalEffective * (activeCoupon.valor / 100);
         } else if (activeCoupon.tipo === 'fijo') {
-            discount = activeCoupon.valor;
+            couponDiscount = activeCoupon.valor;
         }
 
-        // Agregar línea de cupón visualmente
-        const liCoupon = document.createElement('li');
-        liCoupon.className = 'list-group-item d-flex justify-content-between bg-light py-2 text-success';
-        liCoupon.innerHTML = `
-            <div class="text-success">
-                <h6 class="my-0"><i class="bi bi-tag-fill me-2"></i>Cupón aplicado</h6>
-                <small>${activeCoupon.codigo}</small>
-            </div>
-            <span class="fw-bold">-S/ ${discount.toFixed(2)}</span>
-        `;
-        checkoutCartItems.appendChild(liCoupon);
+        if (checkoutDiscountRow) {
+            checkoutDiscountRow.style.display = couponDiscount > 0 ? 'flex' : 'none';
+            if (checkoutDiscount) checkoutDiscount.textContent = `-S/ ${couponDiscount.toFixed(2)}`;
+            if (couponDiscountRate) couponDiscountRate.textContent = `${activeCoupon.valor}%`;
+        }
+    } else {
+        if (checkoutDiscountRow) checkoutDiscountRow.style.display = 'none';
     }
 
-    if (checkoutDiscountRow) {
-        checkoutDiscountRow.style.display = discount > 0 ? 'flex' : 'none';
-    }
-
-    // Cálculos financieros locales (solo para visualización, el backend calcula el real)
-    const subtotalAfterDiscount = Math.max(0, subtotal - discount);
-    const taxRate = 0.18; // 18% IGV (ejemplo Perú)
-    const tax = subtotalAfterDiscount * taxRate;
+    // Financial calculations matching backend orderController.js
+    const subtotalAfterCoupon = Math.max(0, subtotalEffective - couponDiscount);
+    const taxRate = 0.18; // 18% IGV (Perú)
+    const tax = subtotalAfterCoupon * taxRate;
     const deliveryFee = 5.00; // Tarifa fija de entrega
-    const total = subtotalAfterDiscount + tax + deliveryFee;
+    const total = subtotalAfterCoupon + tax + deliveryFee;
 
-    if (checkoutSubtotal) checkoutSubtotal.textContent = `S/ ${subtotal.toFixed(2)}`;
-    if (checkoutDiscount) checkoutDiscount.textContent = `-S/ ${discount.toFixed(2)}`;
+    if (checkoutSubtotal) checkoutSubtotal.textContent = `S/ ${subtotalEffective.toFixed(2)}`;
     if (checkoutTax) checkoutTax.textContent = `S/ ${tax.toFixed(2)}`;
+    if (checkoutTaxesEl) checkoutTaxesEl.textContent = `S/ ${tax.toFixed(2)}`;
     if (checkoutDeliveryFee) checkoutDeliveryFee.textContent = `S/ ${deliveryFee.toFixed(2)}`;
+    if (checkoutDeliveryEl) checkoutDeliveryEl.textContent = `S/ ${deliveryFee.toFixed(2)}`;
     if (checkoutTotal) checkoutTotal.textContent = `S/ ${total.toFixed(2)}`;
+    if (walletAmountDisplay) walletAmountDisplay.textContent = `S/ ${total.toFixed(2)}`;
 }
 
 export function renderCheckoutSummary() {
     renderCheckoutCart();
 }
 
-export function fillCheckoutUserData() {
+export async function fillCheckoutUserData() {
     const user = window.currentUser;
     const customerName = document.getElementById('customerName');
     const customerPhone = document.getElementById('customerPhone');
@@ -575,6 +1042,42 @@ export function fillCheckoutUserData() {
 
     if (customerPhone && user?.telefono) {
         customerPhone.value = user.telefono;
+    }
+
+    // Populate saved addresses if available
+    const container = document.getElementById('savedAddressesContainer');
+    const list = document.getElementById('savedAddressesList');
+    if (container && list && window.authToken) {
+        try {
+            const addresses = await api.fetchMyAddressesAPI(window.authToken);
+            if (Array.isArray(addresses) && addresses.length > 0) {
+                list.innerHTML = '';
+                container.hidden = false;
+                addresses.forEach((addr, idx) => {
+                    const chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = 'saved-address-chip' + (idx === 0 ? ' saved-address-chip--selected' : '');
+                    chip.dataset.id = addr.id;
+                    chip.innerHTML = `<i class="bi bi-house-door-fill me-1" aria-hidden="true"></i><span class="text-truncate">${addr.direccion_detallada}</span>`;
+                    chip.addEventListener('click', () => {
+                        list.querySelectorAll('.saved-address-chip').forEach(c => c.classList.remove('saved-address-chip--selected'));
+                        chip.classList.add('saved-address-chip--selected');
+                        const addrInput = document.getElementById('customerAddress');
+                        const refInput = document.getElementById('customerReference');
+                        if (addrInput) addrInput.value = addr.direccion_detallada;
+                        if (refInput && addr.referencia) refInput.value = addr.referencia;
+                        if (addr.latitud && addr.longitud && window.FoodJetMapas?.moverMapa) {
+                            window.FoodJetMapas.moverMapa({ lat: addr.latitud, lng: addr.longitud });
+                        }
+                    });
+                    list.appendChild(chip);
+                });
+            } else {
+                container.hidden = true;
+            }
+        } catch {
+            container.hidden = true;
+        }
     }
 }
 
@@ -679,11 +1182,28 @@ export function runCardAuthorization(marca, duracionMs = 2500) {
 }
 
 export function toggleCardDetails() {
-    const cardDetails = document.getElementById('cardDetails');
-    if (!cardDetails) return;
+    const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'cash';
 
-    const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
-    cardDetails.style.display = selectedMethod === 'card' ? 'block' : 'none';
+    document.querySelectorAll('.payment-option').forEach(option => {
+        const input = option.querySelector('input[type="radio"]');
+        const tile = option.querySelector('.foodjet-payment-tile');
+        if (input && tile) {
+            tile.classList.toggle('is-selected', input.checked);
+        }
+    });
+
+    const cashInfo = document.getElementById('paymentCashInfo');
+    const walletInfo = document.getElementById('paymentWalletInfo');
+    const cardDetails = document.getElementById('cardDetails');
+    const confirmBtnText = document.getElementById('confirmOrderText');
+
+    if (cashInfo) cashInfo.style.display = selectedMethod === 'cash' ? 'block' : 'none';
+    if (walletInfo) walletInfo.style.display = selectedMethod === 'wallet' ? 'block' : 'none';
+    if (cardDetails) cardDetails.style.display = selectedMethod === 'card' ? 'block' : 'none';
+
+    if (confirmBtnText) {
+        confirmBtnText.textContent = selectedMethod === 'wallet' ? 'Pagar con QR' : 'Confirmar Pedido';
+    }
 }
 
 
@@ -707,10 +1227,11 @@ export async function renderOrderHistory() {
 
         if (orders.length === 0) {
             container.innerHTML = `
-                <div class="text-center py-5 bg-light rounded shadow-sm">
-                    <i class="bi bi-bag-x fs-1 text-muted mb-3 d-block"></i>
-                    <h5 class="text-muted">No tienes pedidos anteriores</h5>
-                    <button class="btn btn-primary mt-3" onclick="window.ui.showView('homeView')">Empezar a pedir</button>
+                <div class="text-center py-5 foodjet-card p-5">
+                    <i class="bi bi-bag-x fs-1 text-secondary mb-3 d-block" aria-hidden="true"></i>
+                    <h5 class="fw-bold text-dark">No tienes pedidos anteriores</h5>
+                    <p class="text-secondary small mb-3">Tus pedidos confirmados y entregados aparecerán aquí.</p>
+                    <button class="btn foodjet-btn-primary rounded-pill px-4" onclick="window.ui.showView('homeView')">Empezar a pedir</button>
                 </div>`;
             return;
         }
@@ -747,7 +1268,7 @@ export async function renderOrderHistory() {
                 const seguimientoHtml = isTerminal(estadoStr)
                     ? ''
                     : `
-                        <button class="btn btn-sm btn-outline-primary mt-3 me-2 btn-ver-seguimiento"
+                        <button class="btn btn-sm foodjet-btn-primary mt-3 me-2 btn-ver-seguimiento px-3 py-2"
                             data-order-id="${order.id}">
                             <i class="bi bi-geo-alt-fill me-1" aria-hidden="true"></i>Ver seguimiento
                         </button>
@@ -760,25 +1281,27 @@ export async function renderOrderHistory() {
 
                 if (estadoStr === 'entregado' && !resena) {
                     reviewHtml = `
-                        <button class="btn btn-sm btn-outline-warning mt-3 btn-leave-review"
+                        <button class="btn btn-sm btn-outline-warning foodjet-btn-pill mt-3 btn-leave-review px-3 py-2"
                             data-bs-toggle="modal" data-bs-target="#reviewModal"
-                            data-order-id="${order.id}">
-                            <i class="bi bi-star-fill me-1"></i>Dejar una Reseña
+                            data-order-id="${order.id}"
+                            data-restaurant-name="${order.Restaurant?.nombre || 'Restaurante'}"
+                            data-order-date="${date}">
+                            <i class="bi bi-star-fill me-1" aria-hidden="true"></i>Dejar una Reseña
                         </button>
                     `;
                 } else if (resena) {
                     const r = resena;
                     let stars = '';
                     for(let i=1; i<=5; i++) {
-                        stars += `<i class="bi bi-star${i<=r.puntuacion?'-fill text-warning':''} me-1"></i>`;
+                        stars += `<i class="bi bi-star${i<=r.puntuacion?'-fill text-warning':''} me-1" aria-hidden="true"></i>`;
                     }
                     reviewHtml = `
-                        <div class="mt-3 p-3 bg-light rounded border border-warning border-opacity-25">
+                        <div class="foodjet-review-badge-card mt-3">
                             <div class="d-flex align-items-center mb-1">
                                 <span class="badge bg-warning text-dark me-2">Tu reseña</span>
                                 ${stars}
                             </div>
-                            <p class="mb-0 text-muted small fst-italic">"${r.comentario || 'Sin comentario'}"</p>
+                            <p class="mb-0 text-secondary small fst-italic">"${r.comentario || 'Sin comentario'}"</p>
                         </div>
                     `;
                 }
@@ -792,73 +1315,77 @@ export async function renderOrderHistory() {
                     return `
                         <li class="d-flex justify-content-between align-items-center mb-2">
                             <span>
-                                <span class="badge bg-light text-dark border me-2">${item.cantidad || 1}x</span>
-                                ${nombreProd}
+                                <span class="badge rounded-pill bg-light text-dark border me-2">${item.cantidad || 1}x</span>
+                                <span class="text-dark">${nombreProd}</span>
                             </span>
-                            <span class="text-muted">S/ ${Number(precioStr).toFixed(2)}</span>
+                            <span class="text-secondary fw-medium">S/ ${Number(precioStr).toFixed(2)}</span>
                         </li>
                     `;
                 }).join('');
 
                 const card = document.createElement('div');
-                card.className = 'card mb-4 shadow-sm border-0';
+                card.className = 'card foodjet-card foodjet-order-card mb-4';
                 card.innerHTML = `
-                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <div class="foodjet-order-card-header d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 p-md-4 border-bottom">
                         <div>
-                            <span class="fw-bold text-primary">Pedido #FJ${String(order.id || 0).padStart(4, '0')}</span>
-                            <small class="text-muted d-block mt-1"><i class="bi bi-calendar3 me-1"></i>${date}</small>
+                            <span class="fw-bold fs-6" style="color: var(--color-primary-dark);">Pedido #FJ${String(order.id || 0).padStart(4, '0')}</span>
+                            <small class="text-secondary d-block mt-1"><i class="bi bi-calendar3 me-1" aria-hidden="true"></i>${date}</small>
                         </div>
-                        <span class="badge rounded-pill ${statusColor} px-3 py-2"><i class="bi ${statusIcon} me-1"></i>${badge.label.toUpperCase()}</span>
+                        <span class="foodjet-status-badge foodjet-status-badge--${estadoStr}">
+                            <i class="bi ${statusIcon} me-1" aria-hidden="true"></i>${badge.label.toUpperCase()}
+                        </span>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">Artículos</h6>
+                    <div class="card-body p-3 p-md-4">
+                        <div class="row g-4">
+                            <div class="col-12 col-md-7 col-lg-8">
+                                <h6 class="fw-bold mb-3 text-secondary text-uppercase small letter-spacing-1">Artículos</h6>
                                 <ul class="list-unstyled mb-0">
                                     ${itemsHtml || '<li class="text-muted">No hay detalles de artículos</li>'}
                                 </ul>
                             </div>
-                            <div class="col-md-4 mt-3 mt-md-0 border-start ps-md-4">
-                                <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">Resumen</h6>
-                                <div class="d-flex justify-content-between small text-muted mb-1">
+                            <div class="col-12 col-md-5 col-lg-4 border-start-md ps-md-4">
+                                <h6 class="fw-bold mb-3 text-secondary text-uppercase small letter-spacing-1">Resumen</h6>
+                                <div class="d-flex justify-content-between small text-secondary mb-1">
                                     <span>Restaurante</span>
-                                    <span>${order.Restaurant?.nombre || '-'}</span>
+                                    <span class="fw-medium text-dark">${order.Restaurant?.nombre || '-'}</span>
                                 </div>
-                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                <div class="d-flex justify-content-between small text-secondary mb-1">
                                     <span>Método de pago</span>
-                                    <span>${etiquetaMetodoPago(order.Transaction?.metodo_pago)}</span>
+                                    <span class="fw-medium text-dark">${etiquetaMetodoPago(order.Transaction?.metodo_pago)}</span>
                                 </div>
-                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                <div class="d-flex justify-content-between small text-secondary mb-1">
                                     <span>Estado del pago</span>
-                                    <span>${etiquetaEstadoPago(order.Transaction?.estado_pago)}</span>
+                                    <span class="fw-medium text-dark">${etiquetaEstadoPago(order.Transaction?.estado_pago)}</span>
                                 </div>
-                                <hr class="my-2">
-                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                <hr class="my-2 border-subtle">
+                                <div class="d-flex justify-content-between small text-secondary mb-1">
                                     <span>Subtotal</span>
                                     <span>S/ ${deriveSubtotal(order).toFixed(2)}</span>
                                 </div>
-                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                <div class="d-flex justify-content-between small text-secondary mb-1">
                                     <span>IGV (18%)</span>
                                     <span>S/ ${Number(order.impuestos || 0).toFixed(2)}</span>
                                 </div>
-                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                <div class="d-flex justify-content-between small text-secondary mb-1">
                                     <span>Envío</span>
                                     <span>S/ ${Number(order.costo_envio || 0).toFixed(2)}</span>
                                 </div>
                                 ${(parseFloat(order.descuento) > 0) ? `
-                                    <div class="d-flex justify-content-between small text-success mb-1">
+                                    <div class="d-flex justify-content-between small text-success fw-medium mb-1">
                                         <span>Descuento</span>
                                         <span>-S/ ${order.descuento}</span>
                                     </div>
                                 ` : ''}
-                                <hr class="my-2">
-                                <div class="d-flex justify-content-between fw-bold fs-5 text-dark">
+                                <hr class="my-2 border-subtle">
+                                <div class="d-flex justify-content-between fw-bold fs-5 text-dark mt-2">
                                     <span>Total</span>
-                                    <span>S/ ${Number(order.total || 0).toFixed(2)}</span>
+                                    <span style="color: var(--color-primary-dark);">S/ ${Number(order.total || 0).toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
-                        ${seguimientoHtml}${reviewHtml}
+                        <div class="mt-3 pt-2 border-top">
+                            ${seguimientoHtml}${reviewHtml}
+                        </div>
                     </div>
                 `;
                 container.appendChild(card);
@@ -953,16 +1480,53 @@ export function renderFoodTypeFilters() {
     const container = document.getElementById('filter-food-type-container');
     if (!container) return;
 
-    container.innerHTML = '';
-    categories.forEach(cat => {
-        container.innerHTML += `
-            <div class="form-check mb-2">
-                <input class="form-check-input filter-food-type" type="checkbox" value="${cat}" id="filter-cat-${cat.replace(/\s+/g, '-')}">
-                <label class="form-check-label text-muted" for="filter-cat-${cat.replace(/\s+/g, '-')}">
-                    ${cat}
-                </label>
+    container.innerHTML = `
+        <div class="foodjet-pills-container w-100">
+            <div class="foodjet-pills-row">
+                <button type="button" class="foodjet-pill foodjet-pill--active" id="filter-cat-all" data-category="all" aria-pressed="true">
+                    Todos
+                </button>
+                ${categories.map(cat => {
+                    const safeId = 'filter-cat-' + cat.replace(/\s+/g, '-');
+                    return `
+                        <label class="foodjet-pill" for="${safeId}" data-category="${cat}">
+                            <input class="form-check-input filter-food-type visually-hidden" type="checkbox" value="${cat}" id="${safeId}">
+                            <span>${cat}</span>
+                        </label>
+                    `;
+                }).join('')}
             </div>
-        `;
+        </div>
+    `;
+
+    const btnAll = document.getElementById('filter-cat-all');
+    if (btnAll) {
+        btnAll.addEventListener('click', () => {
+            document.querySelectorAll('.filter-food-type').forEach(cb => cb.checked = false);
+            document.querySelectorAll('#filter-food-type-container label.foodjet-pill').forEach(l => l.classList.remove('foodjet-pill--active'));
+            btnAll.classList.add('foodjet-pill--active');
+            btnAll.setAttribute('aria-pressed', 'true');
+            renderProducts();
+        });
+    }
+
+    container.querySelectorAll('.filter-food-type').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const label = cb.closest('label');
+            if (cb.checked) {
+                label?.classList.add('foodjet-pill--active');
+                btnAll?.classList.remove('foodjet-pill--active');
+                btnAll?.setAttribute('aria-pressed', 'false');
+            } else {
+                label?.classList.remove('foodjet-pill--active');
+                const anyChecked = container.querySelector('.filter-food-type:checked');
+                if (!anyChecked && btnAll) {
+                    btnAll.classList.add('foodjet-pill--active');
+                    btnAll.setAttribute('aria-pressed', 'true');
+                }
+            }
+            renderProducts();
+        });
     });
 }
 
@@ -1008,6 +1572,37 @@ const formatoHora = new Intl.DateTimeFormat('es-PE', { hour: 'numeric', minute: 
 let desfaseServidorMs = 0;
 
 /**
+ * Actualiza el indicador de conexión en vivo con su badge correspondiente.
+ * @param {'live'|'reconnecting'|'disconnected'} status
+ * @param {string} [message]
+ */
+export function updateLiveIndicator(status, message) {
+    const indicator = document.getElementById('liveIndicator');
+    const textEl = document.getElementById('liveIndicatorText');
+    if (!indicator) return;
+
+    indicator.classList.remove(
+        'foodjet-badge--live',
+        'foodjet-badge--reconnecting',
+        'foodjet-badge--disconnected'
+    );
+
+    if (status === 'live') {
+        indicator.classList.add('foodjet-badge--live');
+        indicator.setAttribute('aria-label', 'Conexión activa: actualizando en vivo');
+        if (textEl) textEl.textContent = message || 'Actualizando en vivo';
+    } else if (status === 'reconnecting') {
+        indicator.classList.add('foodjet-badge--reconnecting');
+        indicator.setAttribute('aria-label', 'Problema de red: reconectando');
+        if (textEl) textEl.textContent = message || 'Reconectando…';
+    } else if (status === 'disconnected') {
+        indicator.classList.add('foodjet-badge--disconnected');
+        indicator.setAttribute('aria-label', 'Desconectado: no se pudo actualizar');
+        if (textEl) textEl.textContent = message || 'Sin conexión';
+    }
+}
+
+/**
  * Vuelca el modelo de vista sobre la cabecera y la línea de tiempo.
  *
  * @param {Object} vm Modelo de getTrackingViewModel (títulos e iconos).
@@ -1018,6 +1613,26 @@ function applyTrackingViewModel(vm, pedido = null) {
     const statusIcon = document.getElementById('statusIcon');
     const statusTitle = document.getElementById('statusTitle');
     const statusDesc = document.getElementById('statusDescription');
+    const trackingHeadline = document.getElementById('trackingHeadline');
+    const trackingSubtitle = document.getElementById('trackingSubtitle');
+    const cancelBtn = document.getElementById('cancelOrderBtn');
+
+    // Dynamic Headline & Subtitle
+    if (trackingHeadline) {
+        trackingHeadline.textContent = vm.estado === 'en_camino'
+            ? '¡Tu antojo va volando!'
+            : (vm.terminal ? (vm.cancelled ? 'Pedido cancelado' : '¡Pedido entregado!') : 'Sigue tu pedido');
+    }
+    if (trackingSubtitle && pedido?.id) {
+        trackingSubtitle.textContent = `Pedido #FJ${String(pedido.id).padStart(4, '0')} · Sigue cada parte del viaje en tiempo real.`;
+    }
+
+    // Cancel Order Button Visibility
+    if (cancelBtn) {
+        const cancelable = ['pendiente', 'confirmado'].includes(vm.estado);
+        cancelBtn.style.display = cancelable ? 'inline-flex' : 'none';
+        cancelBtn.dataset.orderId = pedido?.id || '';
+    }
 
     if (statusIcon) {
         const color = vm.cancelled ? 'text-danger' : (vm.terminal ? 'text-success' : 'text-primary');
@@ -1095,9 +1710,11 @@ async function pollOnce() {
 
     if (!resultado.ok) {
         trackingFallos += 1;
+        updateLiveIndicator('reconnecting', 'Reconectando…');
         setConnectionNotice('Sin conexión con el servidor, reintentando…');
 
         if (trackingFallos >= MAX_FALLOS) {
+            updateLiveIndicator('disconnected', 'Sin conexión');
             setConnectionNotice('No se pudo actualizar el estado del pedido.');
             stopOrderTracking();
         }
@@ -1105,6 +1722,7 @@ async function pollOnce() {
     }
 
     trackingFallos = 0;
+    updateLiveIndicator('live', 'Actualizando en vivo');
     setConnectionNotice('');
 
     const pedido = resultado.data;
@@ -1120,12 +1738,17 @@ async function pollOnce() {
     mostrarMapaSeguimiento(pedido, mapKeys);
 
     if (vm.terminal) {
+        updateLiveIndicator('live', vm.cancelled ? 'Cancelado' : 'Entregado');
         showToast(
             vm.cancelled ? '❌ Tu pedido fue cancelado.' : '✅ ¡Tu pedido ha sido entregado! Buen provecho.',
             vm.cancelled ? 'warning' : 'success'
         );
         stopOrderTracking();
     }
+}
+
+export async function pollTrackingOnce() {
+    return pollOnce();
 }
 
 /**
@@ -1138,7 +1761,8 @@ async function pollOnce() {
  */
 export function startOrderTracking(paymentMethod, orderData) {
     renderOrderDetails(orderData, paymentMethod);
-    applyTrackingViewModel(getTrackingViewModel(orderData?.estado));
+    applyTrackingViewModel(getTrackingViewModel(orderData?.estado), orderData);
+    updateLiveIndicator('live', 'Actualizando en vivo');
 
     stopOrderTracking();
 
@@ -1177,3 +1801,4 @@ if (typeof document !== 'undefined') {
         }
     });
 }
+

@@ -1,0 +1,318 @@
+{
+  "verdict": "APPROVE",
+  "passed": [
+    {
+      "testName": "CSS Comments properly closed",
+      "details": "All comments closed"
+    },
+    {
+      "testName": "CSS Strings properly closed",
+      "details": "All strings closed"
+    },
+    {
+      "testName": "CSS Curly Braces balanced",
+      "details": "Delta: 0"
+    },
+    {
+      "testName": "CSS Parentheses balanced",
+      "details": "Delta: 0"
+    },
+    {
+      "testName": "CSS Square Brackets balanced",
+      "details": "Delta: 0"
+    },
+    {
+      "testName": "No premature closing delimiters",
+      "details": ""
+    },
+    {
+      "testName": "Zero usage of vw units causing Windows scrollbar horizontal overflow",
+      "details": "No vw units found"
+    },
+    {
+      "testName": "html, body root block defined",
+      "details": ""
+    },
+    {
+      "testName": "Root overflow-x is strictly hidden",
+      "details": ""
+    },
+    {
+      "testName": "Root width is 100%",
+      "details": ""
+    },
+    {
+      "testName": "Root max-width is 100%",
+      "details": ""
+    },
+    {
+      "testName": "Universal box-sizing: border-box applied",
+      "details": ""
+    },
+    {
+      "testName": ".min-w-0 and card flex child containment rule defined",
+      "details": ""
+    },
+    {
+      "testName": "Contains min-width: 0 for flex/grid overflow prevention",
+      "details": ""
+    },
+    {
+      "testName": "Contains overflow-wrap: break-word for long text strings",
+      "details": ""
+    },
+    {
+      "testName": "Contains word-break: break-word for long text strings",
+      "details": ""
+    },
+    {
+      "testName": "Responsive media queries defined for mobile viewports (<= 991px, <= 768px, <= 576px)",
+      "details": ""
+    },
+    {
+      "testName": "Responsive media queries defined for desktop viewports (>= 768px, >= 992px, >= 1200px)",
+      "details": ""
+    },
+    {
+      "testName": "@media (prefers-reduced-motion: reduce) killswitch block exists",
+      "details": "Found 2 blocks"
+    },
+    {
+      "testName": "Universal killswitch clamps animation-duration and transition-duration to 0.01ms !important",
+      "details": ""
+    },
+    {
+      "testName": "Pulsing indicators (foodjet-badge--live, repartidor marker) explicitly silenced (animation: none !important)",
+      "details": ""
+    },
+    {
+      "testName": "Bootstrap carousel animations disabled under reduced motion",
+      "details": ""
+    },
+    {
+      "testName": "Interactive hover transforms disabled under reduced motion",
+      "details": ""
+    },
+    {
+      "testName": "@media (prefers-reduced-motion: no-preference) shields active animations",
+      "details": "Found 3 guarded blocks"
+    },
+    {
+      "testName": "Selector .foodjet-pill declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-pill--active declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-pill--sm declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-badge declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-badge--student declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-badge--yellow declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-badge--soldout declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-badge--success declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-badge--danger declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-badge--live declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-card declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-card--interactive declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-card--selected declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-btn-primary declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-btn-secondary declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-btn-cta declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-btn-circle declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-btn-add declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-section-header declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-section-header__icon declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-section-header__title declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-input declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-input-group declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-input-group__label declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-input-group__hint declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .foodjet-input-group__error declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .sr-only declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Selector .visually-hidden declared in stylesheet",
+      "details": ""
+    },
+    {
+      "testName": "Universal :focus-visible rule defined",
+      "details": ""
+    },
+    {
+      "testName": "Focus visible has 2px solid outline",
+      "details": ""
+    },
+    {
+      "testName": "Focus visible has 2px outline-offset",
+      "details": ""
+    },
+    {
+      "testName": "Reverse contrast focus ring defined for dark/primary buttons",
+      "details": ""
+    },
+    {
+      "testName": "Reverse focus ring uses 2px solid #FFFFFF",
+      "details": ""
+    }
+  ],
+  "failed": [],
+  "warnings": [],
+  "metrics": {
+    "braceBalance": {
+      "openBraces": 0,
+      "openParens": 0,
+      "openSquare": 0,
+      "syntaxErrorsCount": 0
+    },
+    "totalMediaQueries": 18,
+    "mediaQueries": [
+      {
+        "query": "(prefers-reduced-motion: no-preference)",
+        "line": 472
+      },
+      {
+        "query": "(min-width: 1280px)",
+        "line": 510
+      },
+      {
+        "query": "(max-width: 768px)",
+        "line": 976
+      },
+      {
+        "query": "(max-width: 992px)",
+        "line": 1210
+      },
+      {
+        "query": "(max-width: 576px)",
+        "line": 1216
+      },
+      {
+        "query": "(prefers-contrast: high)",
+        "line": 1277
+      },
+      {
+        "query": "(prefers-reduced-motion: reduce)",
+        "line": 1300
+      },
+      {
+        "query": "print",
+        "line": 1368
+      },
+      {
+        "query": "(prefers-color-scheme: dark)",
+        "line": 1450
+      },
+      {
+        "query": "(max-width: 575.98px)",
+        "line": 2019
+      },
+      {
+        "query": "(prefers-color-scheme: dark)",
+        "line": 2025
+      },
+      {
+        "query": "(min-width: 992px)",
+        "line": 2069
+      },
+      {
+        "query": "(min-width: 992px)",
+        "line": 2093
+      },
+      {
+        "query": "(prefers-reduced-motion: reduce)",
+        "line": 2289
+      },
+      {
+        "query": "(prefers-color-scheme: dark)",
+        "line": 2295
+      },
+      {
+        "query": "(prefers-reduced-motion: no-preference)",
+        "line": 2375
+      },
+      {
+        "query": "(max-width: 991px)",
+        "line": 2382
+      },
+      {
+        "query": "(prefers-reduced-motion: no-preference)",
+        "line": 2390
+      }
+    ]
+  }
+}

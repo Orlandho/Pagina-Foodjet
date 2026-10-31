@@ -24,3 +24,22 @@ Feature: CP-09 Pago con tarjeta de credito y debito
     When se valida la tarjeta
     Then el resultado de la validacion es false
     And el campo "cvc" reporta el error "El CVC debe tener 3 dígitos."
+
+  Scenario: UT-CARD-004 Rechazo de numero de tarjeta vacio
+    Given los datos de tarjeta numero "", expiracion "12/29" y cvc "123"
+    When se valida la tarjeta
+    Then el resultado de la validacion es false
+    And el campo "numero" reporta el error "Ingresa el número de tarjeta."
+
+  Scenario: UT-CARD-005 Rechazo de expiracion con mes fuera de rango
+    Given los datos de tarjeta numero "4111 1111 1111 1111", expiracion "13/28" y cvc "123"
+    When se valida la tarjeta
+    Then el resultado de la validacion es false
+    And el campo "expiracion" reporta el error "El mes debe estar entre 01 y 12."
+
+  Scenario: UT-CARD-006 Rechazo de expiracion con formato invalido
+    Given los datos de tarjeta numero "4111 1111 1111 1111", expiracion "2028-12" y cvc "123"
+    When se valida la tarjeta
+    Then el resultado de la validacion es false
+    And el campo "expiracion" reporta el error "Usa el formato MM/AA."
+

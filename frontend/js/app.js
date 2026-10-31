@@ -1,8 +1,8 @@
 import * as api from './api.js';
 import * as state from './state.js';
 import * as ui from './ui.js';
-import { validateCard, formatCardNumber, formatExpiry } from './domain/payment.js';
-import { buildOrderPayload } from './domain/checkout.js';
+import { validateCard, formatCardNumber, formatExpiry, detectBrand } from './domain/payment.js';
+import { buildOrderPayload, validateCoupon } from './domain/checkout.js';
 import { getProductRestaurant, getCartRestaurant } from './domain/catalog.js';
 import { loadFavorites } from './favorites.js';
 import { sanitizePhone, validatePhone } from './domain/validation.js';
@@ -147,21 +147,28 @@ function initEventListeners() {
         viewHistoryTrackingBtn.addEventListener('click', handleHistoryClick);
     }
 
-    // Estrellas Modal
-    document.getElementById('starRatingContainer')?.addEventListener('click', handleStarRatingClick);
+    // Estrellas Modal (Interacción hover & click)
+    const starContainer = document.getElementById('starRatingContainer');
+    if (starContainer) {
+        starContainer.addEventListener('click', handleStarRatingClick);
+        starContainer.addEventListener('mouseover', handleStarRatingHover);
+        starContainer.addEventListener('mouseleave', handleStarRatingLeave);
+    }
     document.getElementById('reviewForm')?.addEventListener('submit', handleReviewSubmit);
 
     // Delegación para botones de calificación
     document.getElementById('orderHistoryContainer')?.addEventListener('click', (e) => {
-        const btn = e.target.closest('.open-review-modal');
+        const btn = e.target.closest('.open-review-modal, .btn-leave-review');
         if (btn) {
-            openReviewModal(btn.dataset.orderId, btn.dataset.restaurantName, btn.dataset.orderDate);
+            openReviewModal(btn.dataset.orderId, btn.dataset.restaurantName || 'Restaurante', btn.dataset.orderDate || 'Fecha reciente');
         }
     });
 
     // Payment method toggle
     setupCardInputs();
     setupPhoneInput('customerPhone', 'customerPhoneError');
+    setupCouponHandlers();
+    setupCancelOrderHandler();
 
     document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
         radio.addEventListener('change', () => {
@@ -209,6 +216,8 @@ function handleCheckoutNavigation() {
 
     if (typeof ui.renderCheckoutSummary === 'function') ui.renderCheckoutSummary();
     if (typeof ui.fillCheckoutUserData === 'function') ui.fillCheckoutUserData();
+    if (typeof ui.toggleCardDetails === 'function') ui.toggleCardDetails();
+    setOrderSubmittingState(false);
     abrirMapaEntrega();
 }
 
@@ -236,9 +245,37 @@ async function abrirMapaEntrega() {
 // CÓDIGO REFACTORIZADO
 // ==========================================
 
+// Control de envío único y estado del botón de confirmación
+let isSubmittingOrder = false;
+
+function setOrderSubmittingState(isSubmitting) {
+    isSubmittingOrder = isSubmitting;
+    const confirmBtn = document.getElementById('confirmOrderBtn');
+    const spinner = document.getElementById('confirmOrderSpinner');
+    const text = document.getElementById('confirmOrderText');
+    const arrow = document.getElementById('confirmOrderArrow');
+
+    if (!confirmBtn) return;
+    confirmBtn.disabled = isSubmitting;
+    confirmBtn.classList.toggle('is-loading', isSubmitting);
+
+    if (spinner) spinner.classList.toggle('d-none', !isSubmitting);
+    if (arrow) arrow.classList.toggle('d-none', isSubmitting);
+    if (text) {
+        if (isSubmitting) {
+            text.textContent = 'Registrando pedido...';
+        } else {
+            const method = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+            text.textContent = method === 'wallet' ? 'Pagar con QR' : 'Confirmar Pedido';
+        }
+    }
+}
+
 // 1. Función Principal (Orquestador)
 async function handleCheckoutSubmit(e) {
     e.preventDefault();
+
+    if (isSubmittingOrder) return;
 
     if (state.isCartEmpty()) {
         return ui.showToast('El carrito está vacío', 'warning');
@@ -255,17 +292,30 @@ async function handleCheckoutSubmit(e) {
         return ui.showToast('Revisa el teléfono de contacto', 'warning');
     }
 
-    const direccionId = await resolveDeliveryAddressId();
-    if (!direccionId) return;
+    setOrderSubmittingState(true);
 
-    const orderPayload = buildOrderPayload(state.getCart(), state.getProductById, paymentMethod, direccionId);
+    try {
+        const direccionId = await resolveDeliveryAddressId();
+        if (!direccionId) {
+            setOrderSubmittingState(false);
+            return;
+        }
 
-    if (paymentMethod === 'wallet') {
-        await processWalletPayment(orderPayload, paymentMethod);
-    } else if (paymentMethod === 'card') {
-        await processCardPayment(orderPayload, paymentMethod);
-    } else {
-        await submitOrder(orderPayload, paymentMethod);
+        const activeCoupon = state.getActiveCoupon();
+        const cuponId = activeCoupon ? activeCoupon.id : null;
+        const orderPayload = buildOrderPayload(state.getCart(), state.getProductById, paymentMethod, direccionId, cuponId);
+
+        if (paymentMethod === 'wallet') {
+            await processWalletPayment(orderPayload, paymentMethod);
+        } else if (paymentMethod === 'card') {
+            await processCardPayment(orderPayload, paymentMethod);
+        } else {
+            await submitOrder(orderPayload, paymentMethod);
+        }
+    } catch (err) {
+        console.error(err);
+        setOrderSubmittingState(false);
+        ui.showToast('Ocurrió un error inesperado al procesar el pedido', 'danger');
     }
 }
 
@@ -382,13 +432,128 @@ function setupCardInputs() {
     const expiracion = document.getElementById('cardExpiry');
     const cvc = document.getElementById('cardCvc');
 
-    numero?.addEventListener('input', (e) => { e.target.value = formatCardNumber(e.target.value); });
+    numero?.addEventListener('input', (e) => {
+        e.target.value = formatCardNumber(e.target.value);
+        const marca = detectBrand(e.target.value);
+        const brandIcon = document.getElementById('detectedBrandIcon');
+        if (brandIcon) {
+            if (marca === 'visa') {
+                brandIcon.className = 'bi bi-credit-card-2-front-fill text-primary';
+            } else if (marca === 'mastercard') {
+                brandIcon.className = 'bi bi-credit-card-2-front-fill text-warning';
+            } else if (marca === 'amex') {
+                brandIcon.className = 'bi bi-credit-card-2-front-fill text-info';
+            } else {
+                brandIcon.className = 'bi bi-credit-card fs-6 text-muted';
+            }
+        }
+    });
     expiracion?.addEventListener('input', (e) => { e.target.value = formatExpiry(e.target.value); });
     cvc?.addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, ''); });
 
     // Al corregir un campo desaparece su error, sin esperar a reenviar.
     [numero, expiracion, cvc].forEach((campo) => {
         campo?.addEventListener('input', () => ui.clearFieldError(campo.id));
+    });
+}
+
+function setupCouponHandlers() {
+    const couponInput = document.getElementById('couponCode');
+    const applyBtn = document.getElementById('applyCouponBtn');
+    const removeBtn = document.getElementById('removeCouponBtn');
+    const couponMessage = document.getElementById('couponMessage');
+
+    if (!couponInput || !applyBtn) return;
+
+    const handleApply = () => {
+        const rawCode = couponInput.value;
+        const { valid, error, coupon } = validateCoupon(rawCode);
+
+        if (!valid) {
+            state.setActiveCoupon(null);
+            couponInput.classList.add('is-invalid');
+            couponInput.classList.remove('is-valid');
+            if (couponMessage) {
+                couponMessage.innerHTML = `<span class="text-danger fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>${error}</span>`;
+            }
+            ui.renderCheckoutCart();
+            return;
+        }
+
+        state.setActiveCoupon(coupon);
+        couponInput.classList.remove('is-invalid');
+        couponInput.classList.add('is-valid');
+        couponInput.disabled = true;
+        applyBtn.style.display = 'none';
+        if (removeBtn) removeBtn.style.display = 'inline-flex';
+
+        if (couponMessage) {
+            couponMessage.innerHTML = `
+                <div class="alert alert-success py-2 px-3 rounded-3 mb-0 d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <span>Cupón '<strong>${coupon.codigo}</strong>' (${coupon.porcentaje}%) aplicado</span>
+                </div>
+            `;
+        }
+        ui.renderCheckoutCart();
+    };
+
+    const handleRemove = () => {
+        state.setActiveCoupon(null);
+        couponInput.value = '';
+        couponInput.disabled = false;
+        couponInput.classList.remove('is-valid', 'is-invalid');
+        applyBtn.style.display = 'inline-flex';
+        if (removeBtn) removeBtn.style.display = 'none';
+        if (couponMessage) couponMessage.innerHTML = '';
+        ui.renderCheckoutCart();
+    };
+
+    applyBtn.addEventListener('click', handleApply);
+    if (removeBtn) removeBtn.addEventListener('click', handleRemove);
+    couponInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleApply();
+        }
+    });
+}
+
+function setupCancelOrderHandler() {
+    const cancelBtn = document.getElementById('cancelOrderBtn');
+    if (!cancelBtn) return;
+
+    cancelBtn.addEventListener('click', async () => {
+        const orderId = cancelBtn.dataset.orderId;
+        if (!orderId) return;
+
+        if (!confirm('¿Estás seguro de que deseas cancelar este pedido?')) return;
+
+        cancelBtn.disabled = true;
+        try {
+            const API_URL = (typeof window !== 'undefined' && window.FOODJET_API_URL) || '/api';
+            const response = await fetch(`${API_URL}/orders/${orderId}/cancel`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${window.authToken}`
+                }
+            });
+            const data = await response.json();
+            if (response.ok) {
+                ui.showToast('Pedido cancelado exitosamente', 'info');
+                if (typeof ui.pollTrackingOnce === 'function') {
+                    await ui.pollTrackingOnce();
+                }
+            } else {
+                ui.showToast(data.error || 'No se pudo cancelar el pedido', 'warning');
+            }
+        } catch (error) {
+            console.error('Error al cancelar pedido:', error);
+            ui.showToast('Error al conectar con el servidor', 'danger');
+        } finally {
+            cancelBtn.disabled = false;
+        }
     });
 }
 
@@ -411,6 +576,7 @@ async function processCardPayment(orderPayload, paymentMethod) {
     const { valid, errors, marca } = validateCard(datos);
 
     if (!valid) {
+        setOrderSubmittingState(false);
         ui.showCardErrors(errors);
         return ui.showToast('Revisa los datos de tu tarjeta', 'warning');
     }
@@ -427,6 +593,7 @@ async function processWalletPayment(orderPayload, paymentMethod) {
     const restaurante = getProductRestaurant(firstProduct);
 
     if (!restaurante || !restaurante.qr_pago) {
+        setOrderSubmittingState(false);
         return ui.showToast('No se encontró el QR de pago para este restaurante', 'warning');
     }
 
@@ -453,10 +620,12 @@ function openQRModal(restaurante, orderPayload, paymentMethod) {
     const cleanupAndHide = () => {
         clearInterval(timerInterval);
         qrModal.hide();
+        setOrderSubmittingState(false);
     };
 
     const finishPayment = async () => {
-        cleanupAndHide();
+        clearInterval(timerInterval);
+        qrModal.hide();
         await submitOrder(orderPayload, paymentMethod);
     };
 
@@ -466,6 +635,7 @@ function openQRModal(restaurante, orderPayload, paymentMethod) {
     qrModalElement.addEventListener('hidden.bs.modal', () => {
         clearInterval(timerInterval);
         cancelBtn.removeEventListener('click', handleCancel);
+        setOrderSubmittingState(false);
     }, { once: true });
 
     timerInterval = setInterval(() => {
@@ -487,6 +657,7 @@ async function submitOrder(orderPayload, paymentMethod) {
         if (result.ok) {
             // Limpiar carrito
             state.clearCart();
+            state.setActiveCoupon(null);
             ui.renderCartOffcanvas(); 
             ui.renderCheckoutCart();
 
@@ -505,8 +676,11 @@ async function submitOrder(orderPayload, paymentMethod) {
     } catch (err) {
         console.error(err);
         ui.showToast('Error de conexión al crear el pedido', 'warning');
+    } finally {
+        setOrderSubmittingState(false);
     }
 }
+
 
 // ==========================================
 // MÉTODOS PÚBLICOS GLOBALES
@@ -590,38 +764,79 @@ async function handleHistoryClick(e) {
 
 function openReviewModal(orderId, restaurantName, orderDate) {
     document.getElementById('reviewOrderId').value = orderId;
-    document.getElementById('reviewRestaurantName').textContent = restaurantName;
-    document.getElementById('reviewOrderDate').textContent = orderDate;
+    document.getElementById('reviewRestaurantName').textContent = restaurantName || 'Restaurante';
+    document.getElementById('reviewOrderDate').textContent = orderDate || 'Fecha reciente';
 
     // Reset stars
     document.getElementById('reviewRating').value = '';
     document.getElementById('reviewComment').value = '';
-    const stars = document.querySelectorAll('#starRatingContainer .bi-star, #starRatingContainer .bi-star-fill');
+    const stars = document.querySelectorAll('#starRatingContainer .bi, #starRatingContainer .foodjet-star-icon');
     stars.forEach(s => {
         s.classList.remove('bi-star-fill');
         s.classList.add('bi-star');
+        s.setAttribute('aria-checked', 'false');
     });
 
-    const reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
+    const reviewModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('reviewModal'));
     reviewModal.show();
 }
 
 function handleStarRatingClick(e) {
-    const star = e.target.closest('.bi');
+    const star = e.target.closest('.foodjet-star-icon, .bi');
     if (!star) return;
 
     const rating = parseInt(star.dataset.rating);
+    if (!rating) return;
     document.getElementById('reviewRating').value = rating;
 
-    const stars = document.querySelectorAll('#starRatingContainer .bi');
+    const stars = document.querySelectorAll('#starRatingContainer .bi, #starRatingContainer .foodjet-star-icon');
     stars.forEach(s => {
         const r = parseInt(s.dataset.rating);
         if (r <= rating) {
             s.classList.remove('bi-star');
             s.classList.add('bi-star-fill');
+            s.setAttribute('aria-checked', 'true');
         } else {
             s.classList.remove('bi-star-fill');
             s.classList.add('bi-star');
+            s.setAttribute('aria-checked', 'false');
+        }
+    });
+}
+
+function handleStarRatingHover(e) {
+    const star = e.target.closest('.foodjet-star-icon, .bi');
+    if (!star) return;
+
+    const hoverRating = parseInt(star.dataset.rating);
+    if (!hoverRating) return;
+
+    const stars = document.querySelectorAll('#starRatingContainer .bi, #starRatingContainer .foodjet-star-icon');
+    stars.forEach(s => {
+        const r = parseInt(s.dataset.rating);
+        if (r <= hoverRating) {
+            s.classList.remove('bi-star');
+            s.classList.add('bi-star-fill');
+        } else {
+            s.classList.remove('bi-star-fill');
+            s.classList.add('bi-star');
+        }
+    });
+}
+
+function handleStarRatingLeave() {
+    const currentRating = parseInt(document.getElementById('reviewRating')?.value || '0');
+    const stars = document.querySelectorAll('#starRatingContainer .bi, #starRatingContainer .foodjet-star-icon');
+    stars.forEach(s => {
+        const r = parseInt(s.dataset.rating);
+        if (r <= currentRating) {
+            s.classList.remove('bi-star');
+            s.classList.add('bi-star-fill');
+            s.setAttribute('aria-checked', 'true');
+        } else {
+            s.classList.remove('bi-star-fill');
+            s.classList.add('bi-star');
+            s.setAttribute('aria-checked', 'false');
         }
     });
 }
@@ -670,7 +885,58 @@ async function handleReviewSubmit(e) {
     submitBtn.textContent = 'Enviar Calificación';
 }
 
+// Función para sincronizar datos del perfil en #miCuentaModal
+export function syncMiCuentaModalData() {
+    if (!window.currentUser) return;
+
+    const nombreEl = document.getElementById('accountNombre');
+    if (nombreEl) nombreEl.textContent = window.currentUser.nombre || 'Usuario FoodJet';
+
+    const emailEl = document.getElementById('accountEmail');
+    if (emailEl) emailEl.textContent = window.currentUser.email || 'Sin correo registrado';
+
+    const telefonoEl = document.getElementById('accountTelefono');
+    const telefonoContainer = document.getElementById('accountTelefonoContainer');
+    if (telefonoEl && window.currentUser.telefono) {
+        telefonoEl.textContent = window.currentUser.telefono;
+        if (telefonoContainer) telefonoContainer.style.display = 'block';
+    } else if (telefonoContainer) {
+        telefonoContainer.style.display = 'none';
+    }
+
+    const rolEl = document.getElementById('accountRol');
+    if (rolEl) rolEl.textContent = window.currentUser.rol === 'admin' ? 'Administrador' : 'Cliente';
+
+    const estBadge = document.getElementById('accountEstudianteBadge');
+    if (estBadge) estBadge.style.display = window.currentUser.es_estudiante ? 'inline-flex' : 'none';
+
+    const adminBtn = document.getElementById('accountAdminBtn');
+    if (adminBtn) adminBtn.style.display = window.currentUser.rol === 'admin' ? 'flex' : 'none';
+
+    const statusContainer = document.getElementById('studentStatusContainer');
+    const formContainer = document.getElementById('verifyStudentFormContainer');
+
+    if (window.currentUser.es_estudiante) {
+        if (statusContainer) {
+            statusContainer.className = 'alert alert-success d-flex align-items-center';
+            statusContainer.innerHTML = '<i class="bi bi-check-circle-fill me-2 fs-5" aria-hidden="true"></i><div><strong>Estudiante Verificado</strong> — Disfrutas de descuentos exclusivos de estudiante.</div>';
+        }
+        if (formContainer) formContainer.style.display = 'none';
+    } else {
+        if (statusContainer) {
+            statusContainer.className = 'alert alert-secondary d-flex align-items-center';
+            statusContainer.innerHTML = '<i class="bi bi-info-circle-fill me-2 fs-5" aria-hidden="true"></i><div><strong>Cuenta Regular</strong> — Sube tu carnet para acceder a descuentos para estudiantes.</div>';
+        }
+        if (formContainer) formContainer.style.display = 'block';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Sincronizar automáticamente #miCuentaModal cada vez que se abre
+    document.getElementById('miCuentaModal')?.addEventListener('show.bs.modal', () => {
+        syncMiCuentaModalData();
+    });
+
     // Escuchar botón "Mi Cuenta"
     document.getElementById('miCuentaBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
@@ -679,22 +945,48 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Configurar modal
-        const statusContainer = document.getElementById('studentStatusContainer');
-        const formContainer = document.getElementById('verifyStudentFormContainer');
-
-        if (window.currentUser.es_estudiante) {
-            statusContainer.className = 'alert alert-success';
-            statusContainer.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i><strong>Verificado</strong> - Disfrutas de descuentos para estudiantes.';
-            formContainer.style.display = 'none';
-        } else {
-            statusContainer.className = 'alert alert-secondary';
-            statusContainer.innerHTML = '<i class="bi bi-info-circle-fill me-2"></i>No verificado';
-            formContainer.style.display = 'block';
-        }
+        syncMiCuentaModalData();
 
         const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('miCuentaModal'));
         modal.show();
+    });
+
+    // Botón de acceso directo a Panel de Operaciones dentro de Mi Cuenta
+    document.getElementById('accountAdminBtn')?.addEventListener('click', () => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('miCuentaModal'));
+        if (modal) modal.hide();
+        const dashboardBtn = document.getElementById('dashboardBtn');
+        if (dashboardBtn) {
+            dashboardBtn.click();
+        } else if (typeof displayDashboard === 'function') {
+            displayDashboard();
+        }
+    });
+
+    // Botón de cerrar sesión dentro de Mi Cuenta
+    document.getElementById('accountLogoutBtn')?.addEventListener('click', (e) => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('miCuentaModal'));
+        if (modal) modal.hide();
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.click();
+        } else if (typeof handleLogout === 'function') {
+            handleLogout(e);
+        }
+    });
+
+    // Feedback visual en vivo del carnet seleccionado
+    document.getElementById('carnetImage')?.addEventListener('change', (e) => {
+        const feedback = document.getElementById('carnetImageFeedback');
+        const file = e.target.files?.[0];
+        if (feedback) {
+            if (file) {
+                feedback.textContent = `Archivo seleccionado: ${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
+                feedback.style.display = 'block';
+            } else {
+                feedback.style.display = 'none';
+            }
+        }
     });
 
     // Manejar el submit del form de verificación
@@ -726,10 +1018,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Actualizar estado local
             window.currentUser.es_estudiante = true;
 
-            // Refrescar modal (ocultar form, mostrar verificado)
-            document.getElementById('studentStatusContainer').className = 'alert alert-success';
-            document.getElementById('studentStatusContainer').innerHTML = '<i class="bi bi-check-circle-fill me-2"></i><strong>Verificado</strong> - Disfrutas de descuentos para estudiantes.';
-            document.getElementById('verifyStudentFormContainer').style.display = 'none';
+            // Sincronizar modal actualizado
+            syncMiCuentaModalData();
 
             // Refrescar catálogo (precios tachados) y el checkout si está abierto
             ui.renderProducts();
@@ -739,7 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ui.renderCheckoutSummary();
             }
 
-            // Opcional: Cerrar modal
+            // Opcional: Cerrar modal tras 1.5s
             setTimeout(() => {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('miCuentaModal'));
                 if(modal) modal.hide();
