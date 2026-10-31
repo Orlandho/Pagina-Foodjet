@@ -337,7 +337,13 @@ function updateUserUI(user) {
         if (window.app && window.app.loadFavorites) {
             window.app.loadFavorites();
         }
+        if (window.ui && typeof window.ui.syncHeaderAddress === 'function') {
+            window.ui.syncHeaderAddress();
+        }
     } else {
+        if (window.ui && typeof window.ui.updateHeaderDeliveryAddress === 'function') {
+            window.ui.updateHeaderDeliveryAddress(null);
+        }
         if(userMenu) userMenu.style.display = 'none';
         if(loginNav) loginNav.style.display = 'block';
         if(dashboardBtn) dashboardBtn.style.display = 'none';

@@ -190,8 +190,8 @@ export async function cargarGoogleMaps(apiKeyOrKeys) {
             keys = raw.filter((k) => typeof k === 'string' && k.trim());
         }
 
-        // Si no se pasaron claves, intentar consultarlas a la API pública
-        if (keys.length === 0) {
+        // Si no se pasaron claves explícitamente, intentar consultarlas a la API pública
+        if (keys.length === 0 && (apiKeyOrKeys === undefined || apiKeyOrKeys === null)) {
             try {
                 const config = await fetchConfigAPI();
                 const raw = [
