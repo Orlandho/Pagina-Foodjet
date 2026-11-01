@@ -431,6 +431,11 @@ canvas {
     color: #1C1C1C !important;
 }
 
+.foodjet-badge--popular {
+    background-color: var(--color-primary);
+    color: #ffffff !important;
+}
+
 .foodjet-badge--soldout,
 .foodjet-badge--dark {
     background-color: var(--color-text-primary);
@@ -2137,13 +2142,33 @@ h1[tabindex="-1"]:focus {
     max-width: none;
 }
 
+@media (max-width: 991.98px) {
+    .seguimiento {
+        display: flex;
+        flex-direction: column;
+    }
+    .seguimiento__col-izq {
+        display: contents;
+    }
+    .seguimiento__mapa {
+        order: 1;
+    }
+    .seguimiento__col-der {
+        order: 2;
+    }
+    #orderDetailsCard {
+        order: 3;
+    }
+}
+
 @media (min-width: 992px) {
     .seguimiento--con-mapa {
         grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
         align-items: start;
+        gap: 2rem;
     }
 
-    .seguimiento--con-mapa .seguimiento__mapa {
+    .seguimiento--con-mapa .seguimiento__col-der {
         position: sticky;
         top: 88px;
     }
@@ -2151,9 +2176,10 @@ h1[tabindex="-1"]:focus {
 
 .seguimiento__mapa {
     position: relative;
-    border: 1px solid #dee2e6;
-    border-radius: 0.5rem;
+    border: 1.5px solid var(--color-border, #E6E4DC);
+    border-radius: var(--radius-card, 16px);
     overflow: hidden;
+    box-shadow: var(--shadow-sm);
 }
 
 .seguimiento__lienzo {
@@ -2163,8 +2189,9 @@ h1[tabindex="-1"]:focus {
 
 @media (min-width: 992px) {
     .seguimiento__lienzo {
-        height: min(640px, calc(100vh - 120px));
-        min-height: 440px;
+        height: 360px;
+        min-height: 340px;
+        max-height: 380px;
     }
 }
 
@@ -2365,7 +2392,22 @@ h1[tabindex="-1"]:focus {
 
 @media (prefers-color-scheme: dark) {
     .seguimiento__mapa {
-        border-color: #333;
+        border-color: var(--color-border, #333333);
+        box-shadow: none;
+    }
+
+    .linea-tiempo__ahora-badge {
+        background-color: rgba(244, 81, 30, 0.2) !important;
+        color: #FF7D47 !important;
+        border-color: rgba(244, 81, 30, 0.4) !important;
+    }
+
+    .seguimiento__llegada-cifra {
+        color: #FFFFFF !important;
+    }
+
+    .seguimiento__llegada-texto {
+        color: #A0A09B !important;
     }
 
     .seguimiento__ruta {
@@ -2404,6 +2446,27 @@ h1[tabindex="-1"]:focus {
 
     .marcador-seguimiento--repartidor {
         border-color: #1a1a1a;
+    }
+
+    .foodjet-delivery-summary {
+        background-color: var(--color-surface, #1E1E1E) !important;
+        border-color: var(--color-border, #333333) !important;
+    }
+
+    .foodjet-wallet-inplace {
+        background-color: var(--color-surface, #1E1E1E) !important;
+        border-color: var(--color-primary, #F4511E) !important;
+    }
+
+    .foodjet-mint-pill {
+        background-color: rgba(15, 81, 50, 0.25) !important;
+        color: #75b798 !important;
+        border-color: rgba(117, 183, 152, 0.3) !important;
+    }
+
+    .foodjet-restaurant-icon-box--coral {
+        background-color: rgba(244, 81, 30, 0.2) !important;
+        color: #FF7A50 !important;
     }
 }
 
@@ -2714,6 +2777,89 @@ h1[tabindex="-1"]:focus {
     flex-shrink: 0;
 }
 
+/* Stacked 2-line address bar (Figma Master) */
+.foodjet-address-stacked {
+    padding: 4px 14px;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    max-width: 280px;
+}
+
+.foodjet-address-bar__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.2px;
+}
+
+.foodjet-address-stacked .foodjet-address-bar__text {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    max-width: 170px;
+}
+
+/* Modal Address Selector Divider Text (Adaptive Surface Background for Dark Mode) */
+.foodjet-modal-divider-text {
+    background-color: var(--color-surface);
+}
+
+/* Central Search Bar in Header */
+.foodjet-header-search {
+    max-width: 480px;
+}
+
+.foodjet-header-search .foodjet-search-bar {
+    width: 100%;
+}
+
+.foodjet-header-search .foodjet-search-input {
+    width: 100%;
+    height: 42px;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
+    padding: 8px 36px 8px 42px;
+    font-size: 0.875rem;
+    color: var(--color-text-primary);
+    box-shadow: none;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.foodjet-header-search .foodjet-search-input:focus,
+.foodjet-header-search .foodjet-search-input:focus-visible {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(244, 81, 30, 0.15);
+    background-color: var(--color-surface);
+    outline: none !important;
+}
+
+.foodjet-header-search .foodjet-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.9375rem;
+    color: var(--color-text-secondary);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.foodjet-header-search .foodjet-search-clear {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--color-text-muted);
+    font-size: 0.9375rem;
+    cursor: pointer;
+    z-index: 2;
+}
+
 /* Action Buttons & Badges */
 .foodjet-icon-btn {
     width: 44px;
@@ -2750,6 +2896,35 @@ h1[tabindex="-1"]:focus {
 .foodjet-cart-btn:hover {
     background-color: var(--color-primary-dark);
     transform: translateY(-1px);
+}
+
+/* Textual Orange Pill Cart Button (Figma Master: "Mi carrito · N") */
+.foodjet-cart-btn--textual {
+    width: auto !important;
+    height: 42px !important;
+    padding: 0 18px !important;
+    border-radius: var(--radius-pill) !important;
+    background-color: var(--color-primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(244, 81, 30, 0.25);
+    font-size: 0.875rem;
+}
+
+.foodjet-cart-btn--textual:hover {
+    background-color: var(--color-primary-dark) !important;
+    box-shadow: 0 6px 16px rgba(244, 81, 30, 0.35);
+}
+
+.foodjet-cart-btn--textual .foodjet-badge-counter {
+    position: static !important;
+    top: auto;
+    right: auto;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #ffffff !important;
 }
 
 .foodjet-badge-counter {
@@ -2942,7 +3117,7 @@ h1[tabindex="-1"]:focus {
     display: inline-flex;
     align-items: center;
     background-color: #ffffff !important;
-    color: var(--color-text-primary) !important;
+    color: #1C1C1C !important; /* WCAG AAA / AA high contrast (17:1) in both light and dark mode */
     font-size: 0.8125rem;
     font-weight: 700;
     border-radius: 14px;
@@ -3328,9 +3503,13 @@ h1[tabindex="-1"]:focus {
 
 .product-card__badge-container {
     position: absolute;
-    top: 8px;
-    left: 8px;
+    top: 10px;
+    left: 10px;
+    max-width: calc(100% - 60px);
     z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
 .product-card__body {
@@ -3473,6 +3652,35 @@ h1[tabindex="-1"]:focus {
     flex-shrink: 0;
 }
 
+.foodjet-restaurant-icon-box--coral {
+    background-color: #FFEFEB;
+    color: #F4511E;
+}
+
+.foodjet-mint-pill {
+    background-color: #E8F8F5;
+    color: #0F5132;
+    border: 1px solid #D1F2EB;
+    font-size: 0.775rem;
+    font-weight: 600;
+}
+
+.foodjet-add-more-link {
+    color: var(--color-primary, #F4511E);
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: color var(--transition-fast, 0.2s ease);
+}
+
+.foodjet-add-more-link:hover {
+    color: var(--color-primary-dark, #D94310);
+}
+
+.cart-header-subtitle {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary, #6B6B66);
+}
+
 /* Cart Item Row */
 .cart-item {
     background-color: var(--color-surface);
@@ -3533,6 +3741,49 @@ h1[tabindex="-1"]:focus {
 
 .foodjet-back-link:hover {
     color: var(--color-primary-dark, #D94310);
+}
+
+/* Steps Breadcrumb Indicator */
+.foodjet-steps-breadcrumb {
+    font-size: 0.825rem;
+    font-weight: 600;
+}
+
+.foodjet-steps-breadcrumb .foodjet-step {
+    display: inline-flex;
+    align-items: center;
+}
+
+.foodjet-steps-breadcrumb .foodjet-step-sep {
+    opacity: 0.4;
+}
+
+/* Compact Saved Delivery Summary Card */
+.foodjet-delivery-summary {
+    background-color: var(--color-surface, #ffffff);
+    border: 1.5px solid var(--color-border, #E6E4DC);
+    border-radius: var(--radius-card, 16px);
+    transition: all var(--transition-fast, 0.2s ease);
+}
+
+.foodjet-delivery-summary:hover {
+    border-color: rgba(244, 81, 30, 0.35);
+    box-shadow: var(--shadow-sm);
+}
+
+/* In-Place Wallet QR Frame & Container */
+.foodjet-wallet-inplace {
+    background-color: var(--color-surface, #ffffff);
+    border: 1.5px solid var(--color-primary, #F4511E);
+    border-radius: var(--radius-card, 16px);
+    box-shadow: 0 4px 16px rgba(244, 81, 30, 0.08);
+}
+
+.foodjet-qr-frame {
+    display: inline-block;
+    padding: 8px;
+    background-color: #ffffff;
+    border-radius: var(--radius-md, 12px);
 }
 
 /* Sticky behavior for desktop */
@@ -3840,6 +4091,8 @@ h1[tabindex="-1"]:focus {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
 }
 
 .linea-tiempo__ahora-badge {

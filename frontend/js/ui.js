@@ -157,17 +157,187 @@ export async function syncHeaderAddress() {
     }
 }
 
+export async function populateAddressSelectorModal() {
+    const listContainer = document.getElementById('savedAddressCardsList');
+    if (!listContainer) return;
+
+    const token = typeof window !== 'undefined' ? window.authToken : null;
+    if (!token) {
+        listContainer.innerHTML = `
+            <div class="text-center py-3">
+                <p class="text-muted small mb-2">Inicia sesión para ver tus direcciones guardadas.</p>
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#loginModal">
+                    Iniciar sesión
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    listContainer.innerHTML = `<div class="text-center py-2"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><span class="ms-2 small text-muted">Cargando direcciones...</span></div>`;
+
+    try {
+        const addresses = await api.fetchMyAddressesAPI(token);
+        if (!Array.isArray(addresses) || addresses.length === 0) {
+            listContainer.innerHTML = `<p class="text-muted small text-center my-2">No tienes direcciones guardadas aún.</p>`;
+            return;
+        }
+
+        const currentHeaderAddress = document.getElementById('headerAddressText')?.textContent?.trim() || '';
+
+        listContainer.innerHTML = `
+            <div class="list-group list-group-flush gap-2">
+                ${addresses.map((addr) => {
+                    const isSelected = currentHeaderAddress === addr.direccion_detallada;
+                    return `
+                        <button type="button" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3 rounded-3 border ${isSelected ? 'border-primary bg-primary-subtle' : ''} saved-address-item" data-id="${addr.id}" data-address="${addr.direccion_detallada}" data-lat="${addr.latitud || ''}" data-lng="${addr.longitud || ''}">
+                            <div class="d-flex align-items-center overflow-hidden me-2">
+                                <i class="bi bi-geo-alt-fill text-primary fs-5 me-3 flex-shrink-0"></i>
+                                <div class="overflow-hidden text-start">
+                                    <h6 class="mb-0 fw-semibold text-truncate small">${addr.direccion_detallada}</h6>
+                                    ${addr.referencia ? `<small class="text-muted text-truncate d-block" style="font-size: 0.75rem;">${addr.referencia}</small>` : ''}
+                                </div>
+                            </div>
+                            ${isSelected ? '<i class="bi bi-check-circle-fill text-primary fs-5 flex-shrink-0"></i>' : '<i class="bi bi-chevron-right text-muted small flex-shrink-0"></i>'}
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+        `;
+
+        listContainer.querySelectorAll('.saved-address-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const selectedAddress = btn.dataset.address;
+                const lat = parseFloat(btn.dataset.lat);
+                const lng = parseFloat(btn.dataset.lng);
+
+                updateHeaderAddress(selectedAddress);
+
+                const checkoutAddressInput = document.getElementById('customerAddress');
+                if (checkoutAddressInput) {
+                    checkoutAddressInput.value = selectedAddress;
+                }
+
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    window.headerDeliveryCoordinates = { lat, lng };
+                }
+
+                const modalEl = document.getElementById('addressSelectorModal');
+                if (modalEl && typeof bootstrap !== 'undefined') {
+                    bootstrap.Modal.getInstance(modalEl)?.hide();
+                }
+
+                showToast(`Dirección de entrega: ${selectedAddress}`);
+            });
+        });
+
+    } catch (err) {
+        console.warn('Error fetching saved addresses:', err);
+        listContainer.innerHTML = `<p class="text-danger small text-center my-2">No se pudieron cargar las direcciones guardadas.</p>`;
+    }
+}
+
+export function initAddressSelectorModal() {
+    const locateBtn = document.getElementById('btnHeaderLocateGps');
+    if (locateBtn && !locateBtn.dataset.initialized) {
+        locateBtn.dataset.initialized = 'true';
+        locateBtn.addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                showToast('La geolocalización no está soportada por tu navegador.', 'warning');
+                return;
+            }
+
+            locateBtn.disabled = true;
+            const originalHtml = locateBtn.innerHTML;
+            locateBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span><span>Localizando...</span>`;
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    locateBtn.disabled = false;
+                    locateBtn.innerHTML = originalHtml;
+                    const { latitude, longitude } = pos.coords;
+                    const gpsText = `Ubicación GPS (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+
+                    updateHeaderAddress(gpsText);
+
+                    const checkoutAddressInput = document.getElementById('customerAddress');
+                    if (checkoutAddressInput) {
+                        checkoutAddressInput.value = gpsText;
+                    }
+                    window.headerDeliveryCoordinates = { lat: latitude, lng: longitude };
+
+                    const modalEl = document.getElementById('addressSelectorModal');
+                    if (modalEl && typeof bootstrap !== 'undefined') {
+                        bootstrap.Modal.getInstance(modalEl)?.hide();
+                    }
+
+                    showToast('Ubicación actual obtenida con éxito');
+                },
+                (err) => {
+                    locateBtn.disabled = false;
+                    locateBtn.innerHTML = originalHtml;
+                    console.warn('GPS location error:', err);
+                    showToast('No se pudo obtener tu ubicación actual. Ingresa tu dirección manualmente.', 'warning');
+                },
+                { timeout: 10000, enableHighAccuracy: true }
+            );
+        });
+    }
+
+    const saveManualBtn = document.getElementById('btnSaveHeaderAddress');
+    const manualInput = document.getElementById('headerCustomAddressInput');
+    if (saveManualBtn && !saveManualBtn.dataset.initialized) {
+        saveManualBtn.dataset.initialized = 'true';
+        const applyManual = () => {
+            const val = manualInput?.value?.trim();
+            if (!val) {
+                showToast('Por favor escribe una dirección válida.', 'warning');
+                return;
+            }
+
+            updateHeaderAddress(val);
+            const checkoutAddressInput = document.getElementById('customerAddress');
+            if (checkoutAddressInput) {
+                checkoutAddressInput.value = val;
+            }
+
+            const modalEl = document.getElementById('addressSelectorModal');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                bootstrap.Modal.getInstance(modalEl)?.hide();
+            }
+
+            showToast(`Dirección actualizada: ${val}`);
+        };
+
+        saveManualBtn.addEventListener('click', applyManual);
+        manualInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyManual();
+            }
+        });
+    }
+}
+
 export function initHeaderAddress() {
     const addressBar = document.getElementById('headerAddressBar');
     if (addressBar && !addressBar.dataset.initialized) {
         addressBar.dataset.initialized = 'true';
         addressBar.addEventListener('click', () => {
-            if (window.authToken && typeof bootstrap !== 'undefined') {
-                const modalEl = document.getElementById('miCuentaModal');
-                if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
-            } else if (typeof bootstrap !== 'undefined') {
-                const modalEl = document.getElementById('loginModal');
-                if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            if (typeof bootstrap !== 'undefined') {
+                const modalEl = document.getElementById('addressSelectorModal');
+                if (modalEl) {
+                    populateAddressSelectorModal();
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                    return;
+                }
+                if (window.authToken) {
+                    const miCuentaEl = document.getElementById('miCuentaModal');
+                    if (miCuentaEl) bootstrap.Modal.getOrCreateInstance(miCuentaEl).show();
+                } else {
+                    const loginEl = document.getElementById('loginModal');
+                    if (loginEl) bootstrap.Modal.getOrCreateInstance(loginEl).show();
+                }
             }
         });
         addressBar.addEventListener('keydown', (e) => {
@@ -177,6 +347,7 @@ export function initHeaderAddress() {
             }
         });
     }
+    initAddressSelectorModal();
     syncHeaderAddress();
 }
 
@@ -276,6 +447,56 @@ export function initCatalogSearch() {
     }
 }
 
+export function initQuickFilters() {
+    const ratingBtn = document.getElementById('quickFilterRating');
+    const priceBtn = document.getElementById('quickFilterPrice');
+    const deliveryBtn = document.getElementById('quickFilterDelivery');
+    const sortSelect = document.getElementById('catalogSortSelect');
+
+    if (ratingBtn && !ratingBtn.dataset.initialized) {
+        ratingBtn.dataset.initialized = 'true';
+        ratingBtn.addEventListener('click', () => {
+            ratingBtn.classList.toggle('foodjet-pill--active');
+            renderProducts();
+        });
+    }
+
+    if (priceBtn && !priceBtn.dataset.initialized) {
+        priceBtn.dataset.initialized = 'true';
+        priceBtn.addEventListener('click', () => {
+            const isActive = priceBtn.classList.toggle('foodjet-pill--active');
+            const maxPriceInput = document.getElementById('filter-price-max');
+            if (maxPriceInput) {
+                if (isActive) {
+                    maxPriceInput.value = '20';
+                } else if (maxPriceInput.value === '20') {
+                    maxPriceInput.value = '';
+                }
+            }
+            renderProducts();
+        });
+    }
+
+    if (deliveryBtn && !deliveryBtn.dataset.initialized) {
+        deliveryBtn.dataset.initialized = 'true';
+        deliveryBtn.addEventListener('click', () => {
+            const isActive = deliveryBtn.classList.toggle('foodjet-pill--active');
+            const timeRadio = document.getElementById('time-30');
+            if (timeRadio) {
+                timeRadio.checked = isActive;
+            }
+            renderProducts();
+        });
+    }
+
+    if (sortSelect && !sortSelect.dataset.initialized) {
+        sortSelect.dataset.initialized = 'true';
+        sortSelect.addEventListener('change', () => {
+            renderProducts();
+        });
+    }
+}
+
 export function resetAllCatalogFilters() {
     const searchInput = document.getElementById('catalogSearchInput');
     if (searchInput) {
@@ -290,6 +511,10 @@ export function resetAllCatalogFilters() {
     if (minPrice) minPrice.value = '';
     const maxPrice = document.getElementById('filter-price-max');
     if (maxPrice) maxPrice.value = '';
+
+    document.querySelectorAll('.quick-filter-btn').forEach(btn => btn.classList.remove('foodjet-pill--active'));
+    const sortSelect = document.getElementById('catalogSortSelect');
+    if (sortSelect) sortSelect.value = 'recommended';
 
     renderProducts();
 }
@@ -383,6 +608,7 @@ export async function loadProducts() {
 export function renderProducts() {
     initCatalogSearch();
     initHeaderAddress();
+    initQuickFilters();
 
     const products = state.getProducts();
     const menuContainer = document.getElementById('productsGrid');
@@ -433,6 +659,29 @@ export function renderProducts() {
         });
     }
 
+    const ratingQuickFilter = document.getElementById('quickFilterRating');
+    if (ratingQuickFilter && ratingQuickFilter.classList.contains('foodjet-pill--active')) {
+        filteredProducts = filteredProducts.filter(product => {
+            const rating = parseFloat(product.calificacion || product.calificacion_promedio || product.Restaurant?.calificacion_promedio || product.restaurante?.calificacion_promedio || 0);
+            return rating >= 4.5;
+        });
+    }
+
+    const sortSelect = document.getElementById('catalogSortSelect');
+    const sortOrder = sortSelect ? sortSelect.value : 'recommended';
+
+    if (sortOrder === 'price-asc') {
+        filteredProducts.sort((a, b) => parseFloat(a.precio || 0) - parseFloat(b.precio || 0));
+    } else if (sortOrder === 'price-desc') {
+        filteredProducts.sort((a, b) => parseFloat(b.precio || 0) - parseFloat(a.precio || 0));
+    } else if (sortOrder === 'rating-desc') {
+        filteredProducts.sort((a, b) => {
+            const rA = parseFloat(a.calificacion || a.calificacion_promedio || a.Restaurant?.calificacion_promedio || a.restaurante?.calificacion_promedio || 0);
+            const rB = parseFloat(b.calificacion || b.calificacion_promedio || b.Restaurant?.calificacion_promedio || b.restaurante?.calificacion_promedio || 0);
+            return rB - rA;
+        });
+    }
+
     const resultsCountEl = document.getElementById('catalogResultsCount');
     if (resultsCountEl) {
         resultsCountEl.textContent = `${filteredProducts.length} ${filteredProducts.length === 1 ? 'producto' : 'productos'}`;
@@ -453,6 +702,8 @@ export function renderProducts() {
             badgeHtml = '<span class="foodjet-badge foodjet-badge--soldout">AGOTADO</span>';
         } else if (isStudent) {
             badgeHtml = '<span class="foodjet-badge foodjet-badge--student">PRECIO ESTUDIANTE</span>';
+        } else if (product.es_mas_pedido || product.id === 1 || product.id === 3) {
+            badgeHtml = '<span class="foodjet-badge foodjet-badge--popular">MÁS PEDIDO</span>';
         }
 
         const priceHtml = renderProductPrice(product, window.currentUser);
@@ -709,6 +960,8 @@ export function renderCartOffcanvas() {
     const cartSubtotalEl = document.getElementById('cartSubtotal');
     const cartSavingsRow = document.getElementById('cartStudentSavingsRow');
     const cartSavingsEl = document.getElementById('cartStudentSavings');
+    const cartHeaderSubtitle = document.getElementById('cartHeaderSubtitle');
+    const cartAddMoreContainer = document.getElementById('cartAddMoreContainer');
 
     const cartCountBadges = ['cartCount', 'cartItemCount']
         .map((id) => document.getElementById(id))
@@ -727,43 +980,55 @@ export function renderCartOffcanvas() {
         if (checkoutBtn) checkoutBtn.disabled = true;
         if (cartFooter) cartFooter.style.display = 'none';
         if (emptyCart) emptyCart.style.display = 'block';
+        if (cartAddMoreContainer) cartAddMoreContainer.style.display = 'none';
+        if (cartHeaderSubtitle) cartHeaderSubtitle.textContent = '0 productos';
 
         cartCountBadges.forEach((badge) => {
             badge.textContent = '0';
             if (badge.id === 'cartCount') badge.style.display = 'none';
         });
+        const cartSep = document.querySelector('.foodjet-cart-btn__sep');
+        if (cartSep) cartSep.style.display = 'none';
         return;
     }
 
     if (checkoutBtn) checkoutBtn.disabled = false;
     if (cartFooter) cartFooter.style.display = 'block';
     if (emptyCart) emptyCart.style.display = 'none';
+    if (cartAddMoreContainer) cartAddMoreContainer.style.display = 'block';
 
-    // Banner de restaurante activo
+    const count = state.getCartItemCount();
+    const distinctProducts = Object.keys(cart).length;
+    if (cartHeaderSubtitle) {
+        cartHeaderSubtitle.textContent = `${count} ${count === 1 ? 'producto' : 'productos'} · ${distinctProducts} ${distinctProducts === 1 ? 'antojo' : 'antojos'}`;
+    }
+
+    // Banner de restaurante activo (Figma Golden Master: coral icon + mint delivery pill)
     const restaurant = getCartRestaurant(cart, state.getProductById);
     if (restaurant && restaurantBanner) {
         restaurantBanner.style.display = 'block';
         restaurantBanner.innerHTML = `
-            <div class="foodjet-cart-restaurant card border-0 p-3 mb-2">
+            <div class="foodjet-cart-restaurant card border-0 p-3 mb-2" style="background: var(--color-surface, #fff); border: 1px solid var(--color-border, #E6E4DC) !important; border-radius: 16px;">
                 <div class="d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center">
-                        <div class="foodjet-restaurant-icon-box me-3">
+                        <div class="foodjet-restaurant-icon-box foodjet-restaurant-icon-box--coral me-3">
                             <i class="bi bi-shop fs-5"></i>
                         </div>
                         <div>
                             <h6 class="mb-0 fw-bold" id="cartRestaurantName">${restaurant.nombre}</h6>
-                            <small class="text-muted" style="font-size: 0.75rem;">Preparado al momento</small>
+                            <small class="text-muted" style="font-size: 0.75rem;">${restaurant.distrito || 'Miraflores'} · Preparado al momento</small>
                         </div>
                     </div>
                     <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-pill px-2 py-1 small" id="clearCartBtn" title="Vaciar carrito" aria-label="Vaciar todo el carrito">
                         <i class="bi bi-trash3 me-1"></i>Vaciar
                     </button>
                 </div>
-                ${restaurant.tiempo_entrega ? `
-                <div class="mt-2 pt-2 border-top d-flex align-items-center text-success small" style="font-size: 0.8rem;">
-                    <i class="bi bi-bicycle me-2 fs-6"></i>
-                    <span class="fw-semibold">En tu puerta en ${restaurant.tiempo_entrega.replace(" minutos", " min")}</span>
-                </div>` : ''}
+                <div class="mt-2 pt-2 border-top d-flex align-items-center">
+                    <div class="foodjet-mint-pill d-inline-flex align-items-center px-2.5 py-1 rounded-pill small">
+                        <i class="bi bi-clock me-1.5 text-success"></i>
+                        <span class="fw-semibold text-success">En tu puerta en ${restaurant.tiempo_entrega ? restaurant.tiempo_entrega.replace(" minutos", " min") : '25–35 min'}</span>
+                    </div>
+                </div>
             </div>
         `;
 
@@ -800,27 +1065,27 @@ export function renderCartOffcanvas() {
         cartItem.className = 'cart-item d-flex align-items-center justify-content-between p-3 mb-2 rounded-3 border';
         cartItem.innerHTML = `
             <div class="d-flex align-items-center flex-grow-1 me-2 overflow-hidden">
-                <img src="${product.imagen_url || product.imagen || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'}" alt="${product.nombre}" class="rounded-3 me-3 object-fit-cover flex-shrink-0" style="width: 60px; height: 60px;">
+                <img src="${product.imagen_url || product.imagen || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'}" alt="${product.nombre}" class="rounded-3 me-3 object-fit-cover flex-shrink-0" style="width: 58px; height: 58px;">
                 <div class="overflow-hidden">
-                    <h6 class="mb-1 fw-bold text-truncate" title="${product.nombre}">${product.nombre}</h6>
-                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                    <h6 class="mb-0 fw-bold text-truncate" title="${product.nombre}" style="font-size: 0.95rem;">${product.nombre}</h6>
+                    <div class="d-flex align-items-center gap-1 flex-wrap mt-0.5">
                         ${isDiscounted ? '<span class="foodjet-badge foodjet-badge--student me-1">Estudiante</span>' : ''}
-                        <small class="text-muted">S/ ${price.toFixed(2)}</small>
+                        <small class="text-muted" style="font-size: 0.8rem;">S/ ${price.toFixed(2)} c/u</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mt-2">
+                        <div class="btn-group btn-group-sm bg-light rounded-pill p-0.5 border">
+                            <button class="btn btn-sm btn-link text-dark text-decoration-none minus-btn px-2 py-0" data-id="${product.id}" aria-label="Reducir cantidad de ${product.nombre}"><i class="bi bi-dash"></i></button>
+                            <span class="px-2 d-flex align-items-center fw-bold small">${quantity}</span>
+                            <button class="btn btn-sm btn-link text-dark text-decoration-none plus-btn px-2 py-0" data-id="${product.id}" aria-label="Aumentar cantidad de ${product.nombre}"><i class="bi bi-plus"></i></button>
+                        </div>
+                        <button type="button" class="btn btn-sm text-danger p-0 ms-1 remove-item-btn" data-id="${product.id}" title="Eliminar producto" aria-label="Eliminar ${product.nombre} del carrito">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
                 </div>
             </div>
-            <div class="d-flex flex-column align-items-end flex-shrink-0">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <span class="fw-bold text-dark">S/ ${itemTotal.toFixed(2)}</span>
-                    <button type="button" class="btn btn-sm text-danger p-0 remove-item-btn" data-id="${product.id}" title="Eliminar producto" aria-label="Eliminar ${product.nombre} del carrito">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-                <div class="btn-group btn-group-sm bg-light rounded-pill p-1 border">
-                    <button class="btn btn-sm btn-link text-dark text-decoration-none minus-btn px-2 py-0" data-id="${product.id}" aria-label="Reducir cantidad de ${product.nombre}"><i class="bi bi-dash"></i></button>
-                    <span class="px-2 d-flex align-items-center fw-bold small">${quantity}</span>
-                    <button class="btn btn-sm btn-link text-dark text-decoration-none plus-btn px-2 py-0" data-id="${product.id}" aria-label="Aumentar cantidad de ${product.nombre}"><i class="bi bi-plus"></i></button>
-                </div>
+            <div class="d-flex flex-column align-items-end flex-shrink-0 ms-2">
+                <span class="fw-bold text-dark fs-6">S/ ${itemTotal.toFixed(2)}</span>
             </div>
         `;
         cartItemsContainer.appendChild(cartItem);
@@ -842,11 +1107,12 @@ export function renderCartOffcanvas() {
     }
     cartTotalElement.textContent = `S/ ${total.toFixed(2)}`;
 
-    const count = state.getCartItemCount();
     cartCountBadges.forEach((badge) => {
         badge.textContent = count.toString();
         if (badge.id === 'cartCount') badge.style.display = count > 0 ? 'inline-flex' : 'none';
     });
+    const cartSep = document.querySelector('.foodjet-cart-btn__sep');
+    if (cartSep) cartSep.style.display = count > 0 ? 'inline' : 'none';
 
     // Event listeners
     document.querySelectorAll('.plus-btn').forEach(btn => {
@@ -1025,16 +1291,99 @@ export function renderCheckoutCart() {
     if (checkoutDeliveryEl) checkoutDeliveryEl.textContent = `S/ ${deliveryFee.toFixed(2)}`;
     if (checkoutTotal) checkoutTotal.textContent = `S/ ${total.toFixed(2)}`;
     if (walletAmountDisplay) walletAmountDisplay.textContent = `S/ ${total.toFixed(2)}`;
+
+    // Update confirmation button label if wallet is active
+    const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'cash';
+    const confirmBtnText = document.getElementById('confirmOrderText');
+    const confirmBtn = document.getElementById('confirmOrderBtn');
+    if (confirmBtnText && (!confirmBtn || !confirmBtn.classList.contains('is-loading'))) {
+        confirmBtnText.textContent = selectedMethod === 'wallet' ? `Ya pagué · S/ ${total.toFixed(2)}` : 'Confirmar Pedido';
+    }
 }
 
 export function renderCheckoutSummary() {
     renderCheckoutCart();
 }
 
+/** Actualiza la tarjeta compacta de resumen de entrega con los datos actuales */
+export function updateDeliverySummaryCard() {
+    const summaryAddress = document.getElementById('deliverySummaryAddress');
+    const summaryReference = document.getElementById('deliverySummaryReference');
+    const summaryName = document.getElementById('deliverySummaryName');
+    const summaryPhone = document.getElementById('deliverySummaryPhone');
+
+    const addressVal = document.getElementById('customerAddress')?.value.trim();
+    const referenceVal = document.getElementById('customerReference')?.value.trim();
+    const nameVal = document.getElementById('customerName')?.value.trim() || window.currentUser?.nombre || 'Cliente';
+    const phoneVal = document.getElementById('customerPhone')?.value.trim() || window.currentUser?.telefono || '';
+
+    if (summaryAddress) {
+        summaryAddress.textContent = addressVal || 'Ingresar dirección de entrega';
+    }
+    if (summaryReference) {
+        summaryReference.textContent = referenceVal || 'Sin referencia adicional';
+    }
+    if (summaryName) summaryName.textContent = nameVal;
+    if (summaryPhone) summaryPhone.textContent = phoneVal;
+}
+
+/** Maneja la alternancia entre la tarjeta compacta de entrega y el formulario editable */
+export function initDeliveryEditToggle(hasAddress) {
+    const summaryCard = document.getElementById('deliverySummaryCard');
+    const formContainer = document.getElementById('deliveryFormContainer');
+    const editBtn = document.getElementById('editDeliveryBtn');
+    const saveContainer = document.getElementById('saveDeliveryEditContainer');
+    const saveBtn = document.getElementById('saveDeliveryEditBtn');
+
+    if (!summaryCard || !formContainer) return;
+
+    if (hasAddress) {
+        summaryCard.style.display = 'block';
+        formContainer.style.display = 'none';
+        if (editBtn) editBtn.style.display = 'inline-flex';
+        if (saveContainer) saveContainer.style.display = 'none';
+    } else {
+        summaryCard.style.display = 'none';
+        formContainer.style.display = 'block';
+        if (editBtn) editBtn.style.display = 'none';
+        if (saveContainer) saveContainer.style.display = 'none';
+    }
+
+    if (editBtn) {
+        editBtn.onclick = () => {
+            summaryCard.style.display = 'none';
+            formContainer.style.display = 'block';
+            editBtn.style.display = 'none';
+            if (saveContainer) saveContainer.style.display = 'block';
+            if (window.google?.maps?.event && window.FoodJetMapas?.mapa) {
+                window.google.maps.event.trigger(window.FoodJetMapas.mapa, 'resize');
+            }
+        };
+    }
+
+    if (saveBtn) {
+        saveBtn.onclick = () => {
+            const addrVal = document.getElementById('customerAddress')?.value.trim();
+            if (!addrVal) {
+                showToast('Por favor ingresa una dirección de entrega', 'warning');
+                document.getElementById('customerAddress')?.focus();
+                return;
+            }
+            updateDeliverySummaryCard();
+            summaryCard.style.display = 'block';
+            formContainer.style.display = 'none';
+            if (editBtn) editBtn.style.display = 'inline-flex';
+            if (saveContainer) saveContainer.style.display = 'none';
+        };
+    }
+}
+
 export async function fillCheckoutUserData() {
     const user = window.currentUser;
     const customerName = document.getElementById('customerName');
     const customerPhone = document.getElementById('customerPhone');
+    const customerAddress = document.getElementById('customerAddress');
+    const customerReference = document.getElementById('customerReference');
 
     if (customerName && user?.nombre) {
         customerName.value = user.nombre;
@@ -1047,12 +1396,15 @@ export async function fillCheckoutUserData() {
     // Populate saved addresses if available
     const container = document.getElementById('savedAddressesContainer');
     const list = document.getElementById('savedAddressesList');
+    let hasSavedAddress = false;
+
     if (container && list && window.authToken) {
         try {
             const addresses = await api.fetchMyAddressesAPI(window.authToken);
             if (Array.isArray(addresses) && addresses.length > 0) {
                 list.innerHTML = '';
                 container.hidden = false;
+                hasSavedAddress = true;
                 addresses.forEach((addr, idx) => {
                     const chip = document.createElement('button');
                     chip.type = 'button';
@@ -1062,15 +1414,20 @@ export async function fillCheckoutUserData() {
                     chip.addEventListener('click', () => {
                         list.querySelectorAll('.saved-address-chip').forEach(c => c.classList.remove('saved-address-chip--selected'));
                         chip.classList.add('saved-address-chip--selected');
-                        const addrInput = document.getElementById('customerAddress');
-                        const refInput = document.getElementById('customerReference');
-                        if (addrInput) addrInput.value = addr.direccion_detallada;
-                        if (refInput && addr.referencia) refInput.value = addr.referencia;
+                        if (customerAddress) customerAddress.value = addr.direccion_detallada;
+                        if (customerReference && addr.referencia) customerReference.value = addr.referencia;
+                        updateDeliverySummaryCard();
                         if (addr.latitud && addr.longitud && window.FoodJetMapas?.moverMapa) {
                             window.FoodJetMapas.moverMapa({ lat: addr.latitud, lng: addr.longitud });
                         }
                     });
                     list.appendChild(chip);
+
+                    // Pre-fill first saved address if input is currently empty
+                    if (idx === 0 && customerAddress && !customerAddress.value.trim()) {
+                        customerAddress.value = addr.direccion_detallada;
+                        if (customerReference && addr.referencia) customerReference.value = addr.referencia;
+                    }
                 });
             } else {
                 container.hidden = true;
@@ -1079,6 +1436,9 @@ export async function fillCheckoutUserData() {
             container.hidden = true;
         }
     }
+
+    updateDeliverySummaryCard();
+    initDeliveryEditToggle(hasSavedAddress || Boolean(customerAddress?.value.trim()));
 }
 
 export function requestUserLocation() {
@@ -1181,6 +1541,70 @@ export function runCardAuthorization(marca, duracionMs = 2500) {
     });
 }
 
+let walletTimerInterval = null;
+
+export function initInPlaceWalletQR() {
+    stopInPlaceWalletQR();
+
+    const firstProduct = state.getProductById(Object.keys(state.getCart())[0]);
+    const restaurante = getCartRestaurant(state.getCart(), state.getProductById) || getProductRestaurant(firstProduct);
+    const totalEl = document.getElementById('checkoutTotal');
+    const totalVal = totalEl ? totalEl.textContent : 'S/ 0.00';
+
+    const qrImage = document.getElementById('qrPaymentImage');
+    const qrName = document.getElementById('qrRestaurantName');
+    const walletAmount = document.getElementById('walletAmountDisplay');
+    const timerText = document.getElementById('qrTimerText');
+    const cancelBtn = document.getElementById('cancelQrPaymentBtn');
+
+    if (qrName && restaurante) {
+        qrName.textContent = restaurante.nombre || 'FOODJET Kitchen';
+    }
+    if (walletAmount) {
+        walletAmount.textContent = totalVal;
+    }
+    if (qrImage) {
+        qrImage.src = restaurante?.qr_pago || 'assets/qr-placeholder.png';
+    }
+
+    let remainingSeconds = 299; // 04:59
+    const formatTime = (secs) => {
+        const m = Math.floor(secs / 60).toString().padStart(2, '0');
+        const s = (secs % 60).toString().padStart(2, '0');
+        return `⏱ ${m}:${s}`;
+    };
+
+    if (timerText) {
+        timerText.textContent = formatTime(remainingSeconds);
+    }
+
+    walletTimerInterval = setInterval(() => {
+        remainingSeconds--;
+        if (remainingSeconds < 0) remainingSeconds = 299;
+        if (timerText) {
+            timerText.textContent = formatTime(remainingSeconds);
+        }
+    }, 1000);
+
+    if (cancelBtn) {
+        cancelBtn.onclick = () => {
+            stopInPlaceWalletQR();
+            const payCash = document.getElementById('payCash');
+            if (payCash) {
+                payCash.checked = true;
+                toggleCardDetails();
+            }
+        };
+    }
+}
+
+export function stopInPlaceWalletQR() {
+    if (walletTimerInterval) {
+        clearInterval(walletTimerInterval);
+        walletTimerInterval = null;
+    }
+}
+
 export function toggleCardDetails() {
     const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'cash';
 
@@ -1201,8 +1625,17 @@ export function toggleCardDetails() {
     if (walletInfo) walletInfo.style.display = selectedMethod === 'wallet' ? 'block' : 'none';
     if (cardDetails) cardDetails.style.display = selectedMethod === 'card' ? 'block' : 'none';
 
+    if (selectedMethod === 'wallet') {
+        initInPlaceWalletQR();
+    } else {
+        stopInPlaceWalletQR();
+    }
+
     if (confirmBtnText) {
-        confirmBtnText.textContent = selectedMethod === 'wallet' ? 'Pagar con QR' : 'Confirmar Pedido';
+        const totalText = document.getElementById('checkoutTotal')?.textContent || '';
+        confirmBtnText.textContent = selectedMethod === 'wallet' 
+            ? (totalText ? `Ya pagué · ${totalText}` : 'Ya pagué')
+            : 'Confirmar Pedido';
     }
 }
 

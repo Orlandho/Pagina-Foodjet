@@ -89,7 +89,7 @@ export function calculateCartTotal(cart, getProductById, user) {
  * Se acepta también la forma en minúscula por si algún punto la construye así.
  */
 export function getProductRestaurant(product) {
-    return product?.Restaurant || product?.restaurante || null;
+    return product?.Restaurant || product?.restaurante || (product?.restaurante_id ? { id: product.restaurante_id } : null);
 }
 
 /**

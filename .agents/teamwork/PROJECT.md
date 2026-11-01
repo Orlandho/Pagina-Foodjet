@@ -54,11 +54,11 @@
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Design Tokens & Base Components | CSS custom properties, color palette, typography scale, radii, elevation, focus states, base button/card/pill styles | None | DONE |
-| M2 | Navigation, Header & Home Catalog | Navbar, Home view, Hero carousel, search & category filters, product cards, cart & favorites offcanvas | M1 | DONE |
-| M3 | Checkout & Order Tracking Critical Flow | Checkout 2-column/1-column layout, delivery address, map fallback, payment methods, coupons, tracking timeline, live indicator | M1 | DONE |
-| M4 | Secondary Views, Modals & Operations Panel | Auth modals, Student account modal, QR modal, Review modal, Order history view, Operations dashboard | M1 | PLANNED |
-| M-Final | 100% E2E Pass & Adversarial Hardening | Phase 1: 100% E2E tests pass (Tiers 1-4). Phase 2: White-box adversarial testing and multi-viewport screenshots | M2, M3, M4 | PLANNED |
+| M-Survey | Visual Survey & Spec Mining | Inspect Figma desktop frames vs current code across R1, R2, R3, R4, R5 | None | DONE |
+| M-Home | R1. Home & Header Figma Recomposition | 2-line address selector, central search, textual cart button "Mi carrito · N", title before banner, compact 2-halves promo banner, remove/relocate 4-benefits strip, compact 2-row filters + popover, full-width catalog (no clipped student badges) | M-Survey | DONE |
+| M-Cart-Checkout | R2. Cart & R3. Checkout Figma Recomposition | Cart offcanvas density/subtotal vs total; 2-column checkout (~65/35), compact saved address card with "Editar" button, in-place QR digital wallet, exact financial reconciliation | M-Survey | IN_PROGRESS |
+| M-Tracking | R4. Tracking & R5. Themes/A11y Recomposition | Asymmetric 2-column tracking (contained map + order summary underneath on left; status card + ETA + 4-stage timeline + callout on right), dark mode contrast fix, timeline wrapping fix | M-Survey | PLANNED |
+| M-Final | Visual Verification, Viewports & 100% E2E Pass | 1440px/1280px/390px screenshots, discrepancy matrix resolution, 131/131 acceptance scenarios, 100% unit tests | M-Home, M-Cart-Checkout, M-Tracking | PLANNED |
 | E2E-Track | E2E Testing Suite Track | Requirement-driven test infrastructure & scenario suite (Tiers 1-4) publishing TEST_READY.md | None | DONE |
 
 ---

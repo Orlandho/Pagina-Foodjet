@@ -114,21 +114,7 @@ function initEventListeners() {
     const btnClearFilters = document.getElementById('btn-clear-filters');
     if (btnClearFilters) {
         btnClearFilters.addEventListener('click', () => {
-            // Uncheck all checkboxes
-            document.querySelectorAll('.filter-food-type, .filter-delivery-time').forEach(cb => cb.checked = false);
-
-            // Clear price inputs
-            const minPrice = document.getElementById('filter-price-min');
-            if (minPrice) minPrice.value = '';
-
-            const maxPrice = document.getElementById('filter-price-max');
-            if (maxPrice) maxPrice.value = '';
-
-            // Uncheck all radio buttons
-            document.querySelectorAll('.filter-delivery-time').forEach(rb => rb.checked = false);
-
-            // Re-render
-            ui.renderProducts();
+            ui.resetAllCatalogFilters();
         });
     }
     document.getElementById('checkoutForm')?.addEventListener('submit', handleCheckoutSubmit);
@@ -266,7 +252,10 @@ function setOrderSubmittingState(isSubmitting) {
             text.textContent = 'Registrando pedido...';
         } else {
             const method = document.querySelector('input[name="paymentMethod"]:checked')?.value;
-            text.textContent = method === 'wallet' ? 'Pagar con QR' : 'Confirmar Pedido';
+            const totalText = document.getElementById('checkoutTotal')?.textContent || '';
+            text.textContent = method === 'wallet' 
+                ? (totalText ? `Ya pagué · ${totalText}` : 'Ya pagué')
+                : 'Confirmar Pedido';
         }
     }
 }
@@ -587,7 +576,7 @@ async function processCardPayment(orderPayload, paymentMethod) {
 }
 
 
-// 3. Función Auxiliar: Maneja la lógica de la billetera y el QR
+// 3. Función Auxiliar: Maneja la lógica de la billetera y el QR in-place
 async function processWalletPayment(orderPayload, paymentMethod) {
     const firstProduct = state.getProductById(Object.keys(state.getCart())[0]);
     const restaurante = getProductRestaurant(firstProduct);
@@ -597,57 +586,15 @@ async function processWalletPayment(orderPayload, paymentMethod) {
         return ui.showToast('No se encontró el QR de pago para este restaurante', 'warning');
     }
 
-    openQRModal(restaurante, orderPayload, paymentMethod);
+    // El QR ya está presentado in-place en la zona de pago y el cliente presionó "Ya pagué".
+    // Detenemos el temporizador y enviamos el pedido directamente.
+    ui.stopInPlaceWalletQR();
+    await submitOrder(orderPayload, paymentMethod);
 }
 
-// 4. Función Auxiliar: Aísla la interacción con el DOM y el temporizador
+// 4. Función Auxiliar: Compatibilidad de apertura de QR
 function openQRModal(restaurante, orderPayload, paymentMethod) {
-    const qrModalElement = document.getElementById('qrModal');
-    // eslint-disable-next-line no-undef
-    const qrModal = bootstrap.Modal.getOrCreateInstance(qrModalElement);
-
-    document.getElementById('qrRestaurantName').textContent = restaurante.nombre;
-    document.getElementById('qrPaymentImage').src = restaurante.qr_pago;
-
-    const timerText = document.getElementById('qrTimerText');
-    let secondsLeft = 5;
-    timerText.textContent = `Esperando confirmación de pago... (${secondsLeft}s)`;
-
-    const cancelBtn = document.getElementById('cancelQrPaymentBtn');
-    let timerInterval;
-
-    // Función de limpieza para no repetir código
-    const cleanupAndHide = () => {
-        clearInterval(timerInterval);
-        qrModal.hide();
-        setOrderSubmittingState(false);
-    };
-
-    const finishPayment = async () => {
-        clearInterval(timerInterval);
-        qrModal.hide();
-        await submitOrder(orderPayload, paymentMethod);
-    };
-
-    const handleCancel = () => cleanupAndHide();
-
-    cancelBtn.addEventListener('click', handleCancel, { once: true });
-    qrModalElement.addEventListener('hidden.bs.modal', () => {
-        clearInterval(timerInterval);
-        cancelBtn.removeEventListener('click', handleCancel);
-        setOrderSubmittingState(false);
-    }, { once: true });
-
-    timerInterval = setInterval(() => {
-        secondsLeft--;
-        timerText.textContent = `Esperando confirmación de pago... (${secondsLeft}s)`;
-
-        if (secondsLeft <= 0) {
-            finishPayment();
-        }
-    }, 1000);
-
-    qrModal.show();
+    processWalletPayment(orderPayload, paymentMethod);
 }
 
 async function submitOrder(orderPayload, paymentMethod) {
