@@ -31,3 +31,12 @@ Feature: CP-02 Adición de Productos al Carrito
   Scenario: UT-CART-006 El conteo de articulos suma las cantidades
     Given el estado inicial del carrito tiene el producto 1 con cantidad 3 del restaurante_id 10
     Then el carrito tiene 3 articulos
+
+  Scenario: UT-CART-007 Añadir el mismo producto consecutivamente acumula cantidad
+    Given el estado inicial del carrito tiene el producto 1 con cantidad 1 del restaurante_id 10
+    And la funcion getProductById retorna para el producto 1: disponibilidad true y restaurante_id 10
+    When ejecuto addToCart con el producto 1
+    Then el objeto cart se actualiza a contener el id 1 con cantidad 2
+    And la funcion retorna success true
+    And el carrito tiene 2 articulos
+

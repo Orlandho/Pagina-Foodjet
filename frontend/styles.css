@@ -49,30 +49,250 @@
    ============================ */
 
 :root {
-    --primary-color: #f5af69;
-    --primary-hover: #f39d4a;
-    --primary-light: #fef3e8;
-    /* El naranja de marca da 1.87:1 sobre blanco, muy por debajo del 4.5:1
-       que exige WCAG AA. Como fondo de botón con texto oscuro funciona bien
-       (11.2:1), así que se conserva; para texto sobre claro se usa esta
-       variante oscurecida del mismo tono, que llega a 4.76:1. */
-    --primary-text: #a9611a;
-    --dark-color: #1a1a1a;
-    --gray-color: #6c757d;
-    --light-gray: #f8f9fa;
+    /* ----------------------------------------------------------------------
+       1. Brand Palette & Color Tokens (FoodJet Design System)
+       ---------------------------------------------------------------------- */
+    --color-primary: #F4511E;                  /* Vibrant FoodJet Orange */
+    --color-primary-rgb: 244, 81, 30;
+    --color-primary-dark: #D94310;             /* Dark Orange (Hover / Active) */
+    --color-primary-dark-rgb: 217, 67, 16;
+    --color-primary-light: #FCF0E4;            /* Peach Tint (Containers / Selected) */
+    --color-primary-light-rgb: 252, 240, 228;
+
+    /* Neutrals & Surfaces */
+    --color-surface: #FFFFFF;                  /* Card surfaces, modals, inputs */
+    --color-surface-rgb: 255, 255, 255;
+    --color-background: #F8F8F4;               /* Canvas body background */
+    --color-background-rgb: 248, 248, 244;
+    --color-border: #E6E4DC;                   /* Card borders, dividers, chip outlines */
+    --color-border-subtle: #F0EEE6;
+
+    /* Typography Colors (WCAG AA Compliant) */
+    --color-text-primary: #1C1C1C;             /* Headings, high-emphasis text */
+    --color-text-primary-rgb: 28, 28, 28;
+    --color-text-secondary: #6B6B66;           /* Subtitles, labels, timestamps */
+    --color-text-muted: #9E9E99;               /* Placeholders, disabled text */
+    --color-text-accessible-orange: #D03D0A;   /* WCAG AA text link & small label orange (4.85:1 on #FFF) */
+
+    /* Accent & Student Perks */
+    --color-yellow-badge: #FCD460;             /* "PRECIO ESTUDIANTE" badge, Hero pill */
+    --color-yellow-badge-rgb: 252, 212, 96;
+    --color-success-deep: #1E7B4F;             /* Student discount price text */
+    --color-success-soft: #ECF4EC;             /* Soft green alert / discount background */
+    --color-success: #28A745;                  /* Live tracking dot, checkmarks */
+    --color-success-rgb: 40, 167, 69;
+    --color-success-container: #D4EDDA;
+    --color-success-text: #155724;
+
+    /* Functional States */
+    --color-warning: #FFC107;
+    --color-warning-container: #FFF3CD;
+    --color-warning-text: #856404;
+    --color-danger: #DC3545;
+    --color-danger-rgb: 220, 53, 69;
+    --color-danger-container: #F8D7DA;
+    --color-danger-text: #721C24;
+    --color-info: #0DCAF0;
+
+    /* ----------------------------------------------------------------------
+       2. Backward-Compatibility Aliases (Legacy Stylesheet Safety)
+       ---------------------------------------------------------------------- */
+    --primary-color: var(--color-primary);
+    --primary-hover: var(--color-primary-dark);
+    --primary-light: var(--color-primary-light);
+    --primary-text: var(--color-text-accessible-orange);
+    --dark-color: var(--color-text-primary);
+    --gray-color: var(--color-text-secondary);
+    --light-gray: var(--color-background);
+    --text-dark: var(--color-text-primary);
+    --text-muted: var(--color-text-secondary);
+    --bg-light: var(--color-background);
+    --border-color: var(--color-border);
+
+    /* ----------------------------------------------------------------------
+       3. Bootstrap 5.3 Root Overrides
+       ---------------------------------------------------------------------- */
+    --bs-primary: var(--color-primary);
+    --bs-primary-rgb: var(--color-primary-rgb);
+    --bs-body-color: var(--color-text-primary);
+    --bs-body-bg: var(--color-background);
+    --bs-border-color: var(--color-border);
+    --bs-link-color: var(--color-text-accessible-orange);
+    --bs-link-hover-color: var(--color-primary-dark);
+    --bs-focus-ring-color: rgba(var(--color-primary-rgb), 0.25);
+
+    /* ----------------------------------------------------------------------
+       4. Typography Scale & Font Tokens
+       ---------------------------------------------------------------------- */
+    --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extrabold: 800;
+
+    --font-size-display-large: 1.875rem;       /* 30px */
+    --line-height-display-large: 2.25rem;      /* 36px */
+
+    --font-size-headline-medium: 1.375rem;     /* 22px */
+    --line-height-headline-medium: 1.75rem;    /* 28px */
+
+    --font-size-title-large: 1.125rem;         /* 18px */
+    --line-height-title-large: 1.5rem;         /* 24px */
+
+    --font-size-title-medium: 1rem;            /* 16px */
+    --line-height-title-medium: 1.375rem;      /* 22px */
+
+    --font-size-body-large: 0.9375rem;         /* 15px */
+    --line-height-body-large: 1.375rem;        /* 22px */
+
+    --font-size-body-medium: 0.8125rem;        /* 13px */
+    --line-height-body-medium: 1.125rem;       /* 18px */
+
+    --font-size-body-small: 0.75rem;           /* 12px */
+    --line-height-body-small: 1rem;            /* 16px */
+
+    --font-size-micro-badge: 0.5625rem;        /* 9px */
+    --line-height-micro-badge: 0.75rem;        /* 12px */
+
+    /* Composite Shorthand Typography Tokens */
+    --font-display-large: 800 var(--font-size-display-large)/var(--line-height-display-large) var(--font-family-base);
+    --font-headline-medium: 700 var(--font-size-headline-medium)/var(--line-height-headline-medium) var(--font-family-base);
+    --font-title-large: 700 var(--font-size-title-large)/var(--line-height-title-large) var(--font-family-base);
+    --font-title-medium: 600 var(--font-size-title-medium)/var(--line-height-title-medium) var(--font-family-base);
+    --font-body-large: 400 var(--font-size-body-large)/var(--line-height-body-large) var(--font-family-base);
+    --font-body-medium: 400 var(--font-size-body-medium)/var(--line-height-body-medium) var(--font-family-base);
+    --font-body-small: 400 var(--font-size-body-small)/var(--line-height-body-small) var(--font-family-base);
+    --font-micro-badge: 800 var(--font-size-micro-badge)/var(--line-height-micro-badge) var(--font-family-base);
+
+    /* ----------------------------------------------------------------------
+       5. Border Radii & Shapes
+       ---------------------------------------------------------------------- */
+    --radius-full: 9999px;
+    --radius-hero: 24px;
+    --radius-card: 20px;
+    --radius-cta: 18px;
+    --radius-input: 16px;
+    --radius-button: 14px;
+    --radius-badge: 10px;
+    --radius-sm: 6px;
+
+    /* ----------------------------------------------------------------------
+       6. Shadows & Elevation
+       ---------------------------------------------------------------------- */
+    --shadow-none: none;
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --shadow-focus: 0 0 0 3px rgba(244, 81, 30, 0.25);
+    --shadow-focus-dark: 0 0 0 3px rgba(28, 28, 28, 0.25);
+
+    /* ----------------------------------------------------------------------
+       7. Spacing Tokens
+       ---------------------------------------------------------------------- */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+
+    /* ----------------------------------------------------------------------
+       8. Animation & Transition Tokens
+       ---------------------------------------------------------------------- */
+    --transition-fast: 0.15s ease-out;
+    --transition-base: 0.25s ease;
+    --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Accesibilidad */
+/* ==========================================================================
+   Root Viewport Containment & Reset
+   ========================================================================== */
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    position: relative;
+    margin: 0;
+    padding: 0;
+    -webkit-text-size-adjust: 100%;
+    font-family: var(--font-family-base);
+    color: var(--color-text-primary);
+    background-color: var(--color-background);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+.min-w-0,
+.foodjet-card,
+.foodjet-section-header,
+.order-item,
+.cart-item,
+.checkout-summary-card {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+/* ==========================================================================
+   Screen Reader Accessibility Utilities (.sr-only / .visually-hidden)
+   ========================================================================== */
+.sr-only,
+.visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.sr-only-focusable:not(:focus),
+.visually-hidden-focusable:not(:focus):not(:focus-within) {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* Skip link de accesibilidad */
 .skip-link {
     position: absolute;
     top: -40px;
     left: 0;
-    background: var(--primary-color);
-    color: #000;
+    background: var(--color-primary-dark);
+    color: #FFFFFF !important;
+    font-weight: 700;
     padding: 8px 16px;
     text-decoration: none;
-    border-radius: 4px;
-    z-index: 100;
+    border-radius: var(--radius-sm);
+    z-index: 1000;
+    transition: top var(--transition-fast);
 }
 
 .skip-link:focus {
@@ -80,40 +300,570 @@
     left: 10px;
 }
 
-/* Tipografía */
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    color: var(--dark-color);
-}
-
-/* Anulación del botón principal */
+/* ==========================================================================
+   Bootstrap 5.3 Button & Utility Overrides
+   ========================================================================== */
 .btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-    color: #000;
-    font-weight: 500;
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #FFFFFF !important;
+    font-weight: 700;
+    border-radius: var(--radius-button);
 }
 
 .btn-primary:hover,
 .btn-primary:focus {
-    background-color: var(--primary-hover);
-    border-color: var(--primary-hover);
-    color: #000;
+    background-color: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+    color: #FFFFFF !important;
 }
 
 .btn-primary:active,
 .btn-primary.active {
-    background-color: var(--primary-hover) !important;
-    border-color: var(--primary-hover) !important;
+    background-color: var(--color-primary-dark) !important;
+    border-color: var(--color-primary-dark) !important;
+    color: #FFFFFF !important;
 }
 
 .text-primary {
-    color: var(--primary-text) !important;
+    color: var(--color-text-accessible-orange) !important;
 }
 
 .bg-primary {
-    background-color: var(--primary-color) !important;
+    background-color: var(--color-primary) !important;
 }
+
+/* ==========================================================================
+   FoodJet Base Component Classes (Milestone 1 Primitives)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Pills (.foodjet-pill)
+   -------------------------------------------------------------------------- */
+.foodjet-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: var(--radius-full);
+    padding: 9px 16px;
+    min-height: 38px;
+    font-size: var(--font-body-medium);
+    font-weight: 600;
+    line-height: 1.2;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background-color var(--transition-fast),
+                border-color var(--transition-fast),
+                color var(--transition-fast),
+                transform var(--transition-fast);
+}
+
+.foodjet-pill:hover {
+    background-color: var(--color-background);
+    border-color: rgba(28, 28, 28, 0.4);
+    color: var(--color-text-primary);
+    transform: translateY(-1px);
+}
+
+.foodjet-pill:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.foodjet-pill--active,
+.foodjet-pill.active,
+.foodjet-pill[aria-selected="true"],
+.foodjet-pill.is-active {
+    background-color: var(--color-text-primary) !important;
+    border-color: var(--color-text-primary) !important;
+    color: #ffffff !important;
+}
+
+.foodjet-pill--active:hover,
+.foodjet-pill.active:hover,
+.foodjet-pill[aria-selected="true"]:hover,
+.foodjet-pill.is-active:hover {
+    background-color: #000000 !important;
+    border-color: #000000 !important;
+    color: #ffffff !important;
+}
+
+.foodjet-pill--active i,
+.foodjet-pill--active svg,
+.foodjet-pill.active i,
+.foodjet-pill.active svg {
+    color: #ffffff !important;
+}
+
+.foodjet-pill--sm {
+    padding: 6px 12px;
+    min-height: 32px;
+    font-size: var(--font-body-small);
+}
+
+/* --------------------------------------------------------------------------
+   2. Badges (.foodjet-badge)
+   -------------------------------------------------------------------------- */
+.foodjet-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border-radius: var(--radius-full);
+    padding: 4px 10px;
+    font-size: var(--font-micro-badge);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: var(--shadow-sm);
+}
+
+.foodjet-badge--student,
+.foodjet-badge--yellow {
+    background-color: var(--color-yellow-badge);
+    color: #1C1C1C !important;
+}
+
+.foodjet-badge--popular {
+    background-color: var(--color-primary);
+    color: #ffffff !important;
+}
+
+.foodjet-badge--soldout,
+.foodjet-badge--dark {
+    background-color: var(--color-text-primary);
+    color: #ffffff;
+}
+
+.foodjet-badge--success {
+    background-color: var(--color-success-soft);
+    color: var(--color-success-deep);
+}
+
+.foodjet-badge--danger {
+    background-color: var(--color-danger-container);
+    color: var(--color-danger-text);
+}
+
+.foodjet-badge--live {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    font-size: var(--font-body-small);
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+    padding: 5px 10px;
+}
+
+.foodjet-badge__dot,
+.foodjet-badge--live::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--color-success);
+    margin-right: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .foodjet-badge__dot,
+    .foodjet-badge--live::before {
+        animation: foodjet-pulse-live 1.8s infinite ease-in-out;
+    }
+}
+
+@keyframes foodjet-pulse-live {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    70% {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   3. Cards (.foodjet-card)
+   -------------------------------------------------------------------------- */
+.foodjet-card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-none);
+    overflow: hidden;
+    position: relative;
+}
+
+.foodjet-card__body {
+    padding: var(--space-4);
+}
+
+@media (min-width: 1280px) {
+    .foodjet-card__body {
+        padding: var(--space-5);
+    }
+}
+
+.foodjet-card__header {
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.foodjet-card--interactive {
+    cursor: pointer;
+    transition: transform var(--transition-smooth),
+                box-shadow var(--transition-smooth),
+                border-color var(--transition-fast);
+}
+
+.foodjet-card--interactive:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: rgba(244, 81, 30, 0.35);
+}
+
+.foodjet-card--interactive:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+.foodjet-card--selected {
+    background-color: var(--color-primary-light);
+    border: 1.5px solid var(--color-primary);
+}
+
+/* --------------------------------------------------------------------------
+   4. Buttons (.foodjet-btn-*)
+   -------------------------------------------------------------------------- */
+.foodjet-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    padding: 12px 24px;
+    border-radius: var(--radius-button);
+    background-color: var(--color-primary);
+    color: #ffffff !important;
+    font-size: var(--font-title-medium);
+    font-weight: 700;
+    line-height: 1;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color var(--transition-fast),
+                transform var(--transition-fast),
+                box-shadow var(--transition-fast);
+}
+
+.foodjet-btn-primary:hover {
+    background-color: var(--color-primary-dark);
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(244, 81, 30, 0.25);
+}
+
+.foodjet-btn-primary:active {
+    background-color: var(--color-primary-dark);
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.foodjet-btn-primary:disabled,
+.foodjet-btn-primary.disabled {
+    background-color: var(--color-border);
+    color: #8e8e8e !important;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.foodjet-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 44px;
+    padding: 10px 18px;
+    border-radius: var(--radius-button);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    font-size: var(--font-body-medium);
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color var(--transition-fast),
+                border-color var(--transition-fast),
+                color var(--transition-fast),
+                transform var(--transition-fast);
+}
+
+.foodjet-btn-secondary:hover {
+    background-color: var(--color-background);
+    border-color: var(--color-text-primary);
+    color: var(--color-text-primary);
+    transform: translateY(-1px);
+}
+
+.foodjet-btn-secondary:active {
+    background-color: #eceae2;
+    transform: translateY(0);
+}
+
+.foodjet-btn-secondary:disabled,
+.foodjet-btn-secondary.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.foodjet-btn-secondary--danger {
+    color: var(--color-danger);
+    border-color: var(--color-danger);
+}
+
+.foodjet-btn-secondary--danger:hover {
+    background-color: #fdf2f2;
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+}
+
+.foodjet-btn-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 56px;
+    padding: 14px 24px;
+    border-radius: var(--radius-cta);
+    background-color: var(--color-primary);
+    color: #ffffff !important;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(244, 81, 30, 0.3);
+    transition: background-color var(--transition-fast),
+                transform var(--transition-fast),
+                box-shadow var(--transition-fast);
+}
+
+.foodjet-btn-cta:hover {
+    background-color: var(--color-primary-dark);
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(217, 67, 16, 0.35);
+}
+
+.foodjet-btn-cta:active {
+    background-color: var(--color-primary-dark);
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(217, 67, 16, 0.2);
+}
+
+.foodjet-btn-cta:disabled,
+.foodjet-btn-cta.disabled {
+    background-color: var(--color-border);
+    color: #8e8e8e !important;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.foodjet-btn-cta.is-loading {
+    pointer-events: none;
+    opacity: 0.85;
+}
+
+.foodjet-btn-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: transform var(--transition-fast),
+                background-color var(--transition-fast),
+                box-shadow var(--transition-fast),
+                color var(--transition-fast);
+}
+
+.foodjet-btn-circle:hover {
+    transform: scale(1.08);
+    box-shadow: var(--shadow-sm);
+    color: var(--color-primary);
+}
+
+.foodjet-btn-circle:active {
+    transform: scale(0.95);
+}
+
+.foodjet-btn-circle--primary {
+    background-color: var(--color-primary);
+    border: none;
+    color: #ffffff !important;
+}
+
+.foodjet-btn-circle--primary:hover {
+    background-color: var(--color-primary-dark);
+    color: #ffffff !important;
+}
+
+.foodjet-btn-add {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-button);
+    background-color: var(--color-primary);
+    color: #ffffff !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.foodjet-btn-add:hover {
+    background-color: var(--color-primary-dark);
+    transform: scale(1.05);
+}
+
+.foodjet-btn-add:disabled,
+.foodjet-btn-add.disabled {
+    background-color: var(--color-border);
+    color: var(--color-text-muted) !important;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* --------------------------------------------------------------------------
+   5. Section Headers (.foodjet-section-header)
+   -------------------------------------------------------------------------- */
+.foodjet-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.foodjet-section-header__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-badge);
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.foodjet-section-header__title {
+    font-size: var(--font-title-large);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0;
+    line-height: 1.25;
+}
+
+/* --------------------------------------------------------------------------
+   6. Inputs & Input Groups (.foodjet-input, .foodjet-input-group)
+   -------------------------------------------------------------------------- */
+.foodjet-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 14px;
+    position: relative;
+}
+
+.foodjet-input-group__label {
+    font-size: var(--font-body-small);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin-bottom: 2px;
+}
+
+.foodjet-input {
+    height: 48px;
+    border-radius: var(--radius-input);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    padding: 12px 16px;
+    font-size: var(--font-body-large);
+    color: var(--color-text-primary);
+    width: 100%;
+    outline: none;
+    transition: border-color var(--transition-fast),
+                box-shadow var(--transition-fast),
+                background-color var(--transition-fast);
+}
+
+.foodjet-input::placeholder {
+    color: var(--color-text-secondary);
+    opacity: 0.75;
+}
+
+.foodjet-input:hover {
+    border-color: rgba(28, 28, 28, 0.4);
+}
+
+.foodjet-input:focus,
+.foodjet-input:focus-visible {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(244, 81, 30, 0.15);
+    outline: none !important;
+}
+
+.foodjet-input.is-invalid,
+.foodjet-input--error {
+    border-color: var(--color-danger) !important;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15) !important;
+}
+
+.foodjet-input:disabled {
+    background-color: var(--color-background);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.foodjet-input-group__hint {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    margin-top: 2px;
+}
+
+.foodjet-input-group__error {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-danger);
+    margin-top: 2px;
+}
+
 
 /* Navbar */
 .navbar {
@@ -479,44 +1229,53 @@ body {
     }
 }
 
-/* Estilos de enfoque para la accesibilidad (solo teclado) */
+/* Estilos de enfoque para la accesibilidad (WCAG 2.2 SC 2.4.11 - solo teclado) */
 :focus-visible {
-    outline: 3px solid var(--primary-color);
-    outline-offset: 3px;
-    box-shadow: 0 0 0 6px rgba(245, 175, 105, 0.25);
+    outline: 2px solid var(--color-primary) !important;
+    outline-offset: 2px !important;
 }
 
 /* Quitar outline en clicks de mouse */
 :focus:not(:focus-visible) {
-    outline: none;
-    box-shadow: none;
+    outline: none !important;
+    box-shadow: none !important;
 }
 
-/* Focus visible en product cards */
-.product-card:focus-visible {
-    outline: 3px solid var(--primary-color);
-    outline-offset: 2px;
+/* Reverse-contrast focus para fondos oscuros o primarios */
+.btn-primary:focus-visible,
+.foodjet-btn-primary:focus-visible,
+.foodjet-btn-cta:focus-visible,
+.foodjet-pill--active:focus-visible,
+.foodjet-badge--soldout:focus-visible,
+.bg-primary:focus-visible {
+    outline: 2px solid #FFFFFF !important;
+    outline-offset: 2px !important;
+}
+
+/* Focus visible en componentes interactivos */
+.product-card:focus-visible,
+.foodjet-card--interactive:focus-visible {
+    outline: 2px solid var(--color-primary) !important;
+    outline-offset: 2px !important;
     transform: translateY(-4px);
 }
 
-/* Focus visible en botones de cantidad */
-.quantity-btn:focus-visible {
-    outline: 3px solid var(--primary-color);
-    outline-offset: 2px;
-    transform: scale(1.15);
+.quantity-btn:focus-visible,
+.foodjet-btn-circle:focus-visible {
+    outline: 2px solid var(--color-primary) !important;
+    outline-offset: 2px !important;
 }
 
-/* Focus visible en opciones de pago */
-.payment-option label:focus-visible {
-    outline: 3px solid var(--primary-color);
-    outline-offset: 2px;
+.payment-option label:focus-visible,
+.foodjet-pill:focus-visible {
+    outline: 2px solid var(--color-primary) !important;
+    outline-offset: 2px !important;
 }
 
-/* Focus visible en controles del carousel */
 .carousel-control-prev:focus-visible,
 .carousel-control-next:focus-visible {
-    outline: 3px solid var(--primary-color);
-    outline-offset: -3px;
+    outline: 2px solid var(--color-primary) !important;
+    outline-offset: -2px !important;
 }
 
 /* Compatibilidad con el modo de alto contraste */
@@ -542,7 +1301,7 @@ body {
     }
 }
 
-/* Soporte de movimiento reducido */
+/* Soporte unificado de movimiento reducido (WCAG 2.1 SC 2.3.3) */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -550,11 +1309,17 @@ body {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 
-    /* El pulso del icono de seguimiento es continuo: se desactiva del todo. */
-    .order-status-icon {
-        animation: none;
+    /* Pulsos continuos e indicadores */
+    .order-status-icon,
+    .marcador-seguimiento--repartidor,
+    .linea-tiempo__etapa[data-situacion="en_curso"] .linea-tiempo__marca,
+    .foodjet-badge__dot,
+    .foodjet-badge--live::before,
+    .live-pulse-dot {
+        animation: none !important;
     }
 
     /* Desactivar scroll suave */
@@ -565,17 +1330,41 @@ body {
     /* Desactivar transición del carousel de Bootstrap */
     .carousel-item {
         transition: none !important;
+        transform: none !important;
     }
     .carousel.slide {
-        --bs-carousel-transition: none;
+        --bs-carousel-transition: none !important;
     }
 
-    /* Desactivar hover transforms */
+    /* Desactivar hover transforms y transiciones */
     .navbar-brand:hover,
     .feature-icon:hover,
     .product-card:hover,
     .product-card:hover .product-image,
-    .quantity-btn:hover {
+    .quantity-btn:hover,
+    .foodjet-pill,
+    .foodjet-pill:hover,
+    .foodjet-btn-primary,
+    .foodjet-btn-primary:hover,
+    .foodjet-btn-secondary,
+    .foodjet-btn-secondary:hover,
+    .foodjet-btn-cta,
+    .foodjet-btn-cta:hover,
+    .foodjet-btn-circle,
+    .foodjet-btn-circle:hover,
+    .foodjet-btn-add,
+    .foodjet-btn-add:hover,
+    .foodjet-card--interactive,
+    .foodjet-card--interactive:hover {
+        transition: none !important;
+        transform: none !important;
+    }
+
+    .fade,
+    .fade-in,
+    .modal.fade .modal-dialog {
+        transition: none !important;
+        animation: none !important;
         transform: none !important;
     }
 }
@@ -665,14 +1454,32 @@ footer .text-muted {
    ============================ */
 @media (prefers-color-scheme: dark) {
     :root {
+        --color-primary: #F4511E;
+        --color-primary-dark: #D94310;
+        --color-primary-light: rgba(244, 81, 30, 0.15);
+        --color-surface: #1E1E1E;
+        --color-background: #121212;
+        --color-border: #333333;
+        --color-border-subtle: #282828;
+        --color-text-primary: #E8E8E8;
+        --color-text-secondary: #ADB5BD;
+        --color-text-muted: #6C757D;
+        --color-text-accessible-orange: #F5AF69;
+        --color-yellow-badge: #FCD460;
+        --color-success-soft: #1B3826;
+        --color-success-deep: #4ADE80;
+
+        /* Legacy aliases */
         --dark-color: #e8e8e8;
         --light-gray: #1e1e1e;
         --gray-color: #adb5bd;
         --bs-body-color: #e8e8e8;
         --bs-body-bg: #121212;
-        /* Sobre fondo oscuro el problema se invierte: el tono oscurecido baja
-           a 3.94:1 y el naranja original sube a 10:1. */
         --primary-text: #f5af69;
+        --text-dark: #e8e8e8;
+        --text-muted: #adb5bd;
+        --bg-light: #1e1e1e;
+        --border-color: #333333;
     }
 
     body {
@@ -799,6 +1606,77 @@ footer .text-muted {
 
     .badge.bg-secondary {
         background-color: #444 !important;
+    }
+
+    /* --- Challenger M1_1 Dark Mode Contrast Remediation --- */
+    .foodjet-badge--student,
+    .foodjet-badge--yellow {
+        color: #1C1C1C !important;
+    }
+
+    .foodjet-pill--active,
+    .foodjet-pill.active,
+    .foodjet-pill[aria-selected="true"],
+    .foodjet-pill.is-active {
+        background-color: #E8E8E8 !important;
+        border-color: #E8E8E8 !important;
+        color: #121212 !important;
+    }
+
+    .foodjet-pill--active:hover,
+    .foodjet-pill.active:hover,
+    .foodjet-pill[aria-selected="true"]:hover,
+    .foodjet-pill.is-active:hover {
+        background-color: #FFFFFF !important;
+        border-color: #FFFFFF !important;
+        color: #000000 !important;
+    }
+
+    .foodjet-pill--active i,
+    .foodjet-pill--active svg,
+    .foodjet-pill.active i,
+    .foodjet-pill.active svg {
+        color: #121212 !important;
+    }
+
+    /* --- Offcanvas & Cart/Favorites in Dark Mode --- */
+    .foodjet-offcanvas {
+        background-color: #1E1E1E !important;
+        color: #E8E8E8 !important;
+        border-left-color: #333333 !important;
+    }
+
+    .foodjet-offcanvas .offcanvas-header {
+        background-color: #1E1E1E !important;
+        border-bottom-color: #333333 !important;
+    }
+
+    .foodjet-offcanvas .offcanvas-body {
+        background-color: #121212 !important;
+    }
+
+    .foodjet-cart-restaurant,
+    .cart-item,
+    #cartFooter,
+    #favoritesOffcanvas .foodjet-card {
+        background-color: #1E1E1E !important;
+        border-color: #333333 !important;
+        color: #E8E8E8 !important;
+    }
+
+    .foodjet-search-input {
+        background-color: #1E1E1E !important;
+        border-color: #333333 !important;
+        color: #E8E8E8 !important;
+    }
+
+    .foodjet-address-bar {
+        background-color: #1E1E1E !important;
+        border-color: #333333 !important;
+    }
+
+    .foodjet-address-bar__text {
+        color: #E8E8E8 !important;
     }
 
     /* --- Dropdown --- */
@@ -1264,13 +2142,33 @@ h1[tabindex="-1"]:focus {
     max-width: none;
 }
 
+@media (max-width: 991.98px) {
+    .seguimiento {
+        display: flex;
+        flex-direction: column;
+    }
+    .seguimiento__col-izq {
+        display: contents;
+    }
+    .seguimiento__mapa {
+        order: 1;
+    }
+    .seguimiento__col-der {
+        order: 2;
+    }
+    #orderDetailsCard {
+        order: 3;
+    }
+}
+
 @media (min-width: 992px) {
     .seguimiento--con-mapa {
         grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
         align-items: start;
+        gap: 2rem;
     }
 
-    .seguimiento--con-mapa .seguimiento__mapa {
+    .seguimiento--con-mapa .seguimiento__col-der {
         position: sticky;
         top: 88px;
     }
@@ -1278,9 +2176,10 @@ h1[tabindex="-1"]:focus {
 
 .seguimiento__mapa {
     position: relative;
-    border: 1px solid #dee2e6;
-    border-radius: 0.5rem;
+    border: 1.5px solid var(--color-border, #E6E4DC);
+    border-radius: var(--radius-card, 16px);
     overflow: hidden;
+    box-shadow: var(--shadow-sm);
 }
 
 .seguimiento__lienzo {
@@ -1290,8 +2189,9 @@ h1[tabindex="-1"]:focus {
 
 @media (min-width: 992px) {
     .seguimiento__lienzo {
-        height: min(640px, calc(100vh - 120px));
-        min-height: 440px;
+        height: 360px;
+        min-height: 340px;
+        max-height: 380px;
     }
 }
 
@@ -1492,7 +2392,22 @@ h1[tabindex="-1"]:focus {
 
 @media (prefers-color-scheme: dark) {
     .seguimiento__mapa {
-        border-color: #333;
+        border-color: var(--color-border, #333333);
+        box-shadow: none;
+    }
+
+    .linea-tiempo__ahora-badge {
+        background-color: rgba(244, 81, 30, 0.2) !important;
+        color: #FF7D47 !important;
+        border-color: rgba(244, 81, 30, 0.4) !important;
+    }
+
+    .seguimiento__llegada-cifra {
+        color: #FFFFFF !important;
+    }
+
+    .seguimiento__llegada-texto {
+        color: #A0A09B !important;
     }
 
     .seguimiento__ruta {
@@ -1532,45 +2447,244 @@ h1[tabindex="-1"]:focus {
     .marcador-seguimiento--repartidor {
         border-color: #1a1a1a;
     }
+
+    .foodjet-delivery-summary {
+        background-color: var(--color-surface, #1E1E1E) !important;
+        border-color: var(--color-border, #333333) !important;
+    }
+
+    .foodjet-wallet-inplace {
+        background-color: var(--color-surface, #1E1E1E) !important;
+        border-color: var(--color-primary, #F4511E) !important;
+    }
+
+    .foodjet-mint-pill {
+        background-color: rgba(15, 81, 50, 0.25) !important;
+        color: #75b798 !important;
+        border-color: rgba(117, 183, 152, 0.3) !important;
+    }
+
+    .foodjet-restaurant-icon-box--coral {
+        background-color: rgba(244, 81, 30, 0.2) !important;
+        color: #FF7A50 !important;
+    }
 }
 
 /* Panel de operaciones: filtros por estado y etiqueta de estado */
-.operaciones__filtros { display: flex; flex-wrap: wrap; gap: .5rem; }
-.operaciones__filtro {
-    background: transparent; color: inherit; cursor: pointer;
-    border: 1px solid rgba(255, 255, 255, .2); border-radius: 999px;
-    padding: .25rem .75rem; font-size: .875rem;
+.operaciones__filtros-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
 }
-.operaciones__filtro:hover { border-color: var(--bs-primary, #f4a04a); }
-.operaciones__filtro.is-active { background: var(--bs-primary, #f4a04a); border-color: var(--bs-primary, #f4a04a); color: #000; }
-.operaciones__conteo { opacity: .75; margin-left: .25rem; font-variant-numeric: tabular-nums; }
-.estado-pedido { display: inline-block; padding: .15rem .6rem; border-radius: 999px; font-size: .8rem; border: 1px solid currentColor; white-space: nowrap; }
-.estado-pedido--pendiente { color: #adb5bd; }
-.estado-pedido--confirmado { color: #6ea8fe; }
-.estado-pedido--en_preparacion { color: #ffc107; }
-.estado-pedido--en_camino { color: #f4a04a; }
-.estado-pedido--entregado { color: #75b798; }
-.estado-pedido--cancelado { color: #ea868f; }
+.operaciones__filtros-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+.operaciones__filtros {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+}
+
+@media (min-width: 992px) {
+    .operaciones__filtros {
+        flex-wrap: wrap;
+    }
+}
+
+.operaciones__filtro {
+    display: inline-flex;
+    align-items: center;
+    background: var(--color-background, #F8F8F4);
+    color: var(--color-text-primary, #1C1C1C);
+    border: 1px solid var(--color-border, #E6E4DC);
+    border-radius: var(--radius-pill, 999px);
+    padding: 0.35rem 0.85rem;
+    font-size: var(--font-size-body-small, 0.8125rem);
+    font-weight: var(--font-weight-medium, 500);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition-fast, 0.15s ease);
+}
+
+.operaciones__filtro:hover,
+.operaciones__filtro:focus-visible {
+    border-color: var(--color-primary, #F4511E);
+    background: var(--color-primary-light, #FCF0E4);
+    color: var(--color-primary-dark, #D94310);
+    outline: none;
+}
+
+.operaciones__filtro.is-active {
+    background: var(--color-primary, #F4511E);
+    border-color: var(--color-primary, #F4511E);
+    color: #ffffff;
+    font-weight: var(--font-weight-bold, 700);
+    box-shadow: 0 2px 6px rgba(244, 81, 30, 0.3);
+}
+
+.operaciones__conteo {
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: var(--radius-pill, 999px);
+    padding: 2px 6px;
+    margin-left: 6px;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.operaciones__filtro.is-active .operaciones__conteo {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+.estado-pedido {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-pill, 999px);
+    font-size: var(--font-size-body-small, 0.8125rem);
+    font-weight: var(--font-weight-semibold, 600);
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+}
+
+.estado-pedido--pendiente {
+    background-color: var(--color-warning-container, #FFF3CD);
+    color: var(--color-warning-text, #856404);
+    border: 1px solid rgba(133, 100, 4, 0.25);
+}
+
+.estado-pedido--confirmado {
+    background-color: #D1ECF1;
+    color: #0C5460;
+    border: 1px solid rgba(12, 84, 96, 0.25);
+}
+
+.estado-pedido--en_preparacion {
+    background-color: #D1ECF1;
+    color: #0C5460;
+    border: 1px solid rgba(12, 84, 96, 0.25);
+}
+
+.estado-pedido--en_camino {
+    background-color: #CCE5FF;
+    color: #004085;
+    border: 1px solid rgba(0, 64, 133, 0.25);
+}
+
+.estado-pedido--entregado {
+    background-color: var(--color-success-container, #D4EDDA);
+    color: var(--color-success-text, #155724);
+    border: 1px solid rgba(21, 87, 36, 0.25);
+}
+
+.estado-pedido--cancelado {
+    background-color: var(--color-danger-container, #F8D7DA);
+    color: var(--color-danger-text, #721C24);
+    border: 1px solid rgba(114, 28, 36, 0.25);
+}
 
 /* Detalle del pedido en el panel de operaciones */
-.detalle-abrir { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
-.detalle-abrir:hover { color: var(--bs-primary, #f4a04a); }
-.linea__barra { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; margin-bottom: 1.25rem; }
-.linea__tramo { background: currentColor; min-width: 4px; }
-.linea { list-style: none; margin: 0; padding: 0 0 0 1.25rem; position: relative; }
-.linea::before { content: ""; position: absolute; left: 5px; top: .5rem; bottom: .5rem; width: 2px; background: rgba(255, 255, 255, .15); }
-.linea__paso { position: relative; padding-bottom: 1rem; }
-.linea__punto { position: absolute; left: -1.25rem; top: .3rem; width: 12px; height: 12px; border-radius: 50%; background: currentColor; }
-.linea__paso.is-futuro .linea__punto { background: var(--bs-body-bg, #212529); border: 2px solid rgba(255, 255, 255, .25); color: transparent; }
-.linea__paso.is-futuro .linea__titulo { opacity: .5; }
-.linea__paso.is-actual .linea__punto { box-shadow: 0 0 0 4px rgba(244, 160, 74, .25); }
-.linea__titulo { display: flex; justify-content: space-between; gap: 1rem; font-weight: 600; }
-.linea__hora { font-weight: 400; font-variant-numeric: tabular-nums; opacity: .7; }
-.linea__detalle { font-size: .85rem; opacity: .7; }
-.detalle__datos { display: grid; grid-template-columns: auto 1fr; gap: .4rem 1rem; margin: 0; }
-.detalle__datos dt { font-weight: 400; opacity: .6; }
-.detalle__datos dd { margin: 0; }
-@media (prefers-reduced-motion: no-preference) { .linea__paso.is-actual .linea__punto { transition: box-shadow .3s; } }
+.detalle-abrir {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-weight: 700;
+    color: var(--color-primary, #F4511E);
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    transition: color var(--transition-fast, 0.15s ease);
+}
+.detalle-abrir:hover {
+    color: var(--color-primary-dark, #D94310);
+}
+.linea__barra {
+    display: flex;
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    gap: 2px;
+    margin-bottom: 1.25rem;
+}
+.linea__tramo {
+    background: currentColor;
+    min-width: 4px;
+}
+.linea {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 1.25rem;
+    position: relative;
+}
+.linea::before {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    width: 2px;
+    background: var(--color-border, #E6E4DC);
+}
+.linea__paso {
+    position: relative;
+    padding-bottom: 1rem;
+}
+.linea__punto {
+    position: absolute;
+    left: -1.25rem;
+    top: 0.3rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.linea__paso.is-futuro .linea__punto {
+    background: var(--color-background, #F8F8F4);
+    border: 2px solid var(--color-border, #E6E4DC);
+    color: transparent;
+}
+.linea__paso.is-futuro .linea__titulo {
+    opacity: 0.5;
+}
+.linea__paso.is-actual .linea__punto {
+    box-shadow: 0 0 0 4px rgba(244, 81, 30, 0.25);
+}
+.linea__titulo {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-weight: 600;
+}
+.linea__hora {
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.7;
+}
+.linea__detalle {
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+.detalle__datos {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.4rem 1rem;
+    margin: 0;
+}
+.detalle__datos dt {
+    font-weight: 400;
+    opacity: 0.6;
+}
+.detalle__datos dd {
+    margin: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .linea__paso.is-actual .linea__punto {
+        transition: box-shadow var(--transition-base, 0.25s ease);
+    }
+}
 
 .detalle__rejilla { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
 /* Con mapa: el mapa ocupa la parte grande y el detalle una columna al lado. */
@@ -1592,3 +2706,1888 @@ h1[tabindex="-1"]:focus {
         100% { box-shadow: 0 0 0 16px rgba(244, 160, 74, 0); }
     }
 }
+
+/* ==========================================================================
+   MILESTONE 2: FoodJet Navigation Bar & User Header (.foodjet-navbar)
+   ========================================================================== */
+
+.foodjet-navbar {
+    background-color: var(--color-surface) !important;
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    padding: 0.625rem 0;
+    transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.foodjet-navbar-brand {
+    text-decoration: none;
+    line-height: 1;
+    transition: transform var(--transition-fast);
+}
+
+.foodjet-navbar-brand:hover {
+    transform: scale(1.02);
+}
+
+.foodjet-brand-text {
+    font-size: 1.375rem; /* 22px matching Compose */
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--color-primary);
+}
+
+.foodjet-brand-bolt {
+    font-size: 1.25rem;
+    color: var(--color-primary);
+}
+
+/* Real vs Neutral Delivery Address Bar */
+.foodjet-address-bar {
+    padding: 6px 14px;
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    max-width: 280px;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast);
+    outline: none;
+}
+
+.foodjet-address-bar:hover,
+.foodjet-address-bar:focus-visible {
+    background-color: var(--color-primary-light);
+    border-color: rgba(244, 81, 30, 0.4);
+}
+
+.foodjet-address-bar__icon {
+    color: var(--color-primary);
+    font-size: 0.9375rem;
+    flex-shrink: 0;
+}
+
+.foodjet-address-bar__text {
+    font-size: 0.8125rem; /* 13px matching Compose */
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.foodjet-address-bar__chevron {
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* Stacked 2-line address bar (Figma Master) */
+.foodjet-address-stacked {
+    padding: 4px 14px;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    max-width: 280px;
+}
+
+.foodjet-address-bar__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.2px;
+}
+
+.foodjet-address-stacked .foodjet-address-bar__text {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    max-width: 170px;
+}
+
+/* Modal Address Selector Divider Text (Adaptive Surface Background for Dark Mode) */
+.foodjet-modal-divider-text {
+    background-color: var(--color-surface);
+}
+
+/* Central Search Bar in Header */
+.foodjet-header-search {
+    max-width: 480px;
+}
+
+.foodjet-header-search .foodjet-search-bar {
+    width: 100%;
+}
+
+.foodjet-header-search .foodjet-search-input {
+    width: 100%;
+    height: 42px;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
+    padding: 8px 36px 8px 42px;
+    font-size: 0.875rem;
+    color: var(--color-text-primary);
+    box-shadow: none;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.foodjet-header-search .foodjet-search-input:focus,
+.foodjet-header-search .foodjet-search-input:focus-visible {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(244, 81, 30, 0.15);
+    background-color: var(--color-surface);
+    outline: none !important;
+}
+
+.foodjet-header-search .foodjet-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.9375rem;
+    color: var(--color-text-secondary);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.foodjet-header-search .foodjet-search-clear {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--color-text-muted);
+    font-size: 0.9375rem;
+    cursor: pointer;
+    z-index: 2;
+}
+
+/* Action Buttons & Badges */
+.foodjet-icon-btn {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-button);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+    padding: 0;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.foodjet-icon-btn:hover {
+    background-color: var(--color-background);
+    border-color: var(--color-text-secondary);
+}
+
+.foodjet-cart-btn {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px; /* Exact Compose rounded rectangle */
+    background-color: var(--color-primary);
+    border: none;
+    padding: 0;
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.foodjet-cart-btn:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-1px);
+}
+
+/* Textual Orange Pill Cart Button (Figma Master: "Mi carrito · N") */
+.foodjet-cart-btn--textual {
+    width: auto !important;
+    height: 42px !important;
+    padding: 0 18px !important;
+    border-radius: var(--radius-pill) !important;
+    background-color: var(--color-primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(244, 81, 30, 0.25);
+    font-size: 0.875rem;
+}
+
+.foodjet-cart-btn--textual:hover {
+    background-color: var(--color-primary-dark) !important;
+    box-shadow: 0 6px 16px rgba(244, 81, 30, 0.35);
+}
+
+.foodjet-cart-btn--textual .foodjet-badge-counter {
+    position: static !important;
+    top: auto;
+    right: auto;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #ffffff !important;
+}
+
+.foodjet-badge-counter {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: var(--radius-pill);
+    font-size: 0.6875rem; /* 11px */
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--color-surface);
+}
+
+.foodjet-badge-counter--primary {
+    background-color: var(--color-primary);
+    color: #ffffff;
+}
+
+.foodjet-badge-counter--dark {
+    background-color: var(--color-text-primary);
+    color: #ffffff;
+}
+
+/* User Menu Dropdown & Login */
+.foodjet-user-chip {
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary) !important;
+    font-size: 0.875rem;
+    transition: background-color var(--transition-fast);
+}
+
+.foodjet-user-chip:hover {
+    background-color: var(--color-primary-light);
+}
+
+.foodjet-dropdown-menu {
+    border-radius: var(--radius-card);
+    padding: 8px;
+    min-width: 200px;
+}
+
+.foodjet-dropdown-menu .dropdown-item {
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.foodjet-dropdown-menu .dropdown-item:hover {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary-dark);
+}
+
+.foodjet-login-btn {
+    height: 42px !important;
+    padding: 8px 20px !important;
+    font-size: 0.875rem !important;
+}
+
+/* Responsive layout adjustments for TopBar */
+@media (max-width: 991.98px) {
+    .foodjet-navbar .container {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .foodjet-address-bar {
+        order: 3;
+        width: 100%;
+        max-width: 100%;
+        margin-top: 8px;
+        justify-content: flex-start;
+    }
+
+    .foodjet-navbar-brand {
+        order: 1;
+    }
+
+    .foodjet-navbar-toggler {
+        order: 2;
+        border: none;
+        padding: 6px;
+    }
+}
+
+/* ==========================================================================
+   MILESTONE 2: FoodJet Home Hero Carousel (.foodjet-hero-carousel)
+   ========================================================================== */
+
+.foodjet-hero-section {
+    width: 100%;
+}
+
+.foodjet-hero-carousel {
+    background: linear-gradient(135deg, #F4511E 0%, #D94310 100%);
+    border-radius: 24px; /* Exact Compose RoundedCornerShape(24.dp) */
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(244, 81, 30, 0.2);
+}
+
+.foodjet-hero-slide {
+    min-height: 250px;
+    padding: 24px 20px 24px 24px;
+}
+
+@media (min-width: 768px) {
+    .foodjet-hero-slide {
+        min-height: 320px;
+        padding: 32px 32px 32px 40px;
+    }
+}
+
+@media (min-width: 1280px) {
+    .foodjet-hero-slide {
+        min-height: 360px;
+        padding: 40px 48px 40px 56px;
+    }
+}
+
+/* Floating Yellow Pill Badge */
+.foodjet-hero-badge-wrap {
+    display: inline-block;
+}
+
+.foodjet-hero-badge {
+    display: inline-block;
+    background-color: var(--color-yellow-badge); /* #FCD460 */
+    color: #1C1C1C !important;                   /* WCAG AAA */
+    font-size: 0.625rem; /* 10px */
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    line-height: 1;
+}
+
+@media (min-width: 768px) {
+    .foodjet-hero-badge {
+        font-size: 0.6875rem; /* 11px */
+        padding: 6px 14px;
+    }
+}
+
+/* Typography */
+.foodjet-hero-title {
+    color: #ffffff !important;
+    font-size: 1.5rem; /* 24px mobile */
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+}
+
+@media (min-width: 768px) {
+    .foodjet-hero-title {
+        font-size: 2rem; /* 32px */
+    }
+}
+
+@media (min-width: 1280px) {
+    .foodjet-hero-title {
+        font-size: 2.375rem; /* 38px */
+    }
+}
+
+.foodjet-hero-subtitle {
+    color: rgba(255, 255, 255, 0.92) !important;
+    font-size: 0.8125rem; /* 13px */
+    line-height: 1.4;
+    max-width: 480px;
+}
+
+@media (min-width: 768px) {
+    .foodjet-hero-subtitle {
+        font-size: 0.9375rem; /* 15px */
+    }
+}
+
+/* CTA Button */
+.foodjet-hero-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    background-color: #ffffff !important;
+    color: #1C1C1C !important; /* WCAG AAA / AA high contrast (17:1) in both light and dark mode */
+    font-size: 0.8125rem;
+    font-weight: 700;
+    border-radius: 14px;
+    padding: 8px 18px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    transition: transform var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.foodjet-hero-cta-btn:hover {
+    background-color: var(--color-background) !important;
+    transform: translateX(3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+@media (min-width: 768px) {
+    .foodjet-hero-cta-btn {
+        font-size: 0.875rem;
+        padding: 10px 22px;
+    }
+}
+
+/* Right Image (Compose 32dp TopStart Corner Clip) */
+.foodjet-hero-image-col {
+    overflow: hidden;
+}
+
+.foodjet-hero-image-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+.foodjet-hero-image {
+    width: 100%;
+    max-width: 220px;
+    height: 160px;
+    object-fit: cover;
+    border-top-left-radius: 32px; /* Exact Compose clip */
+    box-shadow: -4px -4px 20px rgba(0, 0, 0, 0.15);
+    display: block;
+}
+
+@media (min-width: 768px) {
+    .foodjet-hero-image {
+        max-width: 320px;
+        height: 240px;
+        border-top-left-radius: 40px;
+    }
+}
+
+@media (min-width: 1280px) {
+    .foodjet-hero-image {
+        max-width: 400px;
+        height: 280px;
+        border-top-left-radius: 48px;
+    }
+}
+
+/* Indicators (Compose Capsule Pager Dots) */
+.foodjet-hero-indicators {
+    left: 24px !important;
+    right: auto !important;
+    bottom: 12px !important;
+    margin: 0 !important;
+    justify-content: flex-start !important;
+    z-index: 5;
+}
+
+@media (min-width: 768px) {
+    .foodjet-hero-indicators {
+        left: 40px !important;
+        bottom: 16px !important;
+    }
+}
+
+.foodjet-hero-indicators button {
+    width: 6px !important;
+    height: 6px !important;
+    border-radius: var(--radius-pill) !important;
+    background-color: rgba(255, 255, 255, 0.45) !important;
+    border: none !important;
+    margin-right: 6px !important;
+    transition: width 0.3s ease, background-color 0.3s ease !important;
+}
+
+.foodjet-hero-indicators button.active {
+    width: 20px !important; /* Expanded pill when active */
+    background-color: #ffffff !important;
+}
+
+/* Slide Navigation Controls */
+.foodjet-hero-control {
+    width: 38px;
+    height: 38px;
+    background-color: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(4px);
+    border-radius: 50%;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity var(--transition-fast), background-color var(--transition-fast);
+}
+
+.foodjet-hero-carousel:hover .foodjet-hero-control {
+    opacity: 0.85;
+}
+
+.foodjet-hero-control:hover {
+    background-color: rgba(255, 255, 255, 0.45);
+    opacity: 1;
+}
+
+.foodjet-hero-control.carousel-control-prev {
+    left: 12px;
+}
+
+.foodjet-hero-control.carousel-control-next {
+    right: 12px;
+}
+
+/* ==========================================================================
+   MILESTONE 2: Catalog Search Bar (.foodjet-search-bar)
+   ========================================================================== */
+.foodjet-search-container {
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+.foodjet-search-bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.foodjet-search-icon {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-secondary);
+    font-size: 1.15rem;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.foodjet-search-input {
+    width: 100%;
+    height: 52px;
+    border-radius: var(--radius-input); /* 16px */
+    background-color: var(--color-surface);
+    border: 1.5px solid var(--color-border);
+    padding: 12px 48px 12px 50px;
+    font-size: var(--font-body-large);
+    color: var(--color-text-primary);
+    box-shadow: var(--shadow-sm);
+    outline: none;
+    transition: border-color var(--transition-fast),
+                box-shadow var(--transition-fast),
+                background-color var(--transition-fast);
+}
+
+.foodjet-search-input:hover {
+    border-color: rgba(28, 28, 28, 0.4);
+}
+
+.foodjet-search-input:focus,
+.foodjet-search-input:focus-visible {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(244, 81, 30, 0.2);
+    outline: none !important;
+}
+
+.foodjet-search-clear {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 1.2rem;
+    padding: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-full);
+    transition: color var(--transition-fast);
+}
+
+.foodjet-search-clear:hover {
+    color: var(--color-primary);
+}
+
+/* ==========================================================================
+   MILESTONE 2: Category Pills Row (.foodjet-pills-row)
+   ========================================================================== */
+.foodjet-pills-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 4px 0 8px;
+}
+
+.foodjet-pills-container::-webkit-scrollbar {
+    display: none;
+}
+
+.foodjet-pills-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+@media (min-width: 992px) {
+    .foodjet-pills-row {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+/* ==========================================================================
+   MILESTONE 2: Catalog Feedback States
+   ========================================================================== */
+.foodjet-card--skeleton {
+    pointer-events: none;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    height: 100%;
+}
+
+.foodjet-skeleton-box {
+    background: linear-gradient(90deg, #ecebe6 0%, #f7f6f2 50%, #ecebe6 100%);
+    background-size: 200% 100%;
+    animation: foodjet-skeleton-shimmer 1.5s infinite ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .foodjet-skeleton-box {
+        animation: none;
+        background: #ecebe6;
+    }
+}
+
+@keyframes foodjet-skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.foodjet-skeleton-img {
+    width: 100%;
+    aspect-ratio: 1.2;
+}
+
+.foodjet-skeleton-line {
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+.foodjet-skeleton-line--title {
+    width: 75%;
+    height: 18px;
+}
+.foodjet-skeleton-line--meta {
+    width: 45%;
+    height: 12px;
+}
+.foodjet-skeleton-line--desc {
+    width: 90%;
+    height: 12px;
+}
+.foodjet-skeleton-line--price {
+    width: 40%;
+    height: 22px;
+    margin-bottom: 0;
+}
+.foodjet-skeleton-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-button);
+}
+
+.foodjet-empty-state,
+.foodjet-error-state {
+    padding: var(--space-8) var(--space-4);
+    text-align: center;
+}
+
+.foodjet-empty-state__icon,
+.foodjet-error-state__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    margin-bottom: var(--space-3);
+}
+
+.foodjet-empty-state__icon {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.foodjet-error-state__icon {
+    background-color: var(--color-danger-container);
+    color: var(--color-danger-text);
+}
+
+/* ==========================================================================
+   MILESTONE 2: Product Card Grid (.product-card.foodjet-card)
+   ========================================================================== */
+.product-card.foodjet-card {
+    border-radius: var(--radius-card); /* 20px */
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    transition: transform var(--transition-smooth),
+                box-shadow var(--transition-smooth),
+                border-color var(--transition-fast);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.product-card.foodjet-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: rgba(244, 81, 30, 0.4);
+}
+
+.product-card__img-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1.2;
+    overflow: hidden;
+    background-color: var(--color-background);
+}
+
+.product-card__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.product-card.foodjet-card:hover .product-card__img {
+    transform: scale(1.05);
+}
+
+.product-card__fav-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-full);
+    background: #FFFFFF;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 3;
+    transition: transform var(--transition-fast), background-color var(--transition-fast);
+}
+
+.product-card__fav-btn:hover {
+    transform: scale(1.12);
+}
+
+.product-card__fav-btn i {
+    pointer-events: none;
+}
+
+.product-card__badge-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    max-width: calc(100% - 60px);
+    z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.product-card__body {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.product-card__title {
+    font-size: 0.9375rem; /* 15px */
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: 2px;
+    line-height: 1.3;
+}
+
+.product-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem; /* 12px */
+    color: var(--color-text-secondary);
+    margin-bottom: 6px;
+}
+
+.product-card__desc {
+    font-size: 0.75rem; /* 12px */
+    color: var(--color-text-secondary);
+    line-height: 1.35;
+    margin-bottom: 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex-grow: 1;
+}
+
+.product-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.product-card__price-orig {
+    font-size: 0.6875rem; /* 11px */
+    color: var(--color-text-muted);
+    text-decoration: line-through;
+    display: block;
+    line-height: 1;
+}
+
+.product-card__price-final {
+    font-size: 1.0625rem; /* 17px */
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.product-card__price-final--student {
+    color: var(--color-success-deep);
+}
+
+.product-card__price-final--regular {
+    color: var(--color-text-primary);
+}
+
+.product-card__add-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-button); /* 14px */
+    background-color: var(--color-primary);
+    color: #FFFFFF !important;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.product-card__add-btn:hover:not(:disabled) {
+    background-color: var(--color-primary-dark);
+    transform: scale(1.08);
+}
+
+.product-card__add-btn:disabled,
+.product-card__add-btn.disabled {
+    background-color: var(--color-border);
+    color: var(--color-text-muted) !important;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.product-card__add-btn i {
+    pointer-events: none; /* Prevents event target traps */
+}
+
+/* ==========================================================================
+   MILESTONE 2: Cart & Favorites Offcanvas Overhaul
+   ========================================================================== */
+.foodjet-offcanvas {
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+    border-left: 1px solid var(--color-border);
+    width: 400px;
+    max-width: 90vw;
+}
+
+.foodjet-offcanvas .offcanvas-header {
+    background-color: var(--color-surface);
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding: 1rem 1.25rem;
+}
+
+.foodjet-offcanvas .offcanvas-body {
+    background-color: var(--color-background);
+    padding: 1.25rem;
+}
+
+/* Active Restaurant Banner */
+.foodjet-cart-restaurant {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.foodjet-restaurant-icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.foodjet-restaurant-icon-box--coral {
+    background-color: #FFEFEB;
+    color: #F4511E;
+}
+
+.foodjet-mint-pill {
+    background-color: #E8F8F5;
+    color: #0F5132;
+    border: 1px solid #D1F2EB;
+    font-size: 0.775rem;
+    font-weight: 600;
+}
+
+.foodjet-add-more-link {
+    color: var(--color-primary, #F4511E);
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: color var(--transition-fast, 0.2s ease);
+}
+
+.foodjet-add-more-link:hover {
+    color: var(--color-primary-dark, #D94310);
+}
+
+.cart-header-subtitle {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary, #6B6B66);
+}
+
+/* Cart Item Row */
+.cart-item {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border-subtle) !important;
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.cart-item:hover {
+    border-color: var(--color-border) !important;
+    box-shadow: var(--shadow-xs);
+}
+
+/* Cart Footer */
+#cartFooter {
+    background-color: var(--color-surface);
+    border-top: 1px solid var(--color-border) !important;
+    padding: 1rem;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+}
+
+/* Favorites Offcanvas Cards */
+#favoritesOffcanvas .foodjet-card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+#favoritesOffcanvas .foodjet-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* ==========================================================================
+   MILESTONE 3: Checkout Responsive Layout & Payment Components
+   ========================================================================== */
+
+/* Section header icon pill */
+.foodjet-icon-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-circle, 50%);
+    background-color: var(--color-primary-light, #FCF0E4);
+    flex-shrink: 0;
+}
+
+.foodjet-back-link {
+    color: var(--color-text-secondary, #6B6B66);
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: color var(--transition-fast, 0.2s ease);
+}
+
+.foodjet-back-link:hover {
+    color: var(--color-primary-dark, #D94310);
+}
+
+/* Steps Breadcrumb Indicator */
+.foodjet-steps-breadcrumb {
+    font-size: 0.825rem;
+    font-weight: 600;
+}
+
+.foodjet-steps-breadcrumb .foodjet-step {
+    display: inline-flex;
+    align-items: center;
+}
+
+.foodjet-steps-breadcrumb .foodjet-step-sep {
+    opacity: 0.4;
+}
+
+/* Compact Saved Delivery Summary Card */
+.foodjet-delivery-summary {
+    background-color: var(--color-surface, #ffffff);
+    border: 1.5px solid var(--color-border, #E6E4DC);
+    border-radius: var(--radius-card, 16px);
+    transition: all var(--transition-fast, 0.2s ease);
+}
+
+.foodjet-delivery-summary:hover {
+    border-color: rgba(244, 81, 30, 0.35);
+    box-shadow: var(--shadow-sm);
+}
+
+/* In-Place Wallet QR Frame & Container */
+.foodjet-wallet-inplace {
+    background-color: var(--color-surface, #ffffff);
+    border: 1.5px solid var(--color-primary, #F4511E);
+    border-radius: var(--radius-card, 16px);
+    box-shadow: 0 4px 16px rgba(244, 81, 30, 0.08);
+}
+
+.foodjet-qr-frame {
+    display: inline-block;
+    padding: 8px;
+    background-color: #ffffff;
+    border-radius: var(--radius-md, 12px);
+}
+
+/* Sticky behavior for desktop */
+@media (min-width: 992px) {
+    .checkout-summary-sticky,
+    #orderSummaryCard.checkout-summary-sticky {
+        position: sticky !important;
+        top: 96px !important;
+        z-index: 10;
+    }
+}
+
+/* Mobile single column without obstructions */
+@media (max-width: 991.98px) {
+    .checkout-summary-sticky,
+    #orderSummaryCard.checkout-summary-sticky {
+        position: static !important;
+        top: auto !important;
+    }
+}
+
+/* Payment option tiles */
+.payment-options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 575.98px) {
+    .payment-options-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+}
+
+.foodjet-payment-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 1rem 0.85rem;
+    border: 1.5px solid var(--color-border, #E6E4DC);
+    border-radius: var(--radius-card, 16px);
+    background-color: var(--color-surface, #ffffff);
+    cursor: pointer;
+    transition: all var(--transition-fast, 0.2s ease);
+    text-align: start;
+    min-height: 92px;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.foodjet-payment-tile:hover {
+    background-color: var(--color-background, #F8F8F4);
+    border-color: rgba(244, 81, 30, 0.4);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.foodjet-payment-tile:active {
+    transform: translateY(0);
+}
+
+.foodjet-payment-tile__icon {
+    font-size: 1.5rem;
+    color: var(--color-text-secondary, #6B6B66);
+    margin-bottom: 0.35rem;
+    transition: color var(--transition-fast, 0.2s ease);
+}
+
+.foodjet-payment-tile__title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-text-primary, #1C1C1C);
+    line-height: 1.2;
+}
+
+.foodjet-payment-tile__subtitle {
+    font-size: 0.725rem;
+    color: var(--color-text-secondary, #6B6B66);
+    line-height: 1.2;
+}
+
+/* Active Payment Tile */
+.payment-option input:checked + .foodjet-payment-tile,
+.btn-check:checked + .foodjet-payment-tile,
+.foodjet-payment-tile.is-selected {
+    background-color: var(--color-primary-light, #FCF0E4) !important;
+    border-color: var(--color-primary, #F4511E) !important;
+    border-width: 2px !important;
+    box-shadow: 0 4px 12px rgba(244, 81, 30, 0.15) !important;
+}
+
+.payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__icon,
+.btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__icon,
+.foodjet-payment-tile.is-selected .foodjet-payment-tile__icon,
+.payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__title,
+.btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__title,
+.foodjet-payment-tile.is-selected .foodjet-payment-tile__title {
+    color: var(--color-primary, #F4511E) !important;
+}
+
+.btn-check:focus-visible + .foodjet-payment-tile {
+    outline: 2px solid var(--color-primary, #F4511E);
+    outline-offset: 2px;
+}
+
+/* Payment Info Callouts */
+.payment-info-box {
+    background-color: var(--color-background, #F8F8F4);
+    border: 1px solid var(--color-border, #E6E4DC);
+}
+
+.payment-info-box--wallet {
+    background-color: var(--color-primary-light, #FCF0E4);
+    border: 1.5px solid var(--color-primary, #F4511E);
+}
+
+/* Saved addresses chip scroll */
+.saved-address-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border: 1px solid var(--color-border, #E6E4DC);
+    border-radius: var(--radius-pill, 999px);
+    background-color: var(--color-surface, #ffffff);
+    font-size: 0.825rem;
+    font-weight: 500;
+    color: var(--color-text-primary, #1C1C1C);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition-fast, 0.2s ease);
+}
+
+.saved-address-chip:hover,
+.saved-address-chip--selected {
+    background-color: var(--color-primary-light, #FCF0E4);
+    border-color: var(--color-primary, #F4511E);
+    color: var(--color-primary-dark, #D94310);
+}
+
+/* Delivery map container */
+.mapa-entrega {
+    position: relative;
+    height: 280px;
+    border: 1px solid var(--color-border, #E6E4DC);
+    border-radius: var(--radius-card, 16px);
+    overflow: hidden;
+    background-color: var(--color-surface-muted, #f0f0f0);
+}
+
+@media (max-width: 575.98px) {
+    .mapa-entrega {
+        height: 240px;
+    }
+}
+
+/* ==========================================================================
+   MILESTONE 3: Order Tracking View & Live Map Components
+   ========================================================================== */
+
+/* Header & Typography */
+.tracking-header {
+    margin-bottom: var(--space-4, 1.5rem);
+}
+
+.tracking-headline {
+    font-size: var(--font-size-display-large, 1.75rem);
+    line-height: 1.2;
+    font-weight: var(--font-weight-extrabold, 800);
+    color: var(--color-text-primary, #1C1C1C);
+    letter-spacing: -0.02em;
+}
+
+.tracking-subtitle {
+    font-size: var(--font-size-body-medium, 0.95rem);
+    color: var(--color-text-secondary, #6B6B66);
+}
+
+/* Live Connection Indicator Badge States */
+.foodjet-badge--live {
+    background-color: var(--color-surface, #ffffff);
+    border: 1px solid var(--color-border, #E6E4DC);
+    color: var(--color-text-primary, #1C1C1C);
+    font-size: var(--font-size-body-small, 0.825rem);
+    font-weight: var(--font-weight-semibold, 600);
+    padding: 6px 14px;
+    border-radius: var(--radius-pill, 999px);
+    box-shadow: var(--shadow-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all var(--transition-fast, 0.2s ease);
+}
+
+.foodjet-badge--live .foodjet-badge__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #28A745;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .foodjet-badge--live .foodjet-badge__dot {
+        animation: foodjet-pulse-live 1.8s infinite ease-in-out;
+    }
+}
+
+@keyframes foodjet-pulse-live {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+    70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(40, 167, 69, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+/* Reconnecting State (Amber) */
+.foodjet-badge--reconnecting {
+    background-color: #FFFBEB !important;
+    border: 1px solid #F59E0B !important;
+    color: #92400E !important;
+    padding: 6px 14px;
+    border-radius: var(--radius-pill, 999px);
+    box-shadow: var(--shadow-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--font-size-body-small, 0.825rem);
+    font-weight: var(--font-weight-semibold, 600);
+}
+
+.foodjet-badge--reconnecting .foodjet-badge__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #D97706;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .foodjet-badge--reconnecting .foodjet-badge__dot {
+        animation: foodjet-pulse-amber 1.2s infinite ease-in-out;
+    }
+}
+
+@keyframes foodjet-pulse-amber {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.7); }
+    70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(217, 119, 6, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+}
+
+/* Disconnected State (Red) */
+.foodjet-badge--disconnected {
+    background-color: #FEF2F2 !important;
+    border: 1px solid #EF4444 !important;
+    color: #991B1B !important;
+    padding: 6px 14px;
+    border-radius: var(--radius-pill, 999px);
+    box-shadow: var(--shadow-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--font-size-body-small, 0.825rem);
+    font-weight: var(--font-weight-semibold, 600);
+}
+
+.foodjet-badge--disconnected .foodjet-badge__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #DC2626;
+    animation: none;
+}
+
+/* ETA Arrival Counter Styling */
+.seguimiento__llegada {
+    display: flex;
+    flex-direction: column;
+    margin-top: 1rem;
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-md, 12px);
+    background-color: var(--color-primary-light, #FCF0E4);
+    border: 1px solid rgba(244, 81, 30, 0.2);
+}
+
+.seguimiento__llegada-cifra {
+    font-size: 2.25rem !important;
+    font-weight: 800 !important;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-primary-dark, #D94310);
+}
+
+.seguimiento__llegada-cifra:empty {
+    display: none;
+}
+
+.seguimiento__llegada-texto {
+    margin-top: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-secondary, #6B6B66);
+}
+
+/* Timeline Content & "Ahora" Badge */
+.linea-tiempo__contenido {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.linea-tiempo__ahora-badge {
+    display: none;
+    background-color: var(--color-primary-light, #FCF0E4);
+    color: var(--color-primary-dark, #D94310);
+    border: 1px solid rgba(244, 81, 30, 0.3);
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: var(--radius-pill, 999px);
+    line-height: 1;
+}
+
+.linea-tiempo__etapa[data-situacion="en_curso"] .linea-tiempo__ahora-badge {
+    display: inline-flex;
+}
+
+.linea-tiempo__etapa[data-situacion="hecha"]:not(:last-child)::before {
+    background: #28a745 !important;
+}
+
+.linea-tiempo__etapa[data-situacion="hecha"] .linea-tiempo__marca {
+    background: #28a745 !important;
+    color: #ffffff !important;
+    border-color: #28a745 !important;
+}
+
+.linea-tiempo__etapa[data-situacion="en_curso"] .linea-tiempo__marca {
+    background: var(--color-primary, #F4511E) !important;
+    color: #ffffff !important;
+    border-color: var(--color-primary-dark, #D94310) !important;
+    box-shadow: 0 0 0 4px rgba(244, 81, 30, 0.2);
+}
+
+/* Secondary Danger Button */
+.foodjet-btn-secondary--danger {
+    color: #DC3545 !important;
+    border-color: #DC3545 !important;
+    background-color: transparent !important;
+}
+
+.foodjet-btn-secondary--danger:hover {
+    background-color: #DC3545 !important;
+    color: #ffffff !important;
+}
+
+/* ==========================================================================
+   MILESTONE 4: Secondary Views, Modals & Operations Panel
+   ========================================================================== */
+
+/* 1. Modal Surface & Card Container */
+.foodjet-modal .modal-content,
+.foodjet-modal-content {
+    background-color: var(--color-surface, #FFFFFF) !important;
+    border: 1px solid var(--color-border, #E6E4DC) !important;
+    border-radius: var(--radius-card, 20px) !important;
+    box-shadow: var(--shadow-lg) !important;
+    overflow: hidden;
+}
+
+.foodjet-modal .modal-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding: var(--space-4, 1.5rem) var(--space-4, 1.5rem) var(--space-2, 0.5rem);
+}
+
+.foodjet-modal .modal-header .btn-close {
+    position: absolute;
+    top: var(--space-3, 1rem);
+    right: var(--space-3, 1rem);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full, 999px);
+    background-color: var(--color-background, #F8F8F4);
+    opacity: 0.7;
+    padding: 8px;
+    transition: opacity var(--transition-fast, 0.15s ease), transform var(--transition-fast, 0.15s ease), background-color var(--transition-fast, 0.15s ease);
+}
+
+.foodjet-modal .modal-header .btn-close:hover {
+    opacity: 1;
+    transform: scale(1.06);
+    background-color: var(--color-border, #E6E4DC);
+}
+
+.foodjet-modal .modal-header .btn-close:focus-visible {
+    box-shadow: var(--shadow-focus);
+    outline: none;
+}
+
+/* 2. Modal Centered Avatar Badge (Compose Person Badge) */
+.foodjet-modal-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-full, 999px);
+    background-color: var(--color-primary-light, #FCF0E4);
+    color: var(--color-primary-dark, #D94310);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: var(--space-2, 0.5rem);
+    box-shadow: 0 4px 14px rgba(244, 81, 30, 0.15);
+}
+
+.foodjet-modal-icon-badge {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-full, 999px);
+    background-color: var(--color-primary-light, #FCF0E4);
+    color: var(--color-primary-dark, #D94310);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto;
+}
+
+.foodjet-modal-title {
+    font-size: var(--font-size-headline-medium, 1.375rem);
+    font-weight: 700;
+    color: var(--color-text-primary, #1C1C1C);
+    margin: 0;
+    text-align: center;
+    line-height: 1.25;
+}
+
+.foodjet-modal-subtitle {
+    font-size: var(--font-size-body-medium, 0.8125rem);
+    color: var(--color-text-secondary, #6B6B66);
+    margin: 6px 0 0 0;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* 3. Feature 16: Quick Test Credentials & Inline Error */
+.foodjet-auth-quick-fill {
+    background-color: var(--color-background, #F8F8F4);
+    border: 1px dashed var(--color-border, #E6E4DC);
+    border-radius: var(--radius-input, 16px);
+    padding: 10px 12px;
+}
+
+.foodjet-auth-quick-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-secondary, #6B6B66);
+}
+
+.foodjet-quick-login-btn {
+    border: 1px solid var(--color-border, #E6E4DC);
+    background-color: var(--color-surface, #FFFFFF);
+    border-radius: var(--radius-pill, 999px);
+    padding: 4px 12px;
+    font-size: var(--font-size-body-small, 0.8125rem);
+    font-weight: var(--font-weight-medium, 500);
+    cursor: pointer;
+    transition: all var(--transition-fast, 0.15s ease);
+}
+
+.foodjet-quick-login-btn:hover {
+    background-color: var(--color-primary-light, #FCF0E4);
+    border-color: var(--color-primary, #F4511E);
+    color: var(--color-primary-dark, #D94310);
+}
+
+.foodjet-quick-login-btn.is-active {
+    background-color: var(--color-primary, #F4511E) !important;
+    border-color: var(--color-primary, #F4511E) !important;
+    color: #ffffff !important;
+}
+
+.foodjet-password-toggle {
+    background: transparent;
+    border: none;
+    padding: 8px 12px;
+    color: var(--color-text-secondary, #6B6B66);
+    font-size: 18px;
+    border-radius: var(--radius-sm, 6px);
+    cursor: pointer;
+    line-height: 1;
+    z-index: 5;
+    transition: color var(--transition-fast, 0.15s ease), transform var(--transition-fast, 0.15s ease);
+}
+
+.foodjet-password-toggle:hover {
+    color: var(--color-text-primary, #1C1C1C);
+    transform: translateY(-50%) scale(1.08);
+}
+
+.foodjet-password-toggle:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
+}
+
+.foodjet-inline-alert {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: var(--radius-badge, 8px);
+    font-size: var(--font-size-body-small, 0.8125rem);
+    line-height: 1.35;
+}
+
+.foodjet-inline-alert--danger {
+    background-color: var(--color-danger-container, #F8D7DA);
+    color: var(--color-danger-text, #721C24);
+    border: 1px solid rgba(220, 53, 69, 0.25);
+}
+
+.foodjet-inline-alert--danger i {
+    color: var(--color-danger, #DC3545);
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.foodjet-modal-footer-link {
+    font-size: var(--font-size-body-medium, 0.8125rem);
+    color: var(--color-text-secondary, #6B6B66);
+    text-align: center;
+    margin-top: var(--space-3, 1rem);
+}
+
+.foodjet-modal-footer-link a {
+    color: var(--color-text-accessible-orange, #D03D0A) !important;
+    text-decoration: none;
+    transition: text-decoration var(--transition-fast, 0.15s ease);
+}
+
+.foodjet-modal-footer-link a:hover,
+.foodjet-modal-footer-link a:focus {
+    text-decoration: underline;
+}
+
+/* 4. Feature 17: Mi Cuenta & Verificación de Estudiante */
+.foodjet-account-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-full, 999px);
+    background-color: var(--color-primary-light, #FCF0E4);
+    border: 2px solid rgba(244, 81, 30, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary-dark, #D94310);
+    font-size: 2rem;
+    transition: transform var(--transition-fast, 0.15s ease);
+}
+
+.foodjet-account-name {
+    color: var(--color-text-primary, #1C1C1C);
+    font-size: var(--font-size-title-large, 1.125rem);
+}
+
+.foodjet-account-email {
+    color: var(--color-text-secondary, #6B6B66);
+    font-size: var(--font-size-body-medium, 0.8125rem);
+}
+
+#studentStatusContainer {
+    border-radius: var(--radius-button, 14px) !important;
+    padding: 14px 16px !important;
+    font-size: var(--font-size-body-medium, 0.8125rem);
+    line-height: 1.4;
+    transition: all var(--transition-base, 0.25s ease);
+}
+
+#studentStatusContainer.alert-success {
+    background-color: var(--color-success-soft, #ECF4EC) !important;
+    border: 1.5px solid rgba(40, 167, 69, 0.35) !important;
+    color: var(--color-success-deep, #1E7B4F) !important;
+}
+
+#studentStatusContainer.alert-success i {
+    color: var(--color-success-deep, #1E7B4F) !important;
+    font-size: 1.25rem;
+}
+
+#studentStatusContainer.alert-secondary {
+    background-color: var(--color-background, #F8F8F4) !important;
+    border: 1px solid var(--color-border, #E6E4DC) !important;
+    color: var(--color-text-primary, #1C1C1C) !important;
+}
+
+#studentStatusContainer.alert-secondary i {
+    color: var(--color-text-secondary, #6B6B66) !important;
+    font-size: 1.25rem;
+}
+
+.foodjet-file-upload-zone {
+    background-color: var(--color-background, #F8F8F4);
+    border: 2px dashed var(--color-border, #E6E4DC);
+    border-radius: var(--radius-input, 16px);
+    transition: border-color var(--transition-fast, 0.15s ease), background-color var(--transition-fast, 0.15s ease);
+}
+
+.foodjet-file-upload-zone:hover,
+.foodjet-file-upload-zone:focus-within {
+    border-color: var(--color-primary, #F4511E);
+    background-color: var(--color-primary-light, #FCF0E4);
+}
+
+.foodjet-file-upload-zone .foodjet-input {
+    margin-top: 6px;
+    background-color: var(--color-surface, #FFFFFF);
+    border: 1px solid var(--color-border, #E6E4DC);
+    border-radius: var(--radius-sm, 8px);
+    cursor: pointer;
+}
+
+.foodjet-btn-admin {
+    background-color: var(--color-text-primary, #1C1C1C) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    transition: background-color var(--transition-fast, 0.15s ease);
+}
+
+.foodjet-btn-admin:hover {
+    background-color: #000000 !important;
+}
+
+/* 5. Feature 18: Digital Wallet (QR) & Bank Auth */
+.foodjet-qr-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 210px;
+    height: 210px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    border: 2px solid var(--color-primary, #F4511E);
+    border-radius: var(--radius-lg, 16px);
+    padding: 10px;
+    box-shadow: var(--shadow-sm);
+}
+
+.foodjet-qr-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.foodjet-timer-pill {
+    padding: 6px 16px;
+    background-color: var(--color-primary-light, #FCF0E4);
+    border: 1px solid rgba(244, 81, 30, 0.2);
+    border-radius: var(--radius-pill, 999px);
+    color: var(--color-primary-dark, #D94310);
+}
+
+.foodjet-btn-pill {
+    border-radius: var(--radius-pill, 999px) !important;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: var(--font-weight-semibold, 600);
+}
+
+.foodjet-badge--card-brand {
+    background-color: var(--color-background, #F8F8F4);
+    border: 1px solid var(--color-border, #E6E4DC);
+    color: var(--color-text-primary, #1C1C1C);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill, 999px);
+    font-weight: var(--font-weight-semibold, 600);
+    letter-spacing: 0.5px;
+}
+
+/* 6. Feature 19: Order History & Review Modal */
+.foodjet-order-card {
+    border: 1px solid var(--color-border, #E6E4DC);
+    border-radius: var(--radius-card, 16px);
+    background: var(--color-surface, #FFFFFF);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: box-shadow var(--transition-fast, 0.15s ease);
+}
+
+.foodjet-order-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.foodjet-order-card-header {
+    background-color: #ffffff;
+}
+
+.foodjet-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: var(--radius-pill, 999px);
+    font-size: var(--font-size-body-small, 0.8125rem);
+    font-weight: var(--font-weight-bold, 700);
+    letter-spacing: 0.5px;
+}
+
+.foodjet-status-badge--pendiente {
+    background-color: var(--color-warning-container, #FFF3CD);
+    color: var(--color-warning-text, #856404);
+    border: 1px solid rgba(133, 100, 4, 0.25);
+}
+
+.foodjet-status-badge--confirmado,
+.foodjet-status-badge--en_preparacion {
+    background-color: #D1ECF1;
+    color: #0C5460;
+    border: 1px solid rgba(12, 84, 96, 0.25);
+}
+
+.foodjet-status-badge--en_camino {
+    background-color: #CCE5FF;
+    color: #004085;
+    border: 1px solid rgba(0, 64, 133, 0.25);
+}
+
+.foodjet-status-badge--entregado {
+    background-color: var(--color-success-container, #D4EDDA);
+    color: var(--color-success-text, #155724);
+    border: 1px solid rgba(21, 87, 36, 0.25);
+}
+
+.foodjet-status-badge--cancelado {
+    background-color: var(--color-danger-container, #F8D7DA);
+    color: var(--color-danger-text, #721C24);
+    border: 1px solid rgba(114, 28, 36, 0.25);
+}
+
+.foodjet-review-badge-card {
+    background-color: rgba(255, 193, 7, 0.08);
+    border: 1px solid rgba(255, 193, 7, 0.35);
+    border-radius: var(--radius-md, 12px);
+    padding: 12px 16px;
+}
+
+.foodjet-star-rating-container {
+    background-color: var(--color-background, #F8F8F4);
+    border-radius: var(--radius-pill, 999px);
+    border: 1px solid var(--color-border, #E6E4DC);
+}
+
+.foodjet-star-icon {
+    font-size: 2rem;
+    color: var(--color-warning, #FFC107);
+    cursor: pointer;
+    transition: transform var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.foodjet-star-icon:hover,
+.foodjet-star-icon:focus-visible {
+    transform: scale(1.25);
+    outline: 2px solid var(--color-primary, #F4511E);
+}
+
+/* 7. Feature 20: Admin Operations Panel Extra Styles */
+.foodjet-admin-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-full, 999px);
+    background-color: var(--color-primary-light, #FCF0E4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+}
+
+.foodjet-operations-table {
+    font-size: var(--font-size-body-medium, 0.8125rem);
+}
+
+.foodjet-operations-table th {
+    background-color: var(--color-background, #F8F8F4);
+    color: var(--color-text-secondary, #6B6B66);
+    font-weight: var(--font-weight-semibold, 600);
+    font-size: var(--font-size-body-small, 0.8125rem);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--color-border, #E6E4DC);
+    padding: 0.75rem 1rem;
+}
+
+.foodjet-operations-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--color-border-subtle, #EFECE6);
+}
+
+.foodjet-operations-table tr:hover td {
+    background-color: rgba(244, 81, 30, 0.02);
+}
+
+
