@@ -1761,7 +1761,7 @@ export async function renderOrderHistory() {
                 card.innerHTML = `
                     <div class="foodjet-order-card-header d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 p-md-4 border-bottom">
                         <div>
-                            <span class="fw-bold fs-6" style="color: var(--color-primary-dark);">Pedido #FJ${String(order.id || 0).padStart(4, '0')}</span>
+                            <span class="fw-bold fs-6 foodjet-order-card__id" style="color: var(--color-primary-dark);">Pedido #FJ${String(order.id || 0).padStart(4, '0')}</span>
                             <small class="text-secondary d-block mt-1"><i class="bi bi-calendar3 me-1" aria-hidden="true"></i>${date}</small>
                         </div>
                         <span class="foodjet-status-badge foodjet-status-badge--${estadoStr}">
@@ -1812,7 +1812,7 @@ export async function renderOrderHistory() {
                                 <hr class="my-2 border-subtle">
                                 <div class="d-flex justify-content-between fw-bold fs-5 text-dark mt-2">
                                     <span>Total</span>
-                                    <span style="color: var(--color-primary-dark);">S/ ${Number(order.total || 0).toFixed(2)}</span>
+                                    <span class="foodjet-order-card__total-price" style="color: var(--color-primary-dark);">S/ ${Number(order.total || 0).toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>

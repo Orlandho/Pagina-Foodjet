@@ -4482,7 +4482,7 @@ h1[tabindex="-1"]:focus {
 }
 
 .foodjet-order-card-header {
-    background-color: #ffffff;
+    background-color: var(--color-surface, #ffffff);
 }
 
 .foodjet-status-badge {
@@ -4524,6 +4524,59 @@ h1[tabindex="-1"]:focus {
     background-color: var(--color-danger-container, #F8D7DA);
     color: var(--color-danger-text, #721C24);
     border: 1px solid rgba(114, 28, 36, 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+    .foodjet-order-card {
+        background-color: var(--color-surface, #1E1E1E) !important;
+        border-color: var(--color-border, #333333) !important;
+    }
+
+    .foodjet-order-card-header {
+        background-color: #252525 !important;
+        border-color: var(--color-border, #333333) !important;
+    }
+
+    .foodjet-order-card .card-body {
+        background-color: var(--color-surface, #1E1E1E) !important;
+    }
+
+    .foodjet-order-card__id,
+    .foodjet-order-card__total-price,
+    .foodjet-order-card [style*="color: var(--color-primary-dark)"] {
+        color: var(--color-text-accessible-orange, #F5AF69) !important;
+    }
+
+    .foodjet-status-badge--pendiente {
+        background-color: rgba(252, 212, 96, 0.15) !important;
+        color: #FCD460 !important;
+        border-color: rgba(252, 212, 96, 0.35) !important;
+    }
+
+    .foodjet-status-badge--confirmado,
+    .foodjet-status-badge--en_preparacion {
+        background-color: rgba(77, 182, 172, 0.15) !important;
+        color: #80DEEA !important;
+        border-color: rgba(128, 222, 234, 0.35) !important;
+    }
+
+    .foodjet-status-badge--en_camino {
+        background-color: rgba(66, 165, 245, 0.15) !important;
+        color: #90CAF9 !important;
+        border-color: rgba(144, 202, 249, 0.35) !important;
+    }
+
+    .foodjet-status-badge--entregado {
+        background-color: rgba(74, 222, 128, 0.15) !important;
+        color: #4ADE80 !important;
+        border-color: rgba(74, 222, 128, 0.35) !important;
+    }
+
+    .foodjet-status-badge--cancelado {
+        background-color: rgba(248, 113, 113, 0.15) !important;
+        color: #F87171 !important;
+        border-color: rgba(248, 113, 113, 0.35) !important;
+    }
 }
 
 .foodjet-review-badge-card {
