@@ -2994,6 +2994,57 @@ h1[tabindex="-1"]:focus {
     color: var(--color-primary-dark);
 }
 
+@media (prefers-color-scheme: dark) {
+    .foodjet-dropdown-menu {
+        background-color: #1E1E1E !important;
+        border: 1px solid #333333 !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item {
+        color: #E8E8E8 !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item i {
+        color: var(--color-text-accessible-orange, #F5AF69) !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item:hover,
+    .foodjet-dropdown-menu .dropdown-item:focus {
+        background-color: rgba(244, 81, 30, 0.2) !important;
+        color: #FFFFFF !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item:hover i,
+    .foodjet-dropdown-menu .dropdown-item:focus i {
+        color: #FF7D47 !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item.text-danger {
+        color: #F87171 !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item.text-danger i {
+        color: #F87171 !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item.text-danger:hover,
+    .foodjet-dropdown-menu .dropdown-item.text-danger:focus {
+        background-color: rgba(220, 53, 69, 0.2) !important;
+        color: #FFFFFF !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item.text-danger:hover i,
+    .foodjet-dropdown-menu .dropdown-item.text-danger:focus i {
+        color: #F87171 !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-divider {
+        border-color: #333333 !important;
+        opacity: 0.6;
+    }
+}
+
 .foodjet-login-btn {
     height: 42px !important;
     padding: 8px 20px !important;
