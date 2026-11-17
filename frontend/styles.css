@@ -4443,6 +4443,91 @@ h1[tabindex="-1"]:focus {
     background-color: #000000 !important;
 }
 
+@media (prefers-color-scheme: dark) {
+    #studentStatusContainer.alert-secondary {
+        background-color: #252525 !important;
+        border-color: #3E3E3E !important;
+        color: #E8E8E8 !important;
+    }
+
+    #studentStatusContainer.alert-secondary i {
+        color: #ADB5BD !important;
+    }
+
+    #studentStatusContainer.alert-success {
+        background-color: rgba(74, 222, 128, 0.15) !important;
+        border-color: rgba(74, 222, 128, 0.35) !important;
+        color: #4ADE80 !important;
+    }
+
+    #studentStatusContainer.alert-success i {
+        color: #4ADE80 !important;
+    }
+
+    .foodjet-file-upload-zone {
+        background-color: #181818 !important;
+        border-color: #3E3E3E !important;
+    }
+
+    .foodjet-file-upload-zone:hover,
+    .foodjet-file-upload-zone:focus-within {
+        border-color: var(--color-primary, #F4511E) !important;
+        background-color: rgba(244, 81, 30, 0.12) !important;
+    }
+
+    .foodjet-file-upload-zone .foodjet-input {
+        background-color: #252525 !important;
+        border-color: #3E3E3E !important;
+        color: #E8E8E8 !important;
+    }
+
+    .foodjet-file-upload-zone input[type="file"]::file-selector-button,
+    .form-control::file-selector-button {
+        background-color: #2E2E2E !important;
+        color: #E8E8E8 !important;
+        border: 1px solid #444444 !important;
+        border-radius: var(--radius-sm, 6px);
+        padding: 4px 12px;
+        margin-right: 10px;
+        cursor: pointer;
+        transition: background-color var(--transition-fast, 0.15s ease);
+    }
+
+    .foodjet-file-upload-zone input[type="file"]::file-selector-button:hover,
+    .form-control:hover:not(:disabled):not([readonly])::file-selector-button {
+        background-color: #3E3E3E !important;
+        color: #FFFFFF !important;
+        border-color: #555555 !important;
+    }
+
+    .foodjet-btn-admin {
+        background-color: #2A2A2A !important;
+        color: #E8E8E8 !important;
+        border: 1px solid #444444 !important;
+    }
+
+    .foodjet-btn-admin:hover {
+        background-color: #383838 !important;
+        color: #FFFFFF !important;
+        border-color: #555555 !important;
+    }
+
+    .foodjet-input,
+    input[type="tel"].foodjet-input,
+    input[type="text"].foodjet-input {
+        background-color: #252525 !important;
+        border-color: #3E3E3E !important;
+        color: #E8E8E8 !important;
+    }
+
+    .foodjet-input:focus,
+    .foodjet-input:focus-visible {
+        background-color: #2A2A2A !important;
+        border-color: var(--color-primary, #F4511E) !important;
+        color: #FFFFFF !important;
+    }
+}
+
 /* 5. Feature 18: Digital Wallet (QR) & Bank Auth */
 .foodjet-qr-frame {
     display: flex;
