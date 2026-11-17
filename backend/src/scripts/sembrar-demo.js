@@ -52,9 +52,14 @@ const ZONAS = [
     { cliente: 3, direccion: 'Av. Arenales 1900, Lince', referencia: 'Edificio Los Álamos', lat: -12.0846, lon: -77.0342 }
 ];
 
-// Precios del catálogo sembrado (backend/prisma/seed.js).
-const PRECIO = { 1: 8.5, 2: 12.0, 3: 14.5, 4: 9.0, 5: 7.0, 6: 2.0 };
-const PRODUCTOS_DEL_LOCAL = { 1: [1, 5, 6], 2: [2, 3], 3: [4] };
+// Precios y productos del catálogo sembrado (backend/prisma/seedProductsData.js).
+const { productos } = require('../../prisma/seedProductsData');
+const PRECIO = Object.fromEntries(productos.map((p) => [p.id, p.precio]));
+const PRODUCTOS_DEL_LOCAL = {
+    1: productos.filter((p) => p.restaurante_id === 1).map((p) => p.id),
+    2: productos.filter((p) => p.restaurante_id === 2).map((p) => p.id),
+    3: productos.filter((p) => p.restaurante_id === 3).map((p) => p.id)
+};
 
 /**
  * Cada pedido: zona (índice en ZONAS), local, estado y, según el estado:
