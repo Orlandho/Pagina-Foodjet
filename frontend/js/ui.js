@@ -1235,7 +1235,7 @@ export function renderCheckoutCart() {
                 <img src="${product.imagen_url || product.imagen || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'}" alt="${product.nombre}" class="rounded-3 me-3 object-fit-cover flex-shrink-0" style="width: 50px; height: 50px;">
                 <div class="min-w-0">
                     <h6 class="my-0 fw-bold text-truncate" style="font-size: 0.95rem;">${product.nombre}</h6>
-                    <small class="text-muted d-block">${getProductRestaurant(product)?.nombre || 'Restaurante'} · <span class="badge bg-secondary-subtle text-dark rounded-pill">x${quantity}</span></small>
+                    <small class="text-muted d-block">${getProductRestaurant(product)?.nombre || 'Restaurante'} · <span class="badge bg-secondary-subtle text-dark rounded-pill foodjet-checkout-qty-badge">x${quantity}</span></small>
                     ${hasStudentDiscount ? '<small class="text-success fw-semibold"><i class="bi bi-mortarboard-fill me-1"></i>Precio estudiante</small>' : ''}
                 </div>
             </div>
