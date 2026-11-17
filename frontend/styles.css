@@ -1608,6 +1608,14 @@ footer .text-muted {
         background-color: #444 !important;
     }
 
+    .badge.bg-secondary-subtle,
+    .bg-secondary-subtle,
+    .foodjet-checkout-qty-badge {
+        background-color: #2E2E2E !important;
+        color: #E8E8E8 !important;
+        border: 1px solid #444444 !important;
+    }
+
     /* --- Challenger M1_1 Dark Mode Contrast Remediation --- */
     .foodjet-badge--student,
     .foodjet-badge--yellow {
@@ -2986,6 +2994,57 @@ h1[tabindex="-1"]:focus {
     color: var(--color-primary-dark);
 }
 
+@media (prefers-color-scheme: dark) {
+    .foodjet-dropdown-menu {
+        background-color: #1E1E1E !important;
+        border: 1px solid #333333 !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item {
+        color: #E8E8E8 !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item i {
+        color: var(--color-text-accessible-orange, #F5AF69) !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item:hover,
+    .foodjet-dropdown-menu .dropdown-item:focus {
+        background-color: rgba(244, 81, 30, 0.2) !important;
+        color: #FFFFFF !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item:hover i,
+    .foodjet-dropdown-menu .dropdown-item:focus i {
+        color: #FF7D47 !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item.text-danger {
+        color: #F87171 !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item.text-danger i {
+        color: #F87171 !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item.text-danger:hover,
+    .foodjet-dropdown-menu .dropdown-item.text-danger:focus {
+        background-color: rgba(220, 53, 69, 0.2) !important;
+        color: #FFFFFF !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-item.text-danger:hover i,
+    .foodjet-dropdown-menu .dropdown-item.text-danger:focus i {
+        color: #F87171 !important;
+    }
+
+    .foodjet-dropdown-menu .dropdown-divider {
+        border-color: #333333 !important;
+        opacity: 0.6;
+    }
+}
+
 .foodjet-login-btn {
     height: 42px !important;
     padding: 8px 20px !important;
@@ -4186,6 +4245,22 @@ h1[tabindex="-1"]:focus {
     outline: none;
 }
 
+@media (prefers-color-scheme: dark) {
+    .foodjet-modal .modal-header .btn-close {
+        filter: none !important;
+        background-color: #2A2A2A !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e8e8e8'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") !important;
+        border: 1px solid #3E3E3E !important;
+        opacity: 0.85;
+    }
+
+    .foodjet-modal .modal-header .btn-close:hover {
+        background-color: #383838 !important;
+        border-color: #555555 !important;
+        opacity: 1;
+    }
+}
+
 /* 2. Modal Centered Avatar Badge (Compose Person Badge) */
 .foodjet-modal-avatar {
     width: 60px;
@@ -4419,6 +4494,91 @@ h1[tabindex="-1"]:focus {
     background-color: #000000 !important;
 }
 
+@media (prefers-color-scheme: dark) {
+    #studentStatusContainer.alert-secondary {
+        background-color: #252525 !important;
+        border-color: #3E3E3E !important;
+        color: #E8E8E8 !important;
+    }
+
+    #studentStatusContainer.alert-secondary i {
+        color: #ADB5BD !important;
+    }
+
+    #studentStatusContainer.alert-success {
+        background-color: rgba(74, 222, 128, 0.15) !important;
+        border-color: rgba(74, 222, 128, 0.35) !important;
+        color: #4ADE80 !important;
+    }
+
+    #studentStatusContainer.alert-success i {
+        color: #4ADE80 !important;
+    }
+
+    .foodjet-file-upload-zone {
+        background-color: #181818 !important;
+        border-color: #3E3E3E !important;
+    }
+
+    .foodjet-file-upload-zone:hover,
+    .foodjet-file-upload-zone:focus-within {
+        border-color: var(--color-primary, #F4511E) !important;
+        background-color: rgba(244, 81, 30, 0.12) !important;
+    }
+
+    .foodjet-file-upload-zone .foodjet-input {
+        background-color: #252525 !important;
+        border-color: #3E3E3E !important;
+        color: #E8E8E8 !important;
+    }
+
+    .foodjet-file-upload-zone input[type="file"]::file-selector-button,
+    .form-control::file-selector-button {
+        background-color: #2E2E2E !important;
+        color: #E8E8E8 !important;
+        border: 1px solid #444444 !important;
+        border-radius: var(--radius-sm, 6px);
+        padding: 4px 12px;
+        margin-right: 10px;
+        cursor: pointer;
+        transition: background-color var(--transition-fast, 0.15s ease);
+    }
+
+    .foodjet-file-upload-zone input[type="file"]::file-selector-button:hover,
+    .form-control:hover:not(:disabled):not([readonly])::file-selector-button {
+        background-color: #3E3E3E !important;
+        color: #FFFFFF !important;
+        border-color: #555555 !important;
+    }
+
+    .foodjet-btn-admin {
+        background-color: #2A2A2A !important;
+        color: #E8E8E8 !important;
+        border: 1px solid #444444 !important;
+    }
+
+    .foodjet-btn-admin:hover {
+        background-color: #383838 !important;
+        color: #FFFFFF !important;
+        border-color: #555555 !important;
+    }
+
+    .foodjet-input,
+    input[type="tel"].foodjet-input,
+    input[type="text"].foodjet-input {
+        background-color: #252525 !important;
+        border-color: #3E3E3E !important;
+        color: #E8E8E8 !important;
+    }
+
+    .foodjet-input:focus,
+    .foodjet-input:focus-visible {
+        background-color: #2A2A2A !important;
+        border-color: var(--color-primary, #F4511E) !important;
+        color: #FFFFFF !important;
+    }
+}
+
 /* 5. Feature 18: Digital Wallet (QR) & Bank Auth */
 .foodjet-qr-frame {
     display: flex;
@@ -4482,7 +4642,7 @@ h1[tabindex="-1"]:focus {
 }
 
 .foodjet-order-card-header {
-    background-color: #ffffff;
+    background-color: var(--color-surface, #ffffff);
 }
 
 .foodjet-status-badge {
@@ -4524,6 +4684,59 @@ h1[tabindex="-1"]:focus {
     background-color: var(--color-danger-container, #F8D7DA);
     color: var(--color-danger-text, #721C24);
     border: 1px solid rgba(114, 28, 36, 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+    .foodjet-order-card {
+        background-color: var(--color-surface, #1E1E1E) !important;
+        border-color: var(--color-border, #333333) !important;
+    }
+
+    .foodjet-order-card-header {
+        background-color: #252525 !important;
+        border-color: var(--color-border, #333333) !important;
+    }
+
+    .foodjet-order-card .card-body {
+        background-color: var(--color-surface, #1E1E1E) !important;
+    }
+
+    .foodjet-order-card__id,
+    .foodjet-order-card__total-price,
+    .foodjet-order-card [style*="color: var(--color-primary-dark)"] {
+        color: var(--color-text-accessible-orange, #F5AF69) !important;
+    }
+
+    .foodjet-status-badge--pendiente {
+        background-color: rgba(252, 212, 96, 0.15) !important;
+        color: #FCD460 !important;
+        border-color: rgba(252, 212, 96, 0.35) !important;
+    }
+
+    .foodjet-status-badge--confirmado,
+    .foodjet-status-badge--en_preparacion {
+        background-color: rgba(77, 182, 172, 0.15) !important;
+        color: #80DEEA !important;
+        border-color: rgba(128, 222, 234, 0.35) !important;
+    }
+
+    .foodjet-status-badge--en_camino {
+        background-color: rgba(66, 165, 245, 0.15) !important;
+        color: #90CAF9 !important;
+        border-color: rgba(144, 202, 249, 0.35) !important;
+    }
+
+    .foodjet-status-badge--entregado {
+        background-color: rgba(74, 222, 128, 0.15) !important;
+        color: #4ADE80 !important;
+        border-color: rgba(74, 222, 128, 0.35) !important;
+    }
+
+    .foodjet-status-badge--cancelado {
+        background-color: rgba(248, 113, 113, 0.15) !important;
+        color: #F87171 !important;
+        border-color: rgba(248, 113, 113, 0.35) !important;
+    }
 }
 
 .foodjet-review-badge-card {
