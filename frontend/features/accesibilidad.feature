@@ -7,9 +7,11 @@ Feature: Widget de accesibilidad universal de FoodJet
     And los filtros SVG para protanopia, deuteranopia y tritanopia están definidos localmente
     And la aplicación inicializa el módulo de accesibilidad sin cuentas ficticias ni CDN de UserWay
 
-  Scenario: A11Y-KEY-002 Apertura mediante atajo Alt + A sin falsos positivos
+  Scenario: A11Y-KEY-002 Apertura mediante atajo Alt + A sin falsos positivos ni repetición
     When evalúo el atajo de teclado con Alt presionado y tecla "a"
     Then el atajo de apertura es reconocido como válido
+    When evalúo el atajo de teclado repetido con Alt presionado y tecla "a"
+    Then el atajo de apertura es rechazado
     When evalúo el atajo de teclado con Ctrl y Alt presionados y tecla "a"
     Then el atajo de apertura es rechazado
     When evalúo el atajo de teclado con Alt presionado y tecla "b"
@@ -51,8 +53,10 @@ Feature: Widget de accesibilidad universal de FoodJet
     When intento guardar preferencias de accesibilidad
     Then el guardado falla de forma controlada sin lanzar excepciones
 
-  Scenario: A11Y-VOICE-007 Extracción y segmentación de texto para lectura asistida por voz
+  Scenario: A11Y-VOICE-007 Extracción segura y segmentación de texto para lectura asistida por voz
     When extraigo texto legible de un botón sin texto visible pero con aria-label "Carrito de compras"
     Then el texto extraído es "Carrito de compras"
+    When extraigo texto legible de un campo de contraseña con etiqueta "Contraseña" y valor secreto
+    Then el texto extraído es "Contraseña (campo de contraseña)"
     When segmento un párrafo largo de 500 caracteres para síntesis de voz
     Then todos los fragmentos tienen como máximo 220 caracteres

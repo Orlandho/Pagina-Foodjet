@@ -42,7 +42,9 @@ const FOCUSABLE_SELECTOR = [
 ].join(', ');
 
 const READABLE_ELEMENT_SELECTOR =
-    'h1, h2, h3, h4, h5, h6, p, li, a, button, label, [role="button"], .alert, .card-title, .card-text';
+    'h1, h2, h3, h4, h5, h6, p, li, a, button, label, input, select, textarea, [role="button"], .alert, .card-title, .card-text';
+
+const VOICE_DEDUP_WINDOW_MS = 400;
 
 /**
  * Divide texto largo en fragmentos manejables para evitar cortes en motores
@@ -233,6 +235,8 @@ export function createAccessibilityController({
     let isSpeaking = false;
     let isPaused = false;
     let speechQueueId = 0;
+    let lastSpokenElement = null;
+    let lastSpokenAt = 0;
 
     function announce(message) {
         if (!liveRegion || !message) return;
@@ -418,9 +422,15 @@ export function createAccessibilityController({
         }
     }
 
-    function getActiveMainText() {
+    function getActiveReadingTarget() {
+        const activeOverlay = doc.querySelector?.('.modal.show, .offcanvas.show');
+        if (activeOverlay) {
+            const overlayText = extractReadableText(activeOverlay);
+            if (overlayText) return { text: overlayText, target: activeOverlay };
+        }
+
         const main = doc.getElementById('main-content');
-        if (!main) return extractReadableText(doc.body);
+        if (!main) return { text: extractReadableText(doc.body), target: doc.body };
 
         const viewIds = [
             'homeView',
@@ -431,12 +441,17 @@ export function createAccessibilityController({
         ];
         for (const id of viewIds) {
             const view = doc.getElementById(id);
-            if (view && view.style?.display !== 'none') {
+            if (
+                view &&
+                view.style?.display !== 'none' &&
+                !view.hidden &&
+                !view.classList?.contains?.('d-none')
+            ) {
                 const text = extractReadableText(view);
-                if (text) return text;
+                if (text) return { text, target: view };
             }
         }
-        return extractReadableText(main);
+        return { text: extractReadableText(main), target: main };
     }
 
     function syncUI() {
@@ -555,12 +570,16 @@ export function createAccessibilityController({
     function handleGlobalKeydown(event) {
         if (isOpenShortcut(event)) {
             event.preventDefault?.();
+            event.stopPropagation?.();
+            event.stopImmediatePropagation?.();
             togglePanel();
             return;
         }
 
         if (event.key === 'Escape' && isOpen) {
             event.preventDefault?.();
+            event.stopPropagation?.();
+            event.stopImmediatePropagation?.();
             closePanel({ restoreFocus: true });
             return;
         }
@@ -572,17 +591,41 @@ export function createAccessibilityController({
             const first = focusables[0];
             const last = focusables[focusables.length - 1];
             const active = doc.activeElement;
+            const insidePanel = Boolean(panel.contains?.(active));
 
             if (event.shiftKey) {
-                if (active === first || active === panelTitle || !panel.contains?.(active)) {
+                if (active === first || active === panelTitle || !insidePanel) {
                     event.preventDefault?.();
+                    event.stopPropagation?.();
                     last.focus?.();
                 }
-            } else if (active === last) {
+            } else if (active === last || !insidePanel) {
                 event.preventDefault?.();
+                event.stopPropagation?.();
                 first.focus?.();
             }
         }
+    }
+
+    /**
+     * En fase de captura protege el foco del diálogo de accesibilidad frente a
+     * trampas de foco externas (por ejemplo, modales de Bootstrap abiertos).
+     */
+    function handlePanelFocusGuard(event) {
+        if (!isOpen) return;
+        const target = event.target;
+        if (!target) return;
+
+        if (widgetContainer.contains?.(target)) {
+            event.stopPropagation?.();
+            event.stopImmediatePropagation?.();
+            return;
+        }
+
+        event.stopPropagation?.();
+        event.stopImmediatePropagation?.();
+        const fallbackTarget = panelTitle || getFocusableElements()[0];
+        fallbackTarget?.focus?.();
     }
 
     function handlePageInteractionForVoice(event) {
@@ -596,8 +639,15 @@ export function createAccessibilityController({
                 : target;
         if (!readable || widgetContainer.contains?.(readable)) return;
 
+        const now = Date.now();
+        if (readable === lastSpokenElement && now - lastSpokenAt < VOICE_DEDUP_WINDOW_MS) {
+            return;
+        }
+
         const text = extractReadableText(readable);
         if (text) {
+            lastSpokenElement = readable;
+            lastSpokenAt = now;
             speakText(text, readable);
         }
     }
@@ -674,11 +724,17 @@ export function createAccessibilityController({
             { ...prefs, voiceReader: next },
             next ? 'Lectura asistida por voz activada.' : 'Lectura asistida por voz desactivada.'
         );
+        if (next && typeof voiceControls?.scrollIntoView === 'function') {
+            voiceControls.scrollIntoView({
+                block: 'nearest',
+                behavior: prefs.reducedMotion ? 'auto' : 'smooth'
+            });
+        }
     });
 
     voiceReadPageBtn?.addEventListener('click', () => {
-        const text = getActiveMainText();
-        speakText(text, doc.getElementById('main-content'));
+        const { text, target } = getActiveReadingTarget();
+        speakText(text, target);
     });
 
     voicePauseBtn?.addEventListener('click', () => togglePauseSpeech());
@@ -707,10 +763,15 @@ export function createAccessibilityController({
         }
     });
 
-    doc.addEventListener('keydown', handleGlobalKeydown);
+    const handleBeforeUnload = () => stopSpeech({ silent: true });
+    const handleWindowLoad = () => syncHeroCarouselMotion(prefs.reducedMotion, doc, win);
+
+    doc.addEventListener('keydown', handleGlobalKeydown, true);
+    doc.addEventListener('focusin', handlePanelFocusGuard, true);
     doc.addEventListener('click', handlePageInteractionForVoice);
     doc.addEventListener('focusin', handlePageInteractionForVoice);
-    win?.addEventListener?.('beforeunload', () => stopSpeech({ silent: true }));
+    win?.addEventListener?.('beforeunload', handleBeforeUnload);
+    win?.addEventListener?.('load', handleWindowLoad);
 
     // Aplicar estado inicial restaurado de localStorage
     prefs = applyPreferencesToDocument(prefs, doc, win);
@@ -732,9 +793,12 @@ export function createAccessibilityController({
         },
         destroy: () => {
             stopSpeech({ silent: true });
-            doc.removeEventListener('keydown', handleGlobalKeydown);
+            doc.removeEventListener('keydown', handleGlobalKeydown, true);
+            doc.removeEventListener('focusin', handlePanelFocusGuard, true);
             doc.removeEventListener('click', handlePageInteractionForVoice);
             doc.removeEventListener('focusin', handlePageInteractionForVoice);
+            win?.removeEventListener?.('beforeunload', handleBeforeUnload);
+            win?.removeEventListener?.('load', handleWindowLoad);
         }
     };
 }

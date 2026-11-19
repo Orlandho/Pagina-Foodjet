@@ -199,7 +199,7 @@ export function countActiveAdjustments(prefs) {
  * puede generar caracteres compuestos, evitando falsos positivos con Ctrl/Meta.
  */
 export function isOpenShortcut(event) {
-    if (!event || !event.altKey || event.ctrlKey || event.metaKey) {
+    if (!event || event.repeat || !event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
         return false;
     }
     const key = typeof event.key === 'string' ? event.key.toLowerCase() : '';
@@ -209,10 +209,62 @@ export function isOpenShortcut(event) {
 
 /**
  * Normaliza texto para lectura asistida por voz, priorizando etiquetas ARIA
- * cuando el elemento carece de texto visible.
+ * cuando el elemento carece de texto visible y soportando controles de formulario
+ * sin exponer valores de campos de contraseña.
  */
 export function extractReadableText(element) {
     if (!element) return '';
+
+    const tag = typeof element.tagName === 'string' ? element.tagName.toUpperCase() : '';
+    const getAttr = (name) =>
+        typeof element.getAttribute === 'function' ? element.getAttribute(name) || '' : '';
+
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+        const inputType = (getAttr('type') || element.type || '').toLowerCase();
+        let labelText = getAttr('aria-label');
+
+        if (!labelText && element.id && typeof element.ownerDocument?.querySelector === 'function') {
+            try {
+                const escapedId = String(element.id).replace(/["\\]/g, '\\$&');
+                const associatedLabel = element.ownerDocument.querySelector(`label[for="${escapedId}"]`);
+                labelText = associatedLabel?.innerText || associatedLabel?.textContent || '';
+            } catch {
+                // Ignorar selectores inválidos
+            }
+        }
+
+        if (!labelText) {
+            labelText = getAttr('placeholder') || getAttr('title') || getAttr('name') || '';
+        }
+
+        labelText = labelText.replace(/\s+/g, ' ').trim();
+
+        if (tag === 'SELECT') {
+            const selectedOption =
+                element.options && typeof element.selectedIndex === 'number'
+                    ? element.options[element.selectedIndex]
+                    : null;
+            const selectedText = (selectedOption?.textContent || '').replace(/\s+/g, ' ').trim();
+            return [labelText, selectedText].filter(Boolean).join(': ');
+        }
+
+        if (inputType === 'password') {
+            return labelText ? `${labelText} (campo de contraseña)` : 'Campo de contraseña';
+        }
+
+        if (inputType === 'checkbox' || inputType === 'radio') {
+            const stateLabel = element.checked ? 'seleccionado' : 'no seleccionado';
+            return labelText ? `${labelText}, ${stateLabel}` : stateLabel;
+        }
+
+        const valueText =
+            typeof element.value === 'string' ? element.value.replace(/\s+/g, ' ').trim() : '';
+        if (inputType === 'submit' || inputType === 'button' || inputType === 'reset') {
+            return labelText || valueText;
+        }
+
+        return [labelText, valueText].filter(Boolean).join(': ');
+    }
 
     const rawText =
         typeof element.innerText === 'string' && element.innerText.trim()
@@ -221,10 +273,7 @@ export function extractReadableText(element) {
                 ? element.textContent
                 : '';
 
-    const ariaLabel =
-        typeof element.getAttribute === 'function'
-            ? (element.getAttribute('aria-label') || element.getAttribute('alt') || '')
-            : '';
+    const ariaLabel = getAttr('aria-label') || getAttr('alt');
 
     const candidate = rawText || ariaLabel;
     return candidate.replace(/\s+/g, ' ').trim();

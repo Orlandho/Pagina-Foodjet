@@ -4932,7 +4932,7 @@ h1[tabindex="-1"]:focus {
     bottom: 84px;
     z-index: 1082;
     width: min(370px, calc(100vw - 24px));
-    max-height: min(740px, calc(100vh - 96px));
+    max-height: min(780px, calc(100vh - 96px));
     background-color: var(--a11y-surface);
     color: var(--a11y-text);
     border: 1px solid var(--a11y-border);
@@ -4986,7 +4986,7 @@ h1[tabindex="-1"]:focus {
     font-weight: 700;
     padding: 2px 8px;
     border-radius: 999px;
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(0, 0, 0, 0.28);
     color: #FFFFFF;
     white-space: nowrap;
 }
@@ -5343,8 +5343,8 @@ h1[tabindex="-1"]:focus {
 /* Adaptación del widget a modo oscuro del sistema */
 @media (prefers-color-scheme: dark) {
     .a11y-widget {
-        --a11y-blue: #1B6EF3;
-        --a11y-blue-hover: #3B82F6;
+        --a11y-blue: #0B5ED7;
+        --a11y-blue-hover: #094CB0;
         --a11y-blue-soft: #1E3254;
         --a11y-surface: #181C24;
         --a11y-surface-subtle: #232936;
@@ -5404,9 +5404,9 @@ h1[tabindex="-1"]:focus {
    Modos de accesibilidad aplicados al documento (html[data-a11y-*])
    -------------------------------------------------------------------------- */
 
-/* 1. Ampliación tipográfica hasta 200 % */
+/* 1. Ampliación tipográfica hasta 200 % (respeta el tamaño base del navegador) */
 html[data-a11y-font-scale] {
-    font-size: calc(16px * var(--a11y-font-scale, 1));
+    font-size: calc(100% * var(--a11y-font-scale, 1));
 }
 
 html[data-a11y-font-scale] .foodjet-hero-title,
@@ -5425,6 +5425,19 @@ html[data-a11y-font-scale] .foodjet-hero-carousel {
 
 html[data-a11y-font-scale] .foodjet-hero-slide {
     height: auto;
+}
+
+@media (max-width: 767.98px) {
+    html[data-a11y-font-scale] .foodjet-hero-content,
+    html[data-a11y-font-scale] .foodjet-hero-image-col {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    html[data-a11y-font-scale] .foodjet-hero-image-col {
+        margin-top: 16px;
+        justify-content: center !important;
+    }
 }
 
 html[data-a11y-font-scale] .foodjet-search-input {
@@ -5536,7 +5549,7 @@ html[data-a11y-color-filter="tritanopia"] body > .toast-container {
     filter: url(#a11y-filter-tritanopia);
 }
 
-/* 6. Alto contraste (compatible con modo claro y modo oscuro, >= 7:1) */
+/* 6. Alto contraste (compatible con modo claro y modo oscuro, >= 7:1 AAA) */
 html[data-a11y-contrast="high"] {
     --color-background: #FFFFFF;
     --color-surface: #FFFFFF;
@@ -5550,6 +5563,17 @@ html[data-a11y-contrast="high"] {
     --bs-border-color: #000000;
 }
 
+html[data-a11y-contrast="high"] .a11y-widget {
+    --a11y-blue: #003399;
+    --a11y-blue-hover: #002266;
+    --a11y-blue-soft: #FFFFFF;
+    --a11y-surface: #FFFFFF;
+    --a11y-surface-subtle: #FFFFFF;
+    --a11y-text: #000000;
+    --a11y-text-muted: #000000;
+    --a11y-border: #000000;
+}
+
 html[data-a11y-contrast="high"] body,
 html[data-a11y-contrast="high"] .bg-white,
 html[data-a11y-contrast="high"] .bg-light,
@@ -5559,10 +5583,18 @@ html[data-a11y-contrast="high"] .card,
 html[data-a11y-contrast="high"] .foodjet-card,
 html[data-a11y-contrast="high"] .modal-content,
 html[data-a11y-contrast="high"] .offcanvas,
+html[data-a11y-contrast="high"] .dropdown-menu,
+html[data-a11y-contrast="high"] .dropdown-item,
+html[data-a11y-contrast="high"] .list-group-item,
+html[data-a11y-contrast="high"] .table,
+html[data-a11y-contrast="high"] .form-control,
+html[data-a11y-contrast="high"] .form-select,
 html[data-a11y-contrast="high"] .foodjet-search-input,
 html[data-a11y-contrast="high"] .foodjet-input,
 html[data-a11y-contrast="high"] .foodjet-pill,
-html[data-a11y-contrast="high"] .foodjet-address-bar {
+html[data-a11y-contrast="high"] .foodjet-address-bar,
+html[data-a11y-contrast="high"] .foodjet-payment-tile,
+html[data-a11y-contrast="high"] .foodjet-quick-login-btn {
     background-color: #FFFFFF !important;
     color: #000000 !important;
     border-color: #000000 !important;
@@ -5573,7 +5605,12 @@ html[data-a11y-contrast="high"] .foodjet-card,
 html[data-a11y-contrast="high"] .foodjet-pill,
 html[data-a11y-contrast="high"] .foodjet-input,
 html[data-a11y-contrast="high"] .foodjet-search-input,
-html[data-a11y-contrast="high"] .foodjet-address-bar {
+html[data-a11y-contrast="high"] .foodjet-address-bar,
+html[data-a11y-contrast="high"] .foodjet-payment-tile,
+html[data-a11y-contrast="high"] .foodjet-quick-login-btn,
+html[data-a11y-contrast="high"] .form-control,
+html[data-a11y-contrast="high"] .form-select,
+html[data-a11y-contrast="high"] .dropdown-menu {
     border: 2px solid #000000 !important;
     box-shadow: none !important;
 }
@@ -5588,8 +5625,33 @@ html[data-a11y-contrast="high"] h3,
 html[data-a11y-contrast="high"] h4,
 html[data-a11y-contrast="high"] h5,
 html[data-a11y-contrast="high"] h6,
-html[data-a11y-contrast="high"] label {
+html[data-a11y-contrast="high"] label,
+html[data-a11y-contrast="high"] .foodjet-brand-text,
+html[data-a11y-contrast="high"] .foodjet-brand-bolt,
+html[data-a11y-contrast="high"] .foodjet-payment-tile__title {
     color: #000000 !important;
+}
+
+html[data-a11y-contrast="high"] .foodjet-navbar-brand {
+    text-decoration: none !important;
+}
+
+html[data-a11y-contrast="high"] .text-primary,
+html[data-a11y-contrast="high"] .foodjet-step.text-primary,
+html[data-a11y-contrast="high"] .btn-link {
+    color: #003399 !important;
+}
+
+html[data-a11y-contrast="high"] .text-success,
+html[data-a11y-contrast="high"] .foodjet-step.text-success,
+html[data-a11y-contrast="high"] #studentDiscountAmount,
+html[data-a11y-contrast="high"] #checkoutDiscount,
+html[data-a11y-contrast="high"] #couponDiscountRate {
+    color: #005A2B !important;
+}
+
+html[data-a11y-contrast="high"] .text-danger {
+    color: #9E001C !important;
 }
 
 html[data-a11y-contrast="high"] a:not(.btn) {
@@ -5597,14 +5659,27 @@ html[data-a11y-contrast="high"] a:not(.btn) {
     text-decoration: underline !important;
 }
 
+html[data-a11y-contrast="high"] .btn-outline-primary,
+html[data-a11y-contrast="high"] .btn-outline-secondary,
+html[data-a11y-contrast="high"] .btn-outline-danger {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    border: 2px solid #000000 !important;
+}
+
 html[data-a11y-contrast="high"] .foodjet-btn-primary,
 html[data-a11y-contrast="high"] .foodjet-cart-btn,
 html[data-a11y-contrast="high"] .foodjet-hero-cta-btn,
 html[data-a11y-contrast="high"] .foodjet-pill--active,
-html[data-a11y-contrast="high"] .btn-primary {
+html[data-a11y-contrast="high"] .btn-primary,
+html[data-a11y-contrast="high"] .foodjet-badge--soldout,
+html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile,
+html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile,
+html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected {
     background-color: #000000 !important;
     color: #FFFFFF !important;
     border: 2px solid #000000 !important;
+    box-shadow: none !important;
     transition: none !important;
 }
 
@@ -5613,13 +5688,23 @@ html[data-a11y-contrast="high"] .foodjet-btn-primary i,
 html[data-a11y-contrast="high"] .foodjet-cart-btn span,
 html[data-a11y-contrast="high"] .foodjet-cart-btn i,
 html[data-a11y-contrast="high"] .foodjet-hero-cta-btn span,
-html[data-a11y-contrast="high"] .foodjet-hero-cta-btn i {
+html[data-a11y-contrast="high"] .foodjet-hero-cta-btn i,
+html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__icon,
+html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__icon,
+html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected .foodjet-payment-tile__icon,
+html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__title,
+html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__title,
+html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected .foodjet-payment-tile__title,
+html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__subtitle,
+html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__subtitle,
+html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected .foodjet-payment-tile__subtitle {
     color: #FFFFFF !important;
 }
 
 html[data-a11y-contrast="high"] .foodjet-hero-carousel {
     background: #FFFFFF !important;
     border: 2px solid #000000 !important;
+    box-shadow: none !important;
 }
 
 html[data-a11y-contrast="high"] .foodjet-hero-title,
@@ -5636,10 +5721,18 @@ html[data-a11y-contrast="high"] .foodjet-hero-badge {
 
 html[data-a11y-contrast="high"] body > footer,
 html[data-a11y-contrast="high"] body > footer p,
+html[data-a11y-contrast="high"] body > footer p.text-muted,
+html[data-a11y-contrast="high"] body > footer .text-muted,
 html[data-a11y-contrast="high"] body > footer h5,
+html[data-a11y-contrast="high"] body > footer span,
 html[data-a11y-contrast="high"] body > footer a {
     background-color: #000000 !important;
     color: #FFFFFF !important;
+}
+
+html[data-a11y-contrast="high"] body > footer .logo-circle {
+    background-color: #000000 !important;
+    border: 2px solid #FFFFFF !important;
 }
 
 html[data-a11y-contrast="high"] .a11y-panel {
@@ -5647,22 +5740,42 @@ html[data-a11y-contrast="high"] .a11y-panel {
     background-color: #FFFFFF !important;
 }
 
+html[data-a11y-contrast="high"] .a11y-panel__header {
+    background-color: #003399 !important;
+}
+
 html[data-a11y-contrast="high"] .a11y-panel__footer {
     background-color: #FFFFFF !important;
     border-top: 2px solid #000000 !important;
 }
 
+html[data-a11y-contrast="high"] .a11y-font-value {
+    background-color: #FFFFFF !important;
+    color: #003399 !important;
+    border: 2px solid #003399 !important;
+}
+
 html[data-a11y-contrast="high"] .a11y-tile,
 html[data-a11y-contrast="high"] .a11y-chip,
 html[data-a11y-contrast="high"] .a11y-step-btn,
-html[data-a11y-contrast="high"] .a11y-reset-btn {
+html[data-a11y-contrast="high"] .a11y-reset-btn,
+html[data-a11y-contrast="high"] .a11y-voice-btn,
+html[data-a11y-contrast="high"] .a11y-voice-rate__select {
     border: 2px solid #000000 !important;
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
     transition: none !important;
 }
 
+html[data-a11y-contrast="high"] .a11y-reset-btn {
+    color: #003399 !important;
+    border-color: #003399 !important;
+}
+
 html[data-a11y-contrast="high"] .a11y-tile.is-active,
-html[data-a11y-contrast="high"] .a11y-chip.is-active {
-    background-color: #0052CC !important;
+html[data-a11y-contrast="high"] .a11y-chip.is-active,
+html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
+    background-color: #003399 !important;
     border-color: #000000 !important;
     color: #FFFFFF !important;
 }
@@ -5684,9 +5797,21 @@ html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
         --color-text-secondary: #F0F0F0;
         --color-text-muted: #E5E5E5;
         --color-border: #FFFFFF;
+        --color-text-accessible-orange: #FFD700;
         --bs-body-bg: #000000;
         --bs-body-color: #FFFFFF;
         --bs-border-color: #FFFFFF;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-widget {
+        --a11y-blue: #002B80;
+        --a11y-blue-hover: #001F5C;
+        --a11y-blue-soft: #000000;
+        --a11y-surface: #000000;
+        --a11y-surface-subtle: #000000;
+        --a11y-text: #FFFFFF;
+        --a11y-text-muted: #FFFFFF;
+        --a11y-border: #FFFFFF;
     }
 
     html[data-a11y-contrast="high"] body,
@@ -5698,14 +5823,29 @@ html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
     html[data-a11y-contrast="high"] .foodjet-card,
     html[data-a11y-contrast="high"] .modal-content,
     html[data-a11y-contrast="high"] .offcanvas,
+    html[data-a11y-contrast="high"] .dropdown-menu,
+    html[data-a11y-contrast="high"] .dropdown-item,
+    html[data-a11y-contrast="high"] .list-group-item,
+    html[data-a11y-contrast="high"] .table,
+    html[data-a11y-contrast="high"] .form-control,
+    html[data-a11y-contrast="high"] .form-select,
+    html[data-a11y-contrast="high"] select,
+    html[data-a11y-contrast="high"] option,
     html[data-a11y-contrast="high"] .foodjet-search-input,
     html[data-a11y-contrast="high"] .foodjet-input,
     html[data-a11y-contrast="high"] .foodjet-pill,
     html[data-a11y-contrast="high"] .foodjet-address-bar,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile,
+    html[data-a11y-contrast="high"] .foodjet-quick-login-btn,
     html[data-a11y-contrast="high"] .foodjet-hero-carousel {
         background-color: #000000 !important;
         color: #FFFFFF !important;
         border-color: #FFFFFF !important;
+    }
+
+    html[data-a11y-contrast="high"] .foodjet-hero-carousel {
+        background: #000000 !important;
+        box-shadow: none !important;
     }
 
     html[data-a11y-contrast="high"] .card,
@@ -5714,8 +5854,14 @@ html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
     html[data-a11y-contrast="high"] .foodjet-input,
     html[data-a11y-contrast="high"] .foodjet-search-input,
     html[data-a11y-contrast="high"] .foodjet-address-bar,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile,
+    html[data-a11y-contrast="high"] .foodjet-quick-login-btn,
+    html[data-a11y-contrast="high"] .form-control,
+    html[data-a11y-contrast="high"] .form-select,
+    html[data-a11y-contrast="high"] .dropdown-menu,
     html[data-a11y-contrast="high"] .foodjet-hero-carousel {
         border: 2px solid #FFFFFF !important;
+        box-shadow: none !important;
     }
 
     html[data-a11y-contrast="high"] .text-muted,
@@ -5730,22 +5876,56 @@ html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
     html[data-a11y-contrast="high"] h6,
     html[data-a11y-contrast="high"] label,
     html[data-a11y-contrast="high"] .foodjet-hero-title,
-    html[data-a11y-contrast="high"] .foodjet-hero-subtitle {
+    html[data-a11y-contrast="high"] .foodjet-hero-subtitle,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile__title {
         color: #FFFFFF !important;
     }
 
-    html[data-a11y-contrast="high"] a:not(.btn) {
+    html[data-a11y-contrast="high"] .foodjet-brand-text,
+    html[data-a11y-contrast="high"] .foodjet-brand-bolt {
+        color: #FFD700 !important;
+    }
+
+    html[data-a11y-contrast="high"] a:not(.btn),
+    html[data-a11y-contrast="high"] .text-primary,
+    html[data-a11y-contrast="high"] .foodjet-step.text-primary,
+    html[data-a11y-contrast="high"] .btn-link {
         color: #66E0FF !important;
+    }
+
+    html[data-a11y-contrast="high"] .text-success,
+    html[data-a11y-contrast="high"] .foodjet-step.text-success,
+    html[data-a11y-contrast="high"] #studentDiscountAmount,
+    html[data-a11y-contrast="high"] #checkoutDiscount,
+    html[data-a11y-contrast="high"] #couponDiscountRate {
+        color: #5CE69C !important;
+    }
+
+    html[data-a11y-contrast="high"] .text-danger {
+        color: #FF8A9A !important;
+    }
+
+    html[data-a11y-contrast="high"] .btn-outline-primary,
+    html[data-a11y-contrast="high"] .btn-outline-secondary,
+    html[data-a11y-contrast="high"] .btn-outline-danger {
+        background-color: #000000 !important;
+        color: #FFD700 !important;
+        border: 2px solid #FFD700 !important;
     }
 
     html[data-a11y-contrast="high"] .foodjet-btn-primary,
     html[data-a11y-contrast="high"] .foodjet-cart-btn,
     html[data-a11y-contrast="high"] .foodjet-hero-cta-btn,
     html[data-a11y-contrast="high"] .foodjet-pill--active,
-    html[data-a11y-contrast="high"] .btn-primary {
+    html[data-a11y-contrast="high"] .btn-primary,
+    html[data-a11y-contrast="high"] .foodjet-badge--soldout,
+    html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile,
+    html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected {
         background-color: #FFD700 !important;
         color: #000000 !important;
         border: 2px solid #FFFFFF !important;
+        box-shadow: none !important;
         transition: none !important;
     }
 
@@ -5754,7 +5934,16 @@ html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
     html[data-a11y-contrast="high"] .foodjet-cart-btn span,
     html[data-a11y-contrast="high"] .foodjet-cart-btn i,
     html[data-a11y-contrast="high"] .foodjet-hero-cta-btn span,
-    html[data-a11y-contrast="high"] .foodjet-hero-cta-btn i {
+    html[data-a11y-contrast="high"] .foodjet-hero-cta-btn i,
+    html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__icon,
+    html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__icon,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected .foodjet-payment-tile__icon,
+    html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__title,
+    html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__title,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected .foodjet-payment-tile__title,
+    html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__subtitle,
+    html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__subtitle,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected .foodjet-payment-tile__subtitle {
         color: #000000 !important;
     }
 
@@ -5768,20 +5957,42 @@ html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
         border: 2px solid #FFD700 !important;
     }
 
+    html[data-a11y-contrast="high"] .a11y-panel__header {
+        background-color: #002B80 !important;
+        border-bottom: 2px solid #FFD700 !important;
+    }
+
     html[data-a11y-contrast="high"] .a11y-panel__body,
     html[data-a11y-contrast="high"] .a11y-panel__footer {
         background-color: #000000 !important;
+        border-top-color: #FFD700 !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-font-value {
+        background-color: #000000 !important;
+        color: #FFD700 !important;
+        border: 2px solid #FFD700 !important;
     }
 
     html[data-a11y-contrast="high"] .a11y-tile,
     html[data-a11y-contrast="high"] .a11y-chip,
     html[data-a11y-contrast="high"] .a11y-step-btn,
-    html[data-a11y-contrast="high"] .a11y-reset-btn {
+    html[data-a11y-contrast="high"] .a11y-voice-btn,
+    html[data-a11y-contrast="high"] .a11y-voice-rate__select {
+        background-color: #000000 !important;
+        color: #FFFFFF !important;
         border: 2px solid #FFFFFF !important;
     }
 
+    html[data-a11y-contrast="high"] .a11y-reset-btn {
+        background-color: #000000 !important;
+        color: #FFD700 !important;
+        border: 2px solid #FFD700 !important;
+    }
+
     html[data-a11y-contrast="high"] .a11y-tile.is-active,
-    html[data-a11y-contrast="high"] .a11y-chip.is-active {
+    html[data-a11y-contrast="high"] .a11y-chip.is-active,
+    html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
         background-color: #FFD700 !important;
         border-color: #FFD700 !important;
         color: #000000 !important;

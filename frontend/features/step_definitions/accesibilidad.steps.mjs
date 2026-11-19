@@ -63,7 +63,11 @@ Then('la aplicación inicializa el módulo de accesibilidad sin cuentas ficticia
 });
 
 When('evalúo el atajo de teclado con Alt presionado y tecla {string}', function (key) {
-    this.shortcutValid = isOpenShortcut({ altKey: true, ctrlKey: false, metaKey: false, key, code: `Key${key.toUpperCase()}` });
+    this.shortcutValid = isOpenShortcut({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, repeat: false, key, code: `Key${key.toUpperCase()}` });
+});
+
+When('evalúo el atajo de teclado repetido con Alt presionado y tecla {string}', function (key) {
+    this.shortcutValid = isOpenShortcut({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, repeat: true, key, code: `Key${key.toUpperCase()}` });
 });
 
 When('evalúo el atajo de teclado con Ctrl y Alt presionados y tecla {string}', function (key) {
@@ -190,6 +194,16 @@ When('extraigo texto legible de un botón sin texto visible pero con aria-label 
         getAttribute: (name) => (name === 'aria-label' ? label : null)
     };
     this.extractedText = extractReadableText(fakeEl);
+});
+
+When('extraigo texto legible de un campo de contraseña con etiqueta {string} y valor secreto', function (label) {
+    const fakePwd = {
+        tagName: 'INPUT',
+        type: 'password',
+        value: 'MiClavePrivada123!',
+        getAttribute: (name) => (name === 'aria-label' ? label : name === 'type' ? 'password' : null)
+    };
+    this.extractedText = extractReadableText(fakePwd);
 });
 
 Then('el texto extraído es {string}', function (esperado) {

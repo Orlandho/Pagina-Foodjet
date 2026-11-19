@@ -1592,30 +1592,30 @@
         </div>
     </div>
 
-    <!-- Filtros SVG locales de compensación (Daltonización) para deficiencias de visión del color -->
+    <!-- Filtros SVG locales de compensación (Daltonización con preservación de luminancia y blancos neutros) -->
     <svg class="a11y-svg-filters" aria-hidden="true" focusable="false" width="0" height="0">
         <defs>
-            <!-- Protanopia: compensación LMS derivada de Machado et al. (2009) + redistribución de error -->
+            <!-- Protanopia: proyecta diferencia L-M en canal S (azul) preservando luminancia y contraste -->
             <filter id="a11y-filter-protanopia" color-interpolation-filters="linearRGB">
                 <feColorMatrix type="matrix" values="
                     1.000000  0.000000  0.000000  0  0
-                    0.478897  0.476911  0.044192  0  0
-                    0.597282 -0.688692  1.091410  0  0
+                   -0.080000  1.080000  0.000000  0  0
+                    0.650000 -0.650000  1.000000  0  0
                     0         0         0         1  0" />
             </filter>
-            <!-- Deuteranopia: compensación LMS derivada de Machado et al. (2009) + redistribución de error -->
+            <!-- Deuteranopia: proyecta diferencia M-L en canal S (azul) preservando luminancia y contraste -->
             <filter id="a11y-filter-deuteranopia" color-interpolation-filters="linearRGB">
                 <feColorMatrix type="matrix" values="
                     1.000000  0.000000  0.000000  0  0
-                    0.162790  0.725047  0.112165  0  0
-                    0.454695 -0.645392  1.190697  0  0
+                   -0.060000  1.060000  0.000000  0  0
+                    0.550000 -0.550000  1.000000  0  0
                     0         0         0         1  0" />
             </filter>
-            <!-- Tritanopia: compensación LMS derivada de Machado et al. (2009) + redistribución de error -->
+            <!-- Tritanopia: proyecta diferencia azul-verde sobre eje L-M preservando luminancia y contraste -->
             <filter id="a11y-filter-tritanopia" color-interpolation-filters="linearRGB">
                 <feColorMatrix type="matrix" values="
-                    0.741159 -0.407208  0.666049  0  0
-                    0.075098  0.585234  0.339668  0  0
+                    0.820000 -0.270000  0.450000  0  0
+                    0.080000  1.050000 -0.130000  0  0
                     0.000000  0.000000  1.000000  0  0
                     0         0         0         1  0" />
             </filter>

@@ -134,6 +134,12 @@ function createFakeDOM({ speechSupported = true, initialStorage = null } = {}) {
         body,
         activeElement: body,
         getElementById: (id) => elements.get(id) || null,
+        querySelector: (selector) => {
+            if (selector === '.modal.show, .offcanvas.show') {
+                return doc._activeOverlay || null;
+            }
+            return null;
+        },
         querySelectorAll: (selector) => {
             if (selector === '[data-a11y-filter-option]') {
                 return colorButtons;
@@ -150,13 +156,18 @@ function createFakeDOM({ speechSupported = true, initialStorage = null } = {}) {
         },
         dispatch: (type, event = {}) => {
             let prevented = false;
+            let stopped = false;
+            let immediateStopped = false;
             for (const fn of docListeners.get(type) || []) {
                 fn({
                     preventDefault() { prevented = true; },
+                    stopPropagation() { stopped = true; },
+                    stopImmediatePropagation() { immediateStopped = true; },
                     ...event
                 });
+                if (immediateStopped) break;
             }
-            return prevented;
+            return { prevented, stopped, immediateStopped };
         }
     };
 
@@ -210,6 +221,7 @@ function createFakeDOM({ speechSupported = true, initialStorage = null } = {}) {
     const win = {
         setTimeout: (fn) => fn(),
         addEventListener: () => {},
+        removeEventListener: () => {},
         matchMedia: () => ({ matches: false }),
         bootstrap: {
             Carousel: {
@@ -273,10 +285,12 @@ describe('Regression & White-Box Tests — Accessibility Domain', () => {
         assert.equal(scale, 100);
     });
 
-    it('debe reconocer Alt + A incluso con teclas internacionales (code KeyA) y rechazar combinaciones ajenas', () => {
-        assert.equal(isOpenShortcut({ altKey: true, ctrlKey: false, metaKey: false, key: 'a', code: 'KeyA' }), true);
-        assert.equal(isOpenShortcut({ altKey: true, ctrlKey: false, metaKey: false, key: 'A', code: 'KeyA' }), true);
-        assert.equal(isOpenShortcut({ altKey: true, ctrlKey: false, metaKey: false, key: 'å', code: 'KeyA' }), true);
+    it('debe reconocer Alt + A incluso con teclas internacionales (code KeyA) y rechazar combinaciones ajenas, Shift y repeat', () => {
+        assert.equal(isOpenShortcut({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, repeat: false, key: 'a', code: 'KeyA' }), true);
+        assert.equal(isOpenShortcut({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, repeat: false, key: 'A', code: 'KeyA' }), true);
+        assert.equal(isOpenShortcut({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, repeat: false, key: 'å', code: 'KeyA' }), true);
+        assert.equal(isOpenShortcut({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, repeat: true, key: 'a', code: 'KeyA' }), false);
+        assert.equal(isOpenShortcut({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: true, repeat: false, key: 'A', code: 'KeyA' }), false);
         assert.equal(isOpenShortcut({ altKey: true, ctrlKey: true, metaKey: false, key: 'a', code: 'KeyA' }), false);
         assert.equal(isOpenShortcut({ altKey: true, ctrlKey: false, metaKey: true, key: 'a', code: 'KeyA' }), false);
         assert.equal(isOpenShortcut({ altKey: false, ctrlKey: false, metaKey: false, key: 'a', code: 'KeyA' }), false);
@@ -317,11 +331,38 @@ describe('Regression & White-Box Tests — Accessibility Domain', () => {
         assert.deepEqual(clearPreferences(brokenStorage), createDefaultPreferences());
     });
 
-    it('debe extraer texto legible priorizando texto visible y cayendo a aria-label', () => {
+    it('debe extraer texto legible priorizando texto visible, cayendo a aria-label y protegiendo contraseñas en inputs', () => {
         assert.equal(extractReadableText({ innerText: '  Hola   FoodJet  ' }), 'Hola FoodJet');
         assert.equal(
             extractReadableText({ innerText: '', textContent: '', getAttribute: (k) => (k === 'aria-label' ? 'Cerrar' : null) }),
             'Cerrar'
+        );
+        assert.equal(
+            extractReadableText({
+                tagName: 'INPUT',
+                type: 'search',
+                value: 'ceviche',
+                getAttribute: (k) => (k === 'placeholder' ? 'Buscar comida' : null)
+            }),
+            'Buscar comida: ceviche'
+        );
+        assert.equal(
+            extractReadableText({
+                tagName: 'INPUT',
+                type: 'password',
+                value: 'Secreto123!',
+                getAttribute: (k) => (k === 'aria-label' ? 'Contraseña' : k === 'type' ? 'password' : null)
+            }),
+            'Contraseña (campo de contraseña)'
+        );
+        assert.equal(
+            extractReadableText({
+                tagName: 'SELECT',
+                selectedIndex: 1,
+                options: [{ textContent: 'Recomendados' }, { textContent: 'Menor precio' }],
+                getAttribute: (k) => (k === 'aria-label' ? 'Ordenar por' : null)
+            }),
+            'Ordenar por: Menor precio'
         );
         assert.equal(extractReadableText(null), '');
     });
@@ -344,19 +385,61 @@ describe('Regression Tests — Accessibility DOM Controller', () => {
         assert.equal(ctrl.isOpen(), false);
 
         // Abrir mediante Alt + A
-        const prevented = env.doc.dispatch('keydown', { altKey: true, ctrlKey: false, metaKey: false, key: 'a', code: 'KeyA' });
-        assert.equal(prevented, true);
+        const openEvt = env.doc.dispatch('keydown', { altKey: true, ctrlKey: false, metaKey: false, key: 'a', code: 'KeyA' });
+        assert.equal(openEvt.prevented, true);
+        assert.equal(openEvt.immediateStopped, true);
         assert.equal(ctrl.isOpen(), true);
         assert.equal(env.elements.get('a11yPanel').hidden, false);
         assert.equal(env.elements.get('a11yToggleBtn').getAttribute('aria-expanded'), 'true');
         assert.equal(env.doc.activeElement, env.elements.get('a11yPanelTitle'));
 
-        // Cerrar con Escape restaura foco al botón flotante
-        env.doc.dispatch('keydown', { key: 'Escape' });
+        // Forward Tab desde fuera del panel debe devolver foco al primer elemento enfocable
+        const externalBtn = createFakeElement('externalBtn');
+        externalBtn._ownerDoc = env.doc;
+        env.doc.activeElement = externalBtn;
+        const tabEvt = env.doc.dispatch('keydown', { key: 'Tab', shiftKey: false });
+        assert.equal(tabEvt.prevented, true);
+        assert.equal(env.doc.activeElement, env.elements.get('a11yCloseBtn'));
+
+        // Guardia de foco en fase de captura impide que otro modal robe el foco del panel
+        const focusInPanelEvt = env.doc.dispatch('focusin', { target: env.elements.get('a11yCloseBtn') });
+        assert.equal(focusInPanelEvt.immediateStopped, true);
+
+        // Cerrar con Escape detiene propagación inmediata para no cerrar modales subyacentes
+        const escEvt = env.doc.dispatch('keydown', { key: 'Escape' });
+        assert.equal(escEvt.prevented, true);
+        assert.equal(escEvt.immediateStopped, true);
         assert.equal(ctrl.isOpen(), false);
         assert.equal(env.elements.get('a11yPanel').hidden, true);
         assert.equal(env.elements.get('a11yToggleBtn').getAttribute('aria-expanded'), 'false');
         assert.equal(env.doc.activeElement, env.elements.get('a11yToggleBtn'));
+
+        ctrl.destroy();
+    });
+
+    it('debe deduplicar focusin+click en lectura por voz y priorizar modal/offcanvas abierto en Leer vista', () => {
+        const env = createFakeDOM({ speechSupported: true });
+        const ctrl = createAccessibilityController(env);
+
+        env.elements.get('a11yVoiceBtn').click();
+
+        const externalBtn = createFakeElement('catBtn');
+        externalBtn.innerText = 'Pizzas';
+        externalBtn.closest = () => externalBtn;
+
+        // Simular focusin seguido inmediatamente de click al pulsar un botón
+        env.doc.dispatch('focusin', { target: externalBtn });
+        env.doc.dispatch('click', { target: externalBtn });
+        assert.equal(env.spokenUtterances.length, 1, 'No debe tartamudear repitiendo la lectura en focusin + click');
+        assert.equal(env.spokenUtterances[0].text, 'Pizzas');
+
+        // Con un offcanvas abierto, "Leer vista" debe leer el offcanvas y no homeView detrás
+        const openCart = createFakeElement('cartOffcanvas');
+        openCart.innerText = 'Tu carrito tiene 2 productos por S/ 37.00.';
+        env.doc._activeOverlay = openCart;
+        env.elements.get('a11yVoiceReadPageBtn').click();
+        assert.equal(env.spokenUtterances.length, 2);
+        assert.ok(env.spokenUtterances[1].text.includes('Tu carrito tiene 2 productos'));
 
         ctrl.destroy();
     });
@@ -471,7 +554,37 @@ describe('Structural Regression Guards — Anti-Deletion Protection', () => {
         assert.ok(css.includes('html[data-a11y-reduced-motion="true"]'));
         assert.ok(css.includes('html[data-a11y-keyboard-nav="true"]'));
         assert.ok(css.includes('html[data-a11y-font-scale]'));
+        assert.ok(css.includes('font-size: calc(100% * var(--a11y-font-scale, 1))'), 'La escala tipográfica debe respetar el tamaño base del navegador');
         assert.ok(css.includes('font-family: bootstrap-icons !important'), 'Debe preservar iconos Bootstrap en modo dislexia');
+        assert.ok(css.includes('body > footer p.text-muted'), 'Debe evitar texto 1:1 invisible en copyright del footer en alto contraste');
+        assert.ok(css.includes('.foodjet-quick-login-btn'), 'Debe estilizar botones de acceso rápido en alto contraste');
+        assert.ok(css.includes('.foodjet-badge--soldout'), 'Debe estilizar badge AGOTADO en alto contraste');
+        assert.ok(css.includes('.btn-check:checked + .foodjet-payment-tile'), 'Debe estilizar método de pago seleccionado en alto contraste');
+    });
+
+    it('debe definir matrices de daltonización que preserven neutros y contraste de colores de marca', () => {
+        const html = fs.readFileSync(path.resolve('frontend/index.html'), 'utf8');
+        const srgbToLin = (c) => { const v = c / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+        const linToSrgb = (c) => Math.round((Math.max(0, Math.min(1, c)) <= 0.0031308 ? 12.92 * Math.max(0, Math.min(1, c)) : 1.055 * (Math.max(0, Math.min(1, c)) ** (1 / 2.4)) - 0.055) * 255);
+        const lum = (rgb) => { const [r, g, b] = rgb.map(srgbToLin); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+        const cr = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+
+        for (const id of ['a11y-filter-protanopia', 'a11y-filter-deuteranopia', 'a11y-filter-tritanopia']) {
+            const match = html.match(new RegExp(`id="${id}"[\\s\\S]*?values="([^"]+)"`));
+            assert.ok(match, `Debe existir feColorMatrix para ${id}`);
+            const nums = match[1].trim().split(/\s+/).map(Number);
+            assert.equal(nums.length, 20);
+            const m = [nums.slice(0, 3), nums.slice(5, 8), nums.slice(10, 13)];
+            for (const row of m) {
+                assert.ok(Math.abs(row[0] + row[1] + row[2] - 1) < 1e-4, `${id} debe preservar blanco/grises neutros`);
+            }
+            const apply = (rgb) => {
+                const lin = rgb.map(srgbToLin);
+                return m.map((row) => linToSrgb(row[0] * lin[0] + row[1] * lin[1] + row[2] * lin[2]));
+            };
+            assert.ok(cr(apply([244, 81, 30]), [255, 255, 255]) >= 3.2, `${id} no debe lavar el naranja FoodJet contra blanco`);
+            assert.ok(cr(apply([13, 110, 253]), [255, 255, 255]) >= 4.0, `${id} no debe lavar el azul primario contra blanco`);
+        }
     });
 
     it('applyPreferencesToDocument debe ser idempotente y nunca lanzar con documento parcial', () => {
