@@ -521,6 +521,28 @@ describe('Regression Tests — Accessibility DOM Controller', () => {
         assert.ok(noSpeechEnv.elements.get('a11yVoiceStatus').textContent.includes('no soporta síntesis de voz'));
         noSpeechCtrl.destroy();
     });
+
+    it('no debe registrar un listener keydown duplicado sobre #headerAddressBar (gestionado por ui.js)', () => {
+        const env = createFakeDOM();
+        const headerAddressBar = env.elements.get('headerAddressBar');
+        let clickCount = 0;
+        headerAddressBar.addEventListener('click', () => {
+            clickCount += 1;
+        });
+
+        const ctrl = createAccessibilityController(env);
+        headerAddressBar.dispatch('keydown', { key: 'Enter' });
+        headerAddressBar.dispatch('keydown', { key: ' ' });
+        assert.equal(clickCount, 0, 'accessibility.js no debe duplicar el handler keydown de ui.js en #headerAddressBar');
+
+        const uiJs = fs.readFileSync(path.resolve('frontend/js/ui.js'), 'utf8');
+        assert.ok(
+            /function initHeaderAddress[\s\S]*?addEventListener\('keydown'/.test(uiJs),
+            'ui.js debe conservar el soporte de teclado (Enter/Espacio) para #headerAddressBar'
+        );
+
+        ctrl.destroy();
+    });
 });
 
 describe('Structural Regression Guards — Anti-Deletion Protection', () => {
@@ -585,6 +607,86 @@ describe('Structural Regression Guards — Anti-Deletion Protection', () => {
             assert.ok(cr(apply([244, 81, 30]), [255, 255, 255]) >= 3.2, `${id} no debe lavar el naranja FoodJet contra blanco`);
             assert.ok(cr(apply([13, 110, 253]), [255, 255, 255]) >= 4.0, `${id} no debe lavar el azul primario contra blanco`);
         }
+    });
+
+    it('debe garantizar contraste WCAG 2.1 AA en estados hover e indicador de escala del widget en modo oscuro', () => {
+        const css = fs.readFileSync(path.resolve('frontend/styles.css'), 'utf8');
+        const darkBlockMatch = css.match(
+            /\/\* Adaptación del widget a modo oscuro del sistema \*\/[\s\S]*?@media \(prefers-color-scheme: dark\) \{([\s\S]*?)\r?\n\}\r?\n\r?\n\/\* Adaptación responsiva/
+        );
+        assert.ok(darkBlockMatch, 'Debe existir el bloque @media (prefers-color-scheme: dark) del widget de accesibilidad');
+        const darkBlock = darkBlockMatch[1];
+
+        const hexToRgb = (hex) => {
+            const clean = hex.replace('#', '');
+            return [0, 2, 4].map((i) => parseInt(clean.slice(i, i + 2), 16));
+        };
+        const srgbToLin = (c) => {
+            const v = c / 255;
+            return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+        };
+        const lum = (hex) => {
+            const [r, g, b] = hexToRgb(hex).map(srgbToLin);
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const contrastRatio = (hexA, hexB) => {
+            const l1 = lum(hexA);
+            const l2 = lum(hexB);
+            return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+        };
+        const readVar = (name) => {
+            const m = darkBlock.match(new RegExp(`${name}:\\s*(#[0-9A-Fa-f]{6})`));
+            assert.ok(m, `Debe definirse ${name} en modo oscuro`);
+            return m[1];
+        };
+
+        const blueSoft = readVar('--a11y-blue-soft');
+        const surface = readVar('--a11y-surface');
+        const surfaceSubtle = readVar('--a11y-surface-subtle');
+
+        const stepHoverRule = darkBlock.match(/\.a11y-step-btn:hover:not\(:disabled\)\s*\{([^}]*)\}/);
+        assert.ok(stepHoverRule, 'Debe existir override de .a11y-step-btn:hover:not(:disabled) en modo oscuro');
+        const stepHoverColor = stepHoverRule[1].match(/(?:^|[;\s])color:\s*(#[0-9A-Fa-f]{6})/);
+        const stepHoverBorder = stepHoverRule[1].match(/border-color:\s*(#[0-9A-Fa-f]{6})/);
+        assert.ok(stepHoverColor, '.a11y-step-btn:hover:not(:disabled) debe definir color explícito en modo oscuro');
+        assert.ok(stepHoverBorder, '.a11y-step-btn:hover:not(:disabled) debe definir border-color explícito en modo oscuro');
+
+        assert.ok(
+            contrastRatio(stepHoverColor[1], blueSoft) >= 4.5,
+            `Contraste texto hover de .a11y-step-btn en modo oscuro debe ser >= 4.5:1 (actual: ${contrastRatio(stepHoverColor[1], blueSoft).toFixed(2)}:1)`
+        );
+        assert.ok(
+            contrastRatio(stepHoverBorder[1], blueSoft) >= 3.0,
+            'Contraste de borde hover de .a11y-step-btn sobre --a11y-blue-soft debe ser >= 3:1'
+        );
+        assert.ok(
+            contrastRatio(stepHoverBorder[1], surface) >= 3.0,
+            'Contraste de borde hover de .a11y-step-btn sobre --a11y-surface debe ser >= 3:1'
+        );
+
+        const tileChipHoverRule = darkBlock.match(
+            /\.a11y-tile:hover,\s*\.a11y-chip:hover\s*\{([^}]*)\}/
+        );
+        assert.ok(tileChipHoverRule, 'Debe existir override de .a11y-tile:hover y .a11y-chip:hover en modo oscuro');
+        const tileChipBorder = tileChipHoverRule[1].match(/border-color:\s*(#[0-9A-Fa-f]{6})/);
+        assert.ok(tileChipBorder, '.a11y-tile:hover y .a11y-chip:hover deben definir border-color en modo oscuro');
+        assert.ok(
+            contrastRatio(tileChipBorder[1], surfaceSubtle) >= 3.0,
+            'Contraste de borde hover en .a11y-tile/.a11y-chip sobre --a11y-surface-subtle debe ser >= 3:1'
+        );
+        assert.ok(
+            contrastRatio(tileChipBorder[1], surface) >= 3.0,
+            'Contraste de borde hover en .a11y-tile/.a11y-chip sobre --a11y-surface debe ser >= 3:1'
+        );
+
+        const trackFillRule = darkBlock.match(/\.a11y-font-track__fill\s*\{([^}]*)\}/);
+        assert.ok(trackFillRule, 'Debe existir override de .a11y-font-track__fill en modo oscuro');
+        const trackFillBg = trackFillRule[1].match(/background-color:\s*(#[0-9A-Fa-f]{6})/);
+        assert.ok(trackFillBg, '.a11y-font-track__fill debe definir background-color explícito en modo oscuro');
+        assert.ok(
+            contrastRatio(trackFillBg[1], surfaceSubtle) >= 3.0,
+            'Contraste del indicador de escala .a11y-font-track__fill en modo oscuro debe ser >= 3:1'
+        );
     });
 
     it('applyPreferencesToDocument debe ser idempotente y nunca lanzar con documento parcial', () => {

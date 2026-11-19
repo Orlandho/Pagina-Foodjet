@@ -5364,8 +5364,22 @@ h1[tabindex="-1"]:focus {
         color: #9BC4FF;
     }
 
+    .a11y-font-track__fill {
+        background-color: #5A9BFF;
+    }
+
+    .a11y-step-btn:hover:not(:disabled) {
+        border-color: #5A9BFF;
+        color: #9BC4FF;
+    }
+
     .a11y-tile__icon {
         color: #7BB3FF;
+    }
+
+    .a11y-tile:hover,
+    .a11y-chip:hover {
+        border-color: #5A9BFF;
     }
 
     .a11y-reset-btn {
@@ -5972,6 +5986,10 @@ html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
         background-color: #000000 !important;
         color: #FFD700 !important;
         border: 2px solid #FFD700 !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-font-track__fill {
+        background-color: #FFD700 !important;
     }
 
     html[data-a11y-contrast="high"] .a11y-tile,

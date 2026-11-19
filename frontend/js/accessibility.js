@@ -754,15 +754,6 @@ export function createAccessibilityController({
         announce('Preferencias de accesibilidad restablecidas a los valores predeterminados.');
     });
 
-    // Mejora de teclado para el selector de dirección del encabezado (role="button")
-    const headerAddressBar = doc.getElementById('headerAddressBar');
-    headerAddressBar?.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault?.();
-            headerAddressBar.click?.();
-        }
-    });
-
     const handleBeforeUnload = () => stopSpeech({ silent: true });
     const handleWindowLoad = () => syncHeroCarouselMotion(prefs.reducedMotion, doc, win);
 
