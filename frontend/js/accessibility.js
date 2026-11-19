@@ -14,6 +14,7 @@ import {
     FONT_SCALE_MAX,
     FONT_SCALE_MIN,
     SPEECH_RATES,
+    classifyVoiceAvailability,
     clearPreferences,
     countActiveAdjustments,
     createDefaultPreferences,
@@ -230,6 +231,7 @@ export function createAccessibilityController({
 
     let prefs = loadPreferences(storage);
     let isOpen = false;
+    let destroyed = false;
     let previouslyFocused = null;
     let activeHighlightEl = null;
     let isSpeaking = false;
@@ -238,6 +240,8 @@ export function createAccessibilityController({
     let lastSpokenElement = null;
     let lastSpokenAt = 0;
     let announceTimer = null;
+    let voiceNoticeVisible = false;
+    let voiceAvailability = { available: false, voice: null, reason: 'none' };
     const cleanups = [];
 
     function on(target, type, listener, options) {
@@ -249,7 +253,7 @@ export function createAccessibilityController({
     }
 
     function announce(message) {
-        if (!liveRegion || !message) return;
+        if (destroyed || !liveRegion || !message) return;
         if (announceTimer !== null && typeof win?.clearTimeout === 'function') {
             win.clearTimeout(announceTimer);
             announceTimer = null;
@@ -258,7 +262,9 @@ export function createAccessibilityController({
         if (typeof win?.setTimeout === 'function') {
             announceTimer = win.setTimeout(() => {
                 announceTimer = null;
-                liveRegion.textContent = message;
+                if (!destroyed) {
+                    liveRegion.textContent = message;
+                }
             }, 30);
         } else {
             liveRegion.textContent = message;
@@ -274,18 +280,31 @@ export function createAccessibilityController({
         );
     }
 
-    function pickSpanishVoice() {
-        try {
-            const voices = win?.speechSynthesis?.getVoices?.() || [];
-            return (
-                voices.find((v) => /^es[-_]PE/i.test(v.lang)) ||
-                voices.find((v) => /^es[-_](419|ES|MX|CO|AR)/i.test(v.lang)) ||
-                voices.find((v) => /^es/i.test(v.lang)) ||
-                null
-            );
-        } catch {
-            return null;
+    function getUnavailableVoiceMessage(reason = voiceAvailability.reason) {
+        if (reason === 'unsupported') {
+            return 'Tu navegador no soporta síntesis de voz (Web Speech API).';
         }
+        if (reason === 'remote-only') {
+            return 'Lectura por voz deshabilitada: solo se detectaron voces remotas. Por privacidad, FoodJet solo permite voces locales del dispositivo.';
+        }
+        return 'Lectura por voz no disponible: no se detectaron voces locales instaladas en este navegador o dispositivo.';
+    }
+
+    function refreshVoices() {
+        if (!hasSpeechSupport()) {
+            voiceAvailability = { available: false, voice: null, reason: 'unsupported' };
+            return voiceAvailability;
+        }
+        try {
+            const voices = win.speechSynthesis.getVoices?.() || [];
+            voiceAvailability = classifyVoiceAvailability(voices);
+        } catch {
+            voiceAvailability = { available: false, voice: null, reason: 'none' };
+        }
+        if (!voiceAvailability.available && isSpeaking) {
+            stopSpeech({ silent: true });
+        }
+        return voiceAvailability;
     }
 
     function clearReadingHighlight() {
@@ -297,27 +316,30 @@ export function createAccessibilityController({
 
     function updateVoiceUI(statusText) {
         const supported = hasSpeechSupport();
+        const localVoiceReady = supported && voiceAvailability.available;
 
         if (voiceControls) {
-            voiceControls.hidden = !prefs.voiceReader;
+            voiceControls.hidden = !prefs.voiceReader && !voiceNoticeVisible;
         }
         if (voiceReadPageBtn) {
-            voiceReadPageBtn.disabled = !supported;
+            voiceReadPageBtn.disabled = !localVoiceReady;
         }
         if (voicePauseBtn) {
-            voicePauseBtn.disabled = !supported || !isSpeaking;
+            voicePauseBtn.disabled = !localVoiceReady || !isSpeaking;
             voicePauseBtn.textContent = isPaused ? 'Reanudar' : 'Pausar';
         }
         if (voiceStopBtn) {
-            voiceStopBtn.disabled = !supported || !isSpeaking;
+            voiceStopBtn.disabled = !localVoiceReady || !isSpeaking;
         }
         if (voiceRateSelect) {
-            voiceRateSelect.disabled = !supported;
+            voiceRateSelect.disabled = !localVoiceReady;
             voiceRateSelect.value = String(prefs.speechRate);
         }
         if (voiceStatus) {
-            if (!supported) {
-                voiceStatus.textContent = 'Tu navegador no soporta síntesis de voz (Web Speech API).';
+            if (!localVoiceReady) {
+                voiceStatus.textContent = getUnavailableVoiceMessage(
+                    supported ? voiceAvailability.reason : 'unsupported'
+                );
             } else if (statusText) {
                 voiceStatus.textContent = statusText;
             } else if (isSpeaking) {
@@ -353,11 +375,22 @@ export function createAccessibilityController({
     }
 
     function speakText(text, targetElement = null) {
+        if (destroyed) return false;
         if (!hasSpeechSupport()) {
-            updateVoiceUI('Tu navegador no soporta síntesis de voz (Web Speech API).');
-            announce('Tu navegador no soporta síntesis de voz.');
+            voiceAvailability = { available: false, voice: null, reason: 'unsupported' };
+            updateVoiceUI();
+            announce(getUnavailableVoiceMessage('unsupported'));
             return false;
         }
+
+        const availability = refreshVoices();
+        if (!availability.available || !availability.voice || availability.voice.localService !== true) {
+            const unavailableMsg = getUnavailableVoiceMessage(availability.reason);
+            updateVoiceUI(unavailableMsg);
+            announce(unavailableMsg);
+            return false;
+        }
+        const voice = availability.voice;
 
         const chunks = splitTextForSpeech(text);
         if (chunks.length === 0) {
@@ -367,7 +400,6 @@ export function createAccessibilityController({
 
         stopSpeech({ silent: true });
         const currentRunId = speechQueueId;
-        const voice = pickSpanishVoice();
 
         if (targetElement?.classList) {
             activeHighlightEl = targetElement;
@@ -379,7 +411,7 @@ export function createAccessibilityController({
         updateVoiceUI('Leyendo en voz alta…');
 
         const speakChunkAt = (index) => {
-            if (currentRunId !== speechQueueId) return;
+            if (destroyed || currentRunId !== speechQueueId) return;
             if (index >= chunks.length) {
                 isSpeaking = false;
                 isPaused = false;
@@ -389,17 +421,17 @@ export function createAccessibilityController({
             }
 
             const utterance = new win.SpeechSynthesisUtterance(chunks[index]);
-            utterance.lang = voice?.lang || 'es-PE';
+            utterance.voice = voice;
+            utterance.lang = voice.lang || 'es-PE';
             utterance.rate = prefs.speechRate;
-            if (voice) utterance.voice = voice;
 
             utterance.onend = () => {
-                if (currentRunId === speechQueueId) {
+                if (!destroyed && currentRunId === speechQueueId) {
                     speakChunkAt(index + 1);
                 }
             };
             utterance.onerror = () => {
-                if (currentRunId === speechQueueId) {
+                if (!destroyed && currentRunId === speechQueueId) {
                     isSpeaking = false;
                     isPaused = false;
                     clearReadingHighlight();
@@ -422,7 +454,7 @@ export function createAccessibilityController({
     }
 
     function togglePauseSpeech() {
-        if (!hasSpeechSupport() || !isSpeaking) return;
+        if (destroyed || !hasSpeechSupport() || !voiceAvailability.available || !isSpeaking) return;
         try {
             if (isPaused) {
                 win.speechSynthesis.resume?.();
@@ -442,12 +474,12 @@ export function createAccessibilityController({
     function getActiveReadingTarget() {
         const activeOverlay = doc.querySelector?.('.modal.show, .offcanvas.show');
         if (activeOverlay) {
-            const overlayText = extractReadableText(activeOverlay);
+            const overlayText = extractReadableText(activeOverlay, win);
             if (overlayText) return { text: overlayText, target: activeOverlay };
         }
 
         const main = doc.getElementById('main-content');
-        if (!main) return { text: extractReadableText(doc.body), target: doc.body };
+        if (!main) return { text: extractReadableText(doc.body, win), target: doc.body };
 
         const viewIds = [
             'homeView',
@@ -464,11 +496,11 @@ export function createAccessibilityController({
                 !view.hidden &&
                 !view.classList?.contains?.('d-none')
             ) {
-                const text = extractReadableText(view);
+                const text = extractReadableText(view, win);
                 if (text) return { text, target: view };
             }
         }
-        return { text: extractReadableText(main), target: main };
+        return { text: extractReadableText(main, win), target: main };
     }
 
     function syncUI() {
@@ -484,7 +516,7 @@ export function createAccessibilityController({
         setToggleState(dyslexiaBtn, prefs.dyslexiaFont);
         setToggleState(motionBtn, prefs.reducedMotion);
         setToggleState(keyboardBtn, prefs.keyboardFocus);
-        setToggleState(voiceBtn, prefs.voiceReader);
+        setToggleState(voiceBtn, prefs.voiceReader && hasSpeechSupport() && voiceAvailability.available);
 
         for (const btn of colorFilterButtons) {
             const option = btn.getAttribute('data-a11y-filter-option');
@@ -501,7 +533,7 @@ export function createAccessibilityController({
         toggleBtn.setAttribute(
             'aria-label',
             activeCount > 0
-                ? `Opciones de accesibilidad (${activeCount} activas, atajo Alt + A)`
+                ? `Opciones de accesibilidad (${activeCount} ${activeCount === 1 ? 'ajuste activo' : 'ajustes activos'}, atajo Alt + A)`
                 : 'Opciones de accesibilidad (atajo Alt + A)'
         );
 
@@ -515,6 +547,7 @@ export function createAccessibilityController({
     }
 
     function commitPreferences(nextPrefs, announcement) {
+        if (destroyed) return;
         prefs = applyPreferencesToDocument(nextPrefs, doc, win);
         savePreferences(prefs, storage);
         syncUI();
@@ -530,8 +563,33 @@ export function createAccessibilityController({
         });
     }
 
+    function applyClosedPanelDom() {
+        isOpen = false;
+        panel.hidden = true;
+        panel.classList?.remove('is-open');
+        if (backdrop) {
+            backdrop.hidden = true;
+            backdrop.classList?.remove('is-open');
+        }
+        toggleBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    function restoreFocusAfterClose() {
+        const target =
+            previouslyFocused &&
+            previouslyFocused !== doc.body &&
+            previouslyFocused.isConnected !== false &&
+            typeof previouslyFocused.focus === 'function'
+                ? previouslyFocused
+                : toggleBtn;
+        previouslyFocused = null;
+        if (typeof target?.focus === 'function') {
+            target.focus();
+        }
+    }
+
     function openPanel() {
-        if (isOpen) return;
+        if (destroyed || isOpen) return;
         previouslyFocused = doc.activeElement || toggleBtn;
         isOpen = true;
         panel.hidden = false;
@@ -550,33 +608,27 @@ export function createAccessibilityController({
         announce('Panel de accesibilidad abierto. Usa Tab para navegar y Escape para cerrar.');
     }
 
-    function closePanel({ restoreFocus = true } = {}) {
-        if (!isOpen) return;
-        isOpen = false;
-        panel.hidden = true;
-        panel.classList?.remove('is-open');
-        if (backdrop) {
-            backdrop.hidden = true;
-            backdrop.classList?.remove('is-open');
+    function closePanel({ restoreFocus = true, silent = false } = {}) {
+        if (destroyed) return;
+        const wasOpen = isOpen;
+        applyClosedPanelDom();
+        if (!wasOpen) {
+            previouslyFocused = null;
+            return;
         }
-        toggleBtn.setAttribute('aria-expanded', 'false');
 
         if (restoreFocus) {
-            const target =
-                previouslyFocused &&
-                previouslyFocused !== doc.body &&
-                previouslyFocused.isConnected !== false &&
-                typeof previouslyFocused.focus === 'function'
-                    ? previouslyFocused
-                    : toggleBtn;
-            if (typeof target?.focus === 'function') {
-                target.focus();
-            }
+            restoreFocusAfterClose();
+        } else {
+            previouslyFocused = null;
         }
-        announce('Panel de accesibilidad cerrado.');
+        if (!silent) {
+            announce('Panel de accesibilidad cerrado.');
+        }
     }
 
     function togglePanel() {
+        if (destroyed) return;
         if (isOpen) {
             closePanel();
         } else {
@@ -585,6 +637,7 @@ export function createAccessibilityController({
     }
 
     function handleGlobalKeydown(event) {
+        if (destroyed) return;
         if (isOpenShortcut(event)) {
             event.preventDefault?.();
             event.stopPropagation?.();
@@ -629,7 +682,7 @@ export function createAccessibilityController({
      * trampas de foco externas (por ejemplo, modales de Bootstrap abiertos).
      */
     function handlePanelFocusGuard(event) {
-        if (!isOpen) return;
+        if (destroyed || !isOpen) return;
         const target = event.target;
         if (!target) return;
 
@@ -646,7 +699,9 @@ export function createAccessibilityController({
     }
 
     function handlePageInteractionForVoice(event) {
-        if (!prefs.voiceReader) return;
+        if (destroyed || !prefs.voiceReader || !hasSpeechSupport()) return;
+        if (!refreshVoices().available) return;
+
         const target = event.target;
         if (!target || widgetContainer.contains?.(target)) return;
 
@@ -661,7 +716,7 @@ export function createAccessibilityController({
             return;
         }
 
-        const text = extractReadableText(readable);
+        const text = extractReadableText(readable, win);
         if (text) {
             lastSpokenElement = readable;
             lastSpokenAt = now;
@@ -733,6 +788,27 @@ export function createAccessibilityController({
     }
 
     on(voiceBtn, 'click', () => {
+        if (destroyed) return;
+        const availability = refreshVoices();
+        if (!availability.available) {
+            stopSpeech({ silent: true });
+            voiceNoticeVisible = !voiceNoticeVisible || prefs.voiceReader;
+            if (prefs.voiceReader) {
+                commitPreferences({ ...prefs, voiceReader: false });
+            } else {
+                syncUI();
+            }
+            announce(getUnavailableVoiceMessage(availability.reason));
+            if (voiceNoticeVisible && typeof voiceControls?.scrollIntoView === 'function') {
+                voiceControls.scrollIntoView({
+                    block: 'nearest',
+                    behavior: prefs.reducedMotion ? 'auto' : 'smooth'
+                });
+            }
+            return;
+        }
+
+        voiceNoticeVisible = false;
         const next = !prefs.voiceReader;
         if (!next) {
             stopSpeech({ silent: true });
@@ -750,12 +826,15 @@ export function createAccessibilityController({
     });
 
     on(voiceReadPageBtn, 'click', () => {
+        if (destroyed) return;
         const { text, target } = getActiveReadingTarget();
         speakText(text, target);
     });
 
     on(voicePauseBtn, 'click', () => togglePauseSpeech());
-    on(voiceStopBtn, 'click', () => stopSpeech());
+    on(voiceStopBtn, 'click', () => {
+        if (!destroyed) stopSpeech();
+    });
 
     on(voiceRateSelect, 'change', (e) => {
         const rate = Number(e.target?.value);
@@ -764,6 +843,8 @@ export function createAccessibilityController({
     });
 
     on(resetBtn, 'click', () => {
+        if (destroyed) return;
+        voiceNoticeVisible = false;
         stopSpeech({ silent: true });
         const defaults = clearPreferences(storage);
         prefs = applyPreferencesToDocument(defaults, doc, win);
@@ -772,7 +853,14 @@ export function createAccessibilityController({
     });
 
     const handleBeforeUnload = () => stopSpeech({ silent: true });
-    const handleWindowLoad = () => syncHeroCarouselMotion(prefs.reducedMotion, doc, win);
+    const handleWindowLoad = () => {
+        if (!destroyed) syncHeroCarouselMotion(prefs.reducedMotion, doc, win);
+    };
+    const handleVoicesChanged = () => {
+        if (destroyed) return;
+        refreshVoices();
+        syncUI();
+    };
 
     on(doc, 'keydown', handleGlobalKeydown, true);
     on(doc, 'focusin', handlePanelFocusGuard, true);
@@ -781,8 +869,23 @@ export function createAccessibilityController({
     on(win, 'beforeunload', handleBeforeUnload);
     on(win, 'load', handleWindowLoad);
 
-    // Aplicar estado inicial restaurado de localStorage
+    if (hasSpeechSupport()) {
+        if (typeof win.speechSynthesis.addEventListener === 'function') {
+            on(win.speechSynthesis, 'voiceschanged', handleVoicesChanged);
+        } else if ('onvoiceschanged' in win.speechSynthesis) {
+            const prevOnVoicesChanged = win.speechSynthesis.onvoiceschanged;
+            win.speechSynthesis.onvoiceschanged = handleVoicesChanged;
+            cleanups.push(() => {
+                if (win.speechSynthesis.onvoiceschanged === handleVoicesChanged) {
+                    win.speechSynthesis.onvoiceschanged = prevOnVoicesChanged ?? null;
+                }
+            });
+        }
+    }
+
+    // Aplicar estado inicial restaurado de localStorage y validar voces locales disponibles
     prefs = applyPreferencesToDocument(prefs, doc, win);
+    refreshVoices();
     syncUI();
 
     return {
@@ -792,19 +895,35 @@ export function createAccessibilityController({
         closePanel,
         togglePanel,
         speakText,
-        stopSpeech,
+        stopSpeech: (opts) => {
+            if (!destroyed) stopSpeech(opts);
+        },
         reset: () => {
+            if (destroyed) return;
+            voiceNoticeVisible = false;
             stopSpeech({ silent: true });
             const defaults = clearPreferences(storage);
             prefs = applyPreferencesToDocument(defaults, doc, win);
             syncUI();
         },
         destroy: () => {
+            if (destroyed) return;
+            destroyed = true;
+            const wasOpen = isOpen;
+            applyClosedPanelDom();
+            if (wasOpen) {
+                restoreFocusAfterClose();
+            } else {
+                previouslyFocused = null;
+            }
             if (announceTimer !== null && typeof win?.clearTimeout === 'function') {
                 win.clearTimeout(announceTimer);
                 announceTimer = null;
             }
             stopSpeech({ silent: true });
+            lastSpokenElement = null;
+            lastSpokenAt = 0;
+            voiceNoticeVisible = false;
             while (cleanups.length > 0) {
                 const cleanup = cleanups.pop();
                 cleanup();

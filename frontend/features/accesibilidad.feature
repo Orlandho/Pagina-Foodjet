@@ -60,3 +60,21 @@ Feature: Widget de accesibilidad universal de FoodJet
     Then el texto extraído es "Contraseña (campo de contraseña)"
     When segmento un párrafo largo de 500 caracteres para síntesis de voz
     Then todos los fragmentos tienen como máximo 220 caracteres
+
+  Scenario: A11Y-PRIV-008 Protección de datos de tarjeta y contraseñas visibles tras Mostrar contraseña
+    When extraigo texto legible de una contraseña mostrada temporalmente como texto con etiqueta "Contraseña"
+    Then el texto extraído no expone datos confidenciales y conserva "campo de contraseña"
+    When extraigo texto legible de un campo de número de tarjeta con dato ficticio
+    Then el texto extraído no expone el número de tarjeta y anuncia "campo confidencial de tarjeta"
+    When extraigo texto legible de un campo de vencimiento con dato ficticio
+    Then el texto extraído no expone la fecha y anuncia "campo confidencial de vencimiento"
+    When extraigo texto legible de un campo CVC con dato ficticio
+    Then el texto extraído no expone el CVC y anuncia "campo confidencial de código de seguridad"
+
+  Scenario: A11Y-VOICE-LOCAL-009 Restricción exclusiva a voces locales y rechazo de voces remotas
+    When evalúo voces donde todas son remotas
+    Then ninguna voz es seleccionada y el motivo es "remote-only"
+    When evalúo una lista vacía de voces
+    Then ninguna voz es seleccionada y el motivo es "none"
+    When evalúo voces mixtas con una voz remota en español y una voz local en español
+    Then se selecciona únicamente la voz local en español

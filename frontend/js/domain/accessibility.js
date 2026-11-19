@@ -207,37 +207,313 @@ export function isOpenShortcut(event) {
     return key === 'a' || code === 'KeyA';
 }
 
+const SENSITIVE_CATEGORIES = new Set([
+    'password',
+    'payment-card',
+    'payment-expiry',
+    'payment-cvc',
+    'sensitive'
+]);
+
+const SENSITIVE_AUTOCOMPLETE_MAP = Object.freeze({
+    'current-password': 'password',
+    'new-password': 'password',
+    'cc-number': 'payment-card',
+    'cc-exp': 'payment-expiry',
+    'cc-exp-month': 'payment-expiry',
+    'cc-exp-year': 'payment-expiry',
+    'cc-csc': 'payment-cvc',
+    'one-time-code': 'sensitive',
+    'cc-name': 'sensitive',
+    'cc-given-name': 'sensitive',
+    'cc-additional-name': 'sensitive',
+    'cc-family-name': 'sensitive',
+    'cc-type': 'sensitive'
+});
+
+const SENSITIVE_METADATA_RULES = Object.freeze([
+    {
+        category: 'payment-cvc',
+        pattern: /(card[-_\s]?cv[cv]|card[-_\s]?csc|cardcv[cv]|\bcv[cv]\b|\bcsc\b|codigo[-_\s]?de[-_\s]?seguridad)/i
+    },
+    {
+        category: 'payment-expiry',
+        pattern: /(card[-_\s]?exp(?:ir(?:y|ation))?|cardexpiry|vencimiento|fecha[-_\s]?exp|exp[-_\s]?date)/i
+    },
+    {
+        category: 'payment-card',
+        pattern: /(card[-_\s]?num(?:ber)?|cardnumber|numero[-_\s]?de[-_\s]?tarjeta|credit[-_\s]?card|debit[-_\s]?card|\bpan\b)/i
+    },
+    {
+        category: 'password',
+        pattern: /(password|passwd|passcode|contrasena|\bpwd\b|\bclave\b)/i
+    },
+    {
+        category: 'sensitive',
+        pattern: /(secret|token|api[-_\s]?key|auth[-_\s]?code|security[-_\s]?code|\botp\b|\bmfa\b|\b2fa\b|\bpin[-_\s]?code\b|\bpin\b)/i
+    }
+]);
+
+const SKIP_CONTAINER_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'SVG']);
+
+function getAttr(element, name) {
+    return typeof element?.getAttribute === 'function' ? element.getAttribute(name) || '' : '';
+}
+
+function normalizeMetadataText(raw) {
+    return String(raw || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function classifyExplicitAttribute(element) {
+    if (!element) return null;
+    const explicit = getAttr(element, 'data-a11y-sensitive').trim().toLowerCase();
+    if (explicit && explicit !== 'false' && explicit !== '0') {
+        return SENSITIVE_CATEGORIES.has(explicit) ? explicit : 'sensitive';
+    }
+    const legacySensitive = getAttr(element, 'data-sensitive').trim().toLowerCase();
+    const legacyPrivate = getAttr(element, 'data-private').trim().toLowerCase();
+    if (
+        legacySensitive === 'true' ||
+        legacySensitive === '1' ||
+        legacyPrivate === 'true' ||
+        legacyPrivate === '1'
+    ) {
+        return 'sensitive';
+    }
+    return null;
+}
+
+/**
+ * Clasifica si un elemento o control contiene información confidencial
+ * (contraseñas visibles u ocultas, tarjetas, vencimientos, CVC, códigos OTP, tokens).
+ * Evalúa múltiples capas independientes y nunca depende únicamente de `type`.
+ */
+export function classifySensitiveField(element) {
+    if (!element) return null;
+
+    // Capa A: atributo explícito en el propio elemento o en un contenedor ancestro
+    const selfExplicit = classifyExplicitAttribute(element);
+    if (selfExplicit) return selfExplicit;
+
+    if (typeof element.closest === 'function') {
+        try {
+            const sensitiveAncestor = element.closest(
+                '[data-a11y-sensitive]:not([data-a11y-sensitive="false"]):not([data-a11y-sensitive="0"]), [data-sensitive="true"], [data-sensitive="1"], [data-private="true"], [data-private="1"]'
+            );
+            if (sensitiveAncestor && sensitiveAncestor !== element) {
+                return classifyExplicitAttribute(sensitiveAncestor) || 'sensitive';
+            }
+        } catch {
+            // Ignorar selectores no soportados en mocks mínimos
+        }
+    }
+
+    // Capa B: tipo password (actual o declarado en atributo)
+    const tag = typeof element.tagName === 'string' ? element.tagName.toUpperCase() : '';
+    const inputType = (getAttr(element, 'type') || element.type || '').toLowerCase();
+    if (inputType === 'password') {
+        return 'password';
+    }
+
+    // Capa C: tokens estándar WHATWG de autocomplete
+    const autocompleteRaw =
+        getAttr(element, 'autocomplete') ||
+        (typeof element.autocomplete === 'string' ? element.autocomplete : '');
+    if (autocompleteRaw) {
+        const tokens = autocompleteRaw.toLowerCase().trim().split(/\s+/);
+        for (const token of tokens) {
+            if (Object.prototype.hasOwnProperty.call(SENSITIVE_AUTOCOMPLETE_MAP, token)) {
+                return SENSITIVE_AUTOCOMPLETE_MAP[token];
+            }
+        }
+    }
+
+    // Capa D: botón asociado "Mostrar contraseña" aunque el input haya cambiado a type="text"
+    if (element.id && typeof element.ownerDocument?.querySelector === 'function') {
+        try {
+            const escapedId = String(element.id).replace(/["\\]/g, '\\$&');
+            const toggleMatch = element.ownerDocument.querySelector(
+                `[data-target="${escapedId}"].foodjet-password-toggle`
+            );
+            if (toggleMatch) {
+                return 'password';
+            }
+        } catch {
+            // Ignorar selectores inválidos
+        }
+    }
+
+    // Capa E: identificadores y metadatos en controles de entrada o elementos editables
+    const isInputControl = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    const isEditable =
+        Boolean(element.isContentEditable) ||
+        getAttr(element, 'contenteditable').trim().toLowerCase() === 'true';
+
+    if (isInputControl || isEditable) {
+        const metadata = normalizeMetadataText(
+            [
+                element.id,
+                getAttr(element, 'id'),
+                element.name,
+                getAttr(element, 'name'),
+                getAttr(element, 'aria-label'),
+                getAttr(element, 'placeholder')
+            ]
+                .filter(Boolean)
+                .join(' ')
+        );
+        if (metadata) {
+            for (const rule of SENSITIVE_METADATA_RULES) {
+                if (rule.pattern.test(metadata)) {
+                    return rule.category;
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Devuelve true cuando el elemento o su contenedor clasifica como confidencial.
+ */
+export function isSensitiveField(element) {
+    return Boolean(classifySensitiveField(element));
+}
+
+function resolveFieldLabel(element) {
+    let labelText = getAttr(element, 'aria-label');
+
+    if (!labelText && element.id && typeof element.ownerDocument?.querySelector === 'function') {
+        try {
+            const escapedId = String(element.id).replace(/["\\]/g, '\\$&');
+            const associatedLabel = element.ownerDocument.querySelector(`label[for="${escapedId}"]`);
+            labelText = associatedLabel?.innerText || associatedLabel?.textContent || '';
+        } catch {
+            // Ignorar selectores inválidos
+        }
+    }
+
+    if (!labelText) {
+        labelText = getAttr(element, 'placeholder') || getAttr(element, 'title') || getAttr(element, 'name') || '';
+    }
+
+    return labelText.replace(/\s+/g, ' ').trim();
+}
+
+function formatSensitiveAnnouncement(category, labelText, { isContainer = false } = {}) {
+    if (isContainer) {
+        return labelText ? `${labelText} (contenido confidencial)` : 'Contenido confidencial';
+    }
+    switch (category) {
+        case 'password':
+            return labelText ? `${labelText} (campo de contraseña)` : 'Campo de contraseña';
+        case 'payment-card':
+            return labelText ? `${labelText} (campo confidencial de tarjeta)` : 'Campo confidencial de tarjeta';
+        case 'payment-expiry':
+            return labelText ? `${labelText} (campo confidencial de vencimiento)` : 'Campo confidencial de vencimiento';
+        case 'payment-cvc':
+            return labelText
+                ? `${labelText} (campo confidencial de código de seguridad)`
+                : 'Campo confidencial de código de seguridad';
+        default:
+            return labelText ? `${labelText} (campo confidencial)` : 'Campo confidencial';
+    }
+}
+
+function isHiddenElement(element, win) {
+    if (!element) return true;
+    const tag = typeof element.tagName === 'string' ? element.tagName.toUpperCase() : '';
+    if (SKIP_CONTAINER_TAGS.has(tag)) return true;
+    if (element.id === 'a11yWidgetContainer') return true;
+    if (element.hidden === true) return true;
+    if (typeof element.hasAttribute === 'function' && element.hasAttribute('hidden')) return true;
+    if (getAttr(element, 'aria-hidden').trim().toLowerCase() === 'true') return true;
+    if (element.style?.display === 'none' || element.style?.visibility === 'hidden') return true;
+    if (element.classList?.contains?.('d-none')) return true;
+
+    if (typeof win?.getComputedStyle === 'function') {
+        try {
+            const computed = win.getComputedStyle(element);
+            if (computed && (computed.display === 'none' || computed.visibility === 'hidden')) {
+                return true;
+            }
+        } catch {
+            // Ignorar nodos sin estilo computado
+        }
+    }
+    return false;
+}
+
+function collectSafeContainerText(root, win) {
+    const parts = [];
+
+    const walk = (node) => {
+        if (!node) return;
+        if (node.nodeType === 3) {
+            const text = String(node.nodeValue || '').replace(/\s+/g, ' ').trim();
+            if (text) parts.push(text);
+            return;
+        }
+        if (node.nodeType !== 1 && typeof node.tagName !== 'string') return;
+        if (isHiddenElement(node, win)) return;
+
+        const tag = typeof node.tagName === 'string' ? node.tagName.toUpperCase() : '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+            const inputType = (getAttr(node, 'type') || node.type || '').toLowerCase();
+            if (inputType === 'hidden') return;
+            const text = extractReadableText(node, win);
+            if (text) parts.push(text);
+            return;
+        }
+
+        const sensitiveKind = classifySensitiveField(node);
+        if (sensitiveKind) {
+            parts.push(
+                formatSensitiveAnnouncement(sensitiveKind, getAttr(node, 'aria-label').trim(), {
+                    isContainer: true
+                })
+            );
+            return;
+        }
+
+        const children = node.childNodes || [];
+        for (let i = 0; i < children.length; i += 1) {
+            walk(children[i]);
+        }
+    };
+
+    if (isHiddenElement(root, win)) return '';
+    const children = root.childNodes || [];
+    for (let i = 0; i < children.length; i += 1) {
+        walk(children[i]);
+    }
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+}
+
 /**
  * Normaliza texto para lectura asistida por voz, priorizando etiquetas ARIA
- * cuando el elemento carece de texto visible y soportando controles de formulario
- * sin exponer valores de campos de contraseña.
+ * cuando el elemento carece de texto visible y protegiendo campos y contenedores
+ * confidenciales para no exponer contraseñas, tarjetas, vencimientos ni CVC.
  */
-export function extractReadableText(element) {
+export function extractReadableText(element, win = globalThis.window) {
     if (!element) return '';
 
     const tag = typeof element.tagName === 'string' ? element.tagName.toUpperCase() : '';
-    const getAttr = (name) =>
-        typeof element.getAttribute === 'function' ? element.getAttribute(name) || '' : '';
 
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
-        const inputType = (getAttr('type') || element.type || '').toLowerCase();
-        let labelText = getAttr('aria-label');
+        const inputType = (getAttr(element, 'type') || element.type || '').toLowerCase();
+        const labelText = resolveFieldLabel(element);
+        const sensitiveKind = classifySensitiveField(element);
 
-        if (!labelText && element.id && typeof element.ownerDocument?.querySelector === 'function') {
-            try {
-                const escapedId = String(element.id).replace(/["\\]/g, '\\$&');
-                const associatedLabel = element.ownerDocument.querySelector(`label[for="${escapedId}"]`);
-                labelText = associatedLabel?.innerText || associatedLabel?.textContent || '';
-            } catch {
-                // Ignorar selectores inválidos
-            }
+        if (sensitiveKind) {
+            return formatSensitiveAnnouncement(sensitiveKind, labelText);
         }
-
-        if (!labelText) {
-            labelText = getAttr('placeholder') || getAttr('title') || getAttr('name') || '';
-        }
-
-        labelText = labelText.replace(/\s+/g, ' ').trim();
 
         if (tag === 'SELECT') {
             const selectedOption =
@@ -248,8 +524,8 @@ export function extractReadableText(element) {
             return [labelText, selectedText].filter(Boolean).join(': ');
         }
 
-        if (inputType === 'password') {
-            return labelText ? `${labelText} (campo de contraseña)` : 'Campo de contraseña';
+        if (inputType === 'file') {
+            return labelText ? `${labelText} (selector de archivo)` : 'Selector de archivo';
         }
 
         if (inputType === 'checkbox' || inputType === 'radio') {
@@ -266,6 +542,19 @@ export function extractReadableText(element) {
         return [labelText, valueText].filter(Boolean).join(': ');
     }
 
+    const sensitiveKind = classifySensitiveField(element);
+    if (sensitiveKind) {
+        const labelText = getAttr(element, 'aria-label').replace(/\s+/g, ' ').trim();
+        return formatSensitiveAnnouncement(sensitiveKind, labelText, { isContainer: true });
+    }
+
+    if (element.childNodes && element.childNodes.length > 0) {
+        const safeText = collectSafeContainerText(element, win);
+        if (safeText) return safeText;
+        const fallbackAria = getAttr(element, 'aria-label') || getAttr(element, 'alt');
+        return fallbackAria.replace(/\s+/g, ' ').trim();
+    }
+
     const rawText =
         typeof element.innerText === 'string' && element.innerText.trim()
             ? element.innerText
@@ -273,8 +562,42 @@ export function extractReadableText(element) {
                 ? element.textContent
                 : '';
 
-    const ariaLabel = getAttr('aria-label') || getAttr('alt');
+    const ariaLabel = getAttr(element, 'aria-label') || getAttr(element, 'alt');
 
     const candidate = rawText || ariaLabel;
     return candidate.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Selecciona exclusivamente una voz local (`localService === true`) con prioridad
+ * para español (es-PE, variantes es-419/ES/MX/CO/AR/CL/US, cualquier es-*).
+ * Nunca devuelve voces remotas ni permite selección implícita sin localService === true.
+ */
+export function selectLocalVoice(voices) {
+    if (!Array.isArray(voices) || voices.length === 0) return null;
+    const localVoices = voices.filter((v) => Boolean(v) && v.localService === true);
+    if (localVoices.length === 0) return null;
+
+    return (
+        localVoices.find((v) => /^es[-_]PE/i.test(v.lang || '')) ||
+        localVoices.find((v) => /^es[-_](419|ES|MX|CO|AR|CL|US)/i.test(v.lang || '')) ||
+        localVoices.find((v) => /^es(?:[-_]|$)/i.test(v.lang || '')) ||
+        localVoices.find((v) => v.default === true) ||
+        localVoices[0]
+    );
+}
+
+/**
+ * Evalúa disponibilidad de síntesis local distinguiendo ausencia total de voces
+ * frente a entornos donde solo existen voces remotas.
+ */
+export function classifyVoiceAvailability(voices) {
+    if (!Array.isArray(voices) || voices.length === 0) {
+        return { available: false, voice: null, reason: 'none' };
+    }
+    const voice = selectLocalVoice(voices);
+    if (voice) {
+        return { available: true, voice, reason: 'ok' };
+    }
+    return { available: false, voice: null, reason: 'remote-only' };
 }

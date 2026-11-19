@@ -702,6 +702,7 @@
                                             <input type="text" class="form-control foodjet-input" id="cardNumber"
                                                    placeholder="1234 5678 9012 3456" maxlength="19"
                                                    inputmode="numeric" autocomplete="cc-number"
+                                                   data-a11y-sensitive="payment-card"
                                                    aria-describedby="cardNumberError">
                                             <div class="invalid-feedback" id="cardNumberError"></div>
                                         </div>
@@ -712,6 +713,7 @@
                                                 <input type="text" class="form-control foodjet-input" id="cardExpiry"
                                                        placeholder="MM/AA" maxlength="5"
                                                        inputmode="numeric" autocomplete="cc-exp"
+                                                       data-a11y-sensitive="payment-expiry"
                                                        aria-describedby="cardExpiryError">
                                                 <div class="invalid-feedback" id="cardExpiryError"></div>
                                             </div>
@@ -720,6 +722,7 @@
                                                 <input type="text" class="form-control foodjet-input" id="cardCvc"
                                                        placeholder="123" maxlength="4"
                                                        inputmode="numeric" autocomplete="cc-csc"
+                                                       data-a11y-sensitive="payment-cvc"
                                                        aria-describedby="cardCvcError">
                                                 <div class="invalid-feedback" id="cardCvcError"></div>
                                             </div>
@@ -1249,7 +1252,8 @@
                             </label>
                             <div class="position-relative">
                                 <input type="password" class="form-control foodjet-input pe-5" id="loginPassword"
-                                       placeholder="••••••••" required autocomplete="current-password">
+                                       placeholder="••••••••" required autocomplete="current-password"
+                                       data-a11y-sensitive="password">
                                 <button type="button" class="foodjet-password-toggle position-absolute top-50 end-0 translate-middle-y me-2"
                                         aria-label="Mostrar contraseña" data-target="loginPassword">
                                     <i class="bi bi-eye" aria-hidden="true"></i>
@@ -1330,7 +1334,8 @@
                             </label>
                             <div class="position-relative">
                                 <input type="password" class="form-control foodjet-input pe-5" id="registerPassword"
-                                       placeholder="••••••••" minlength="6" required autocomplete="new-password">
+                                       placeholder="••••••••" minlength="6" required autocomplete="new-password"
+                                       data-a11y-sensitive="password">
                                 <button type="button" class="foodjet-password-toggle position-absolute top-50 end-0 translate-middle-y me-2"
                                         aria-label="Mostrar contraseña" data-target="registerPassword">
                                     <i class="bi bi-eye" aria-hidden="true"></i>
@@ -1626,22 +1631,24 @@
     <aside id="a11yWidgetContainer" class="a11y-widget" aria-label="Herramientas de accesibilidad">
         <div id="a11yBackdrop" class="a11y-backdrop" hidden></div>
 
-        <button
-            type="button"
-            id="a11yToggleBtn"
-            class="a11y-fab"
-            aria-label="Opciones de accesibilidad (atajo Alt + A)"
-            aria-haspopup="dialog"
-            aria-expanded="false"
-            aria-controls="a11yPanel"
-            title="Accesibilidad (Alt + A)"
-        >
-            <svg class="a11y-fab__icon" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">
-                <circle cx="12" cy="4.2" r="2.1" fill="currentColor"></circle>
-                <path fill="currentColor" d="M20.5 7.4c-.2-.5-.8-.8-1.3-.6-2.3.8-4.7 1.2-7.2 1.2s-4.9-.4-7.2-1.2c-.5-.2-1.1.1-1.3.6-.2.5.1 1.1.6 1.3 1.7.6 3.5 1 5.4 1.2v3.3l-2.3 6.3c-.2.5.1 1.1.6 1.3.1.1.2.1.3.1.4 0 .8-.3 1-.7l2.2-5.7h1.4l2.2 5.7c.2.4.5.7 1 .7.1 0 .2 0 .3-.1.5-.2.8-.8.6-1.3l-2.3-6.3V9.9c1.9-.2 3.7-.6 5.4-1.2.5-.2.8-.8.6-1.3z"></path>
-            </svg>
+        <div class="a11y-fab-wrap">
+            <button
+                type="button"
+                id="a11yToggleBtn"
+                class="a11y-fab"
+                aria-label="Opciones de accesibilidad (atajo Alt + A)"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                aria-controls="a11yPanel"
+                title="Accesibilidad (Alt + A)"
+            >
+                <svg class="a11y-fab__icon" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="4.2" r="2.1" fill="currentColor"></circle>
+                    <path fill="currentColor" d="M20.5 7.4c-.2-.5-.8-.8-1.3-.6-2.3.8-4.7 1.2-7.2 1.2s-4.9-.4-7.2-1.2c-.5-.2-1.1.1-1.3.6-.2.5.1 1.1.6 1.3 1.7.6 3.5 1 5.4 1.2v3.3l-2.3 6.3c-.2.5.1 1.1.6 1.3.1.1.2.1.3.1.4 0 .8-.3 1-.7l2.2-5.7h1.4l2.2 5.7c.2.4.5.7 1 .7.1 0 .2 0 .3-.1.5-.2.8-.8.6-1.3l-2.3-6.3V9.9c1.9-.2 3.7-.6 5.4-1.2.5-.2.8-.8.6-1.3z"></path>
+                </svg>
+            </button>
             <span id="a11yActiveBadge" class="a11y-fab__badge" aria-hidden="true" hidden>0</span>
-        </button>
+        </div>
 
         <div
             id="a11yPanel"
@@ -1680,13 +1687,13 @@
                         <span id="a11yFontValue" class="a11y-font-value" aria-live="polite">100%</span>
                     </div>
                     <div class="a11y-font-controls" role="group" aria-label="Control de ampliación tipográfica hasta 200 por ciento">
-                        <button type="button" id="a11yFontDecBtn" class="a11y-step-btn" aria-label="Reducir tamaño de texto" disabled>
-                            <span aria-hidden="true">A−</span>
+                        <button type="button" id="a11yFontDecBtn" class="a11y-step-btn" aria-label="A-, reducir tamaño de texto" disabled>
+                            <span aria-hidden="true">A-</span>
                         </button>
                         <div class="a11y-font-track" aria-hidden="true">
                             <div id="a11yFontMeter" class="a11y-font-track__fill" style="width: 0%;"></div>
                         </div>
-                        <button type="button" id="a11yFontIncBtn" class="a11y-step-btn" aria-label="Aumentar tamaño de texto hasta 200 por ciento">
+                        <button type="button" id="a11yFontIncBtn" class="a11y-step-btn" aria-label="A+, aumentar tamaño de texto hasta 200 por ciento">
                             <span aria-hidden="true">A+</span>
                         </button>
                     </div>

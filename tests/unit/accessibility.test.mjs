@@ -9,14 +9,18 @@ import {
     FONT_SCALE_MIN,
     STORAGE_KEY,
     clampFontScale,
+    classifySensitiveField,
+    classifyVoiceAvailability,
     clearPreferences,
     countActiveAdjustments,
     createDefaultPreferences,
     extractReadableText,
     isOpenShortcut,
+    isSensitiveField,
     loadPreferences,
     sanitizePreferences,
     savePreferences,
+    selectLocalVoice,
     stepFontScale
 } from '../../frontend/js/domain/accessibility.js';
 
@@ -93,7 +97,12 @@ function createFakeElement(id = '', attrs = {}) {
     return el;
 }
 
-function createFakeDOM({ speechSupported = true, initialStorage = null } = {}) {
+function createFakeDOM({
+    speechSupported = true,
+    voices = [{ lang: 'es-PE', name: 'Español Perú Local', localService: true }],
+    initialStorage = null,
+    fakeTimers = false
+} = {}) {
     const docListeners = new Map();
     const elements = new Map();
     const root = createFakeElement('html');
@@ -207,6 +216,10 @@ function createFakeDOM({ speechSupported = true, initialStorage = null } = {}) {
 
     const spokenUtterances = [];
     const speechCalls = [];
+    const speechListeners = new Map();
+    let currentVoices = Array.isArray(voices) ? [...voices] : [];
+    const timerCalls = { set: [], cleared: [] };
+    let nextTimerId = 1;
 
     class FakeUtterance {
         constructor(text) {
@@ -219,8 +232,39 @@ function createFakeDOM({ speechSupported = true, initialStorage = null } = {}) {
         }
     }
 
+    const speechSynthesisMock = {
+        getVoices: () => currentVoices,
+        addEventListener: (type, fn) => {
+            if (!speechListeners.has(type)) speechListeners.set(type, []);
+            speechListeners.get(type).push(fn);
+        },
+        removeEventListener: (type, fn) => {
+            const arr = speechListeners.get(type) || [];
+            speechListeners.set(type, arr.filter((item) => item !== fn));
+        },
+        speak: (u) => {
+            spokenUtterances.push(u);
+            speechCalls.push('speak');
+        },
+        pause: () => speechCalls.push('pause'),
+        resume: () => speechCalls.push('resume'),
+        cancel: () => speechCalls.push('cancel')
+    };
+
     const win = {
-        setTimeout: (fn) => fn(),
+        setTimeout: fakeTimers
+            ? (fn) => {
+                  const id = nextTimerId++;
+                  timerCalls.set.push({ id, fn });
+                  return id;
+              }
+            : (fn) => {
+                  fn();
+                  return 1;
+              },
+        clearTimeout: (id) => {
+            timerCalls.cleared.push(id);
+        },
         addEventListener: () => {},
         removeEventListener: () => {},
         matchMedia: () => ({ matches: false }),
@@ -233,16 +277,7 @@ function createFakeDOM({ speechSupported = true, initialStorage = null } = {}) {
         ...(speechSupported
             ? {
                   SpeechSynthesisUtterance: FakeUtterance,
-                  speechSynthesis: {
-                      getVoices: () => [{ lang: 'es-PE', name: 'Español Perú' }],
-                      speak: (u) => {
-                          spokenUtterances.push(u);
-                          speechCalls.push('speak');
-                      },
-                      pause: () => speechCalls.push('pause'),
-                      resume: () => speechCalls.push('resume'),
-                      cancel: () => speechCalls.push('cancel')
-                  }
+                  speechSynthesis: speechSynthesisMock
               }
             : {})
     };
@@ -257,7 +292,26 @@ function createFakeDOM({ speechSupported = true, initialStorage = null } = {}) {
         removeItem: (k) => backing.delete(k)
     };
 
-    return { doc, win, storage, elements, colorButtons, carouselCalls, spokenUtterances, speechCalls };
+    return {
+        doc,
+        win,
+        storage,
+        elements,
+        colorButtons,
+        carouselCalls,
+        spokenUtterances,
+        speechCalls,
+        speechListeners,
+        timerCalls,
+        setVoices: (nextVoices) => {
+            currentVoices = Array.isArray(nextVoices) ? [...nextVoices] : [];
+        },
+        triggerVoicesChanged: () => {
+            for (const fn of speechListeners.get('voiceschanged') || []) {
+                fn();
+            }
+        }
+    };
 }
 
 describe('Regression & White-Box Tests — Accessibility Domain', () => {
@@ -375,6 +429,174 @@ describe('Regression & White-Box Tests — Accessibility Domain', () => {
             assert.ok(chunk.length <= 120);
         }
         assert.deepEqual(splitTextForSpeech('   '), []);
+    });
+
+    it('debe proteger tarjeta, vencimiento, CVC y contraseñas aunque cambien a type="text"', () => {
+        const fakePan = '4111 1111 1111 1111';
+        const fakeExp = '12/29';
+        const fakeCvc = '999';
+        const fakePwd = 'ClaveFicticia#2026';
+
+        // 1. Contraseña oculta y visible (tras pulsar Mostrar contraseña: type="text")
+        const loginPwdVisible = {
+            tagName: 'INPUT',
+            id: 'loginPassword',
+            type: 'text',
+            value: fakePwd,
+            ownerDocument: {
+                querySelector: (sel) => {
+                    if (sel === 'label[for="loginPassword"]') return { textContent: 'Contraseña' };
+                    if (sel.includes('foodjet-password-toggle')) return { dataset: { target: 'loginPassword' } };
+                    return null;
+                }
+            },
+            getAttribute: (k) =>
+                k === 'type'
+                    ? 'text'
+                    : k === 'autocomplete'
+                        ? 'current-password'
+                        : k === 'data-a11y-sensitive'
+                            ? 'password'
+                            : null
+        };
+        const outLogin = extractReadableText(loginPwdVisible);
+        assert.equal(outLogin, 'Contraseña (campo de contraseña)');
+        assert.ok(!outLogin.includes(fakePwd));
+
+        // 2. Contraseña visible solo por toggle asociado sin atributo data-a11y-sensitive ni autocomplete
+        const registerPwdToggleOnly = {
+            tagName: 'INPUT',
+            id: 'campoClave',
+            type: 'text',
+            value: fakePwd,
+            ownerDocument: {
+                querySelector: (sel) => (sel.includes('foodjet-password-toggle') ? {} : null)
+            },
+            getAttribute: (k) => (k === 'aria-label' ? 'Contraseña de registro' : k === 'type' ? 'text' : null)
+        };
+        assert.equal(classifySensitiveField(registerPwdToggleOnly), 'password');
+        assert.ok(!extractReadableText(registerPwdToggleOnly).includes(fakePwd));
+
+        // 3. Campos de tarjeta: cardNumber, cardExpiry, cardCvc (por autocomplete, id o data-a11y-sensitive)
+        const cardField = {
+            tagName: 'INPUT',
+            id: 'cardNumber',
+            type: 'text',
+            value: fakePan,
+            getAttribute: (k) =>
+                k === 'aria-label' ? 'Número de tarjeta' : k === 'autocomplete' ? 'cc-number' : null
+        };
+        const expiryField = {
+            tagName: 'INPUT',
+            id: 'cardExpiry',
+            type: 'text',
+            value: fakeExp,
+            getAttribute: (k) =>
+                k === 'aria-label' ? 'Vencimiento' : k === 'autocomplete' ? 'cc-exp' : null
+        };
+        const cvcField = {
+            tagName: 'INPUT',
+            id: 'cardCvc',
+            type: 'text',
+            value: fakeCvc,
+            getAttribute: (k) =>
+                k === 'aria-label' ? 'CVC / CVV' : k === 'autocomplete' ? 'cc-csc' : null
+        };
+
+        const outCard = extractReadableText(cardField);
+        const outExp = extractReadableText(expiryField);
+        const outCvc = extractReadableText(cvcField);
+
+        assert.equal(outCard, 'Número de tarjeta (campo confidencial de tarjeta)');
+        assert.equal(outExp, 'Vencimiento (campo confidencial de vencimiento)');
+        assert.equal(outCvc, 'CVC / CVV (campo confidencial de código de seguridad)');
+        assert.ok(!outCard.includes('4111'));
+        assert.ok(!outExp.includes(fakeExp));
+        assert.ok(!outCvc.includes(fakeCvc));
+
+        // 4. Campos OTP / secretos genéricos y ausencia de falsos positivos en cupón
+        const otpField = {
+            tagName: 'INPUT',
+            id: 'otpInput',
+            type: 'text',
+            value: '654321',
+            getAttribute: (k) => (k === 'autocomplete' ? 'one-time-code' : k === 'aria-label' ? 'Código temporal' : null)
+        };
+        assert.equal(isSensitiveField(otpField), true);
+        assert.ok(!extractReadableText(otpField).includes('654321'));
+
+        const couponField = {
+            tagName: 'INPUT',
+            id: 'couponCode',
+            type: 'text',
+            value: 'FOODJET20',
+            getAttribute: (k) => (k === 'aria-label' ? 'Código de cupón' : null)
+        };
+        assert.equal(isSensitiveField(couponField), false);
+        assert.equal(extractReadableText(couponField), 'Código de cupón: FOODJET20');
+
+        // 5. Lectura segura de contenedor (modal/vista) que contiene inputs y contenedores sensibles
+        const containerTree = {
+            nodeType: 1,
+            tagName: 'DIV',
+            getAttribute: () => null,
+            childNodes: [
+                { nodeType: 1, tagName: 'H2', getAttribute: () => null, childNodes: [{ nodeType: 3, nodeValue: 'Datos de pago' }] },
+                { nodeType: 1, tagName: 'LABEL', getAttribute: () => null, childNodes: [{ nodeType: 3, nodeValue: 'Número de tarjeta' }] },
+                cardField,
+                { nodeType: 1, tagName: 'LABEL', getAttribute: () => null, childNodes: [{ nodeType: 3, nodeValue: 'Vencimiento' }] },
+                expiryField,
+                { nodeType: 1, tagName: 'LABEL', getAttribute: () => null, childNodes: [{ nodeType: 3, nodeValue: 'CVC / CVV' }] },
+                cvcField,
+                {
+                    nodeType: 1,
+                    tagName: 'TEXTAREA',
+                    id: 'apiTokenNotes',
+                    value: 'TOKEN_PRIVADO_999',
+                    getAttribute: (k) => (k === 'data-a11y-sensitive' ? 'true' : k === 'aria-label' ? 'Token privado' : null),
+                    childNodes: [{ nodeType: 3, nodeValue: 'TOKEN_PRIVADO_999' }]
+                },
+                {
+                    nodeType: 1,
+                    tagName: 'DIV',
+                    getAttribute: (k) => (k === 'data-a11y-sensitive' ? 'true' : k === 'aria-label' ? 'Resumen protegido' : null),
+                    childNodes: [{ nodeType: 3, nodeValue: 'SECRETO_EN_CONTENEDOR' }]
+                }
+            ]
+        };
+
+        const safeSummary = extractReadableText(containerTree);
+        assert.ok(safeSummary.includes('Datos de pago'));
+        assert.ok(safeSummary.includes('campo confidencial de tarjeta'));
+        assert.ok(!safeSummary.includes('4111'));
+        assert.ok(!safeSummary.includes(fakeExp));
+        assert.ok(!safeSummary.includes(fakeCvc));
+        assert.ok(!safeSummary.includes('TOKEN_PRIVADO_999'));
+        assert.ok(!safeSummary.includes('SECRETO_EN_CONTENEDOR'));
+    });
+
+    it('debe restringir selectLocalVoice a localService === true y priorizar español local', () => {
+        const remoteEs = { lang: 'es-PE', name: 'Google Español Remoto', localService: false };
+        const undefinedLocal = { lang: 'es-ES', name: 'Voz sin localService' };
+        const localEn = { lang: 'en-US', name: 'Local English', localService: true, default: true };
+        const localEsMx = { lang: 'es-MX', name: 'Local MX', localService: true };
+        const localEsPe = { lang: 'es-PE', name: 'Local PE', localService: true };
+
+        assert.equal(selectLocalVoice([]), null);
+        assert.equal(selectLocalVoice([remoteEs, undefinedLocal]), null);
+        assert.deepEqual(classifyVoiceAvailability([remoteEs]), {
+            available: false,
+            voice: null,
+            reason: 'remote-only'
+        });
+        assert.deepEqual(classifyVoiceAvailability([]), {
+            available: false,
+            voice: null,
+            reason: 'none'
+        });
+        assert.equal(selectLocalVoice([remoteEs, localEn, localEsMx, localEsPe]), localEsPe);
+        assert.equal(selectLocalVoice([remoteEs, localEn, localEsMx]), localEsMx);
+        assert.equal(selectLocalVoice([remoteEs, localEn]), localEn);
     });
 });
 
@@ -496,8 +718,14 @@ describe('Regression Tests — Accessibility DOM Controller', () => {
         ctrlReload.destroy();
     });
 
-    it('debe activar lectura asistida por voz con Web Speech API y degradar si no es soportada', () => {
-        const env = createFakeDOM({ speechSupported: true });
+    it('debe activar lectura asistida por voz solo con voz local, manejar carga asíncrona y bloquear voces remotas o ausentes', () => {
+        const env = createFakeDOM({
+            speechSupported: true,
+            voices: [
+                { lang: 'es-PE', name: 'Voz Remota', localService: false },
+                { lang: 'es-PE', name: 'Español Perú Local', localService: true }
+            ]
+        });
         const ctrl = createAccessibilityController(env);
 
         env.elements.get('a11yVoiceBtn').click();
@@ -506,6 +734,8 @@ describe('Regression Tests — Accessibility DOM Controller', () => {
         env.elements.get('a11yVoiceReadPageBtn').click();
         assert.equal(env.spokenUtterances.length, 1);
         assert.equal(env.spokenUtterances[0].lang, 'es-PE');
+        assert.equal(env.spokenUtterances[0].voice.localService, true);
+        assert.equal(env.spokenUtterances[0].voice.name, 'Español Perú Local');
         assert.ok(env.spokenUtterances[0].text.includes('Tu antojo'));
 
         env.elements.get('a11yVoicePauseBtn').click();
@@ -513,6 +743,36 @@ describe('Regression Tests — Accessibility DOM Controller', () => {
         env.elements.get('a11yVoiceStopBtn').click();
         assert.ok(env.speechCalls.includes('cancel'));
         ctrl.destroy();
+
+        // Solo voces remotas: debe bloquear speak() y deshabilitar controles
+        const remoteOnlyEnv = createFakeDOM({
+            speechSupported: true,
+            voices: [{ lang: 'es-PE', name: 'Google Cloud TTS', localService: false }]
+        });
+        const remoteCtrl = createAccessibilityController(remoteOnlyEnv);
+        remoteOnlyEnv.elements.get('a11yVoiceBtn').click();
+        assert.equal(remoteOnlyEnv.elements.get('a11yVoiceBtn').getAttribute('aria-pressed'), 'false');
+        assert.equal(remoteOnlyEnv.elements.get('a11yVoiceReadPageBtn').disabled, true);
+        assert.ok(remoteOnlyEnv.elements.get('a11yVoiceStatus').textContent.includes('voces remotas'));
+        assert.equal(remoteCtrl.speakText('Texto de prueba'), false);
+        assert.equal(remoteOnlyEnv.spokenUtterances.length, 0);
+        remoteCtrl.destroy();
+
+        // Sin voces iniciales -> carga asíncrona via voiceschanged habilita voz local
+        const asyncEnv = createFakeDOM({ speechSupported: true, voices: [] });
+        const asyncCtrl = createAccessibilityController(asyncEnv);
+        asyncEnv.elements.get('a11yVoiceBtn').click();
+        assert.equal(asyncEnv.elements.get('a11yVoiceReadPageBtn').disabled, true);
+        assert.equal(asyncCtrl.speakText('Intento sin voces'), false);
+        assert.equal(asyncEnv.spokenUtterances.length, 0);
+
+        asyncEnv.setVoices([{ lang: 'es-MX', name: 'Voz Local MX', localService: true }]);
+        asyncEnv.triggerVoicesChanged();
+        assert.equal(asyncEnv.elements.get('a11yVoiceReadPageBtn').disabled, false);
+        assert.equal(asyncCtrl.speakText('Lectura tras voiceschanged'), true);
+        assert.equal(asyncEnv.spokenUtterances.length, 1);
+        assert.equal(asyncEnv.spokenUtterances[0].voice.localService, true);
+        asyncCtrl.destroy();
 
         // Navegador sin Web Speech API
         const noSpeechEnv = createFakeDOM({ speechSupported: false });
@@ -545,19 +805,59 @@ describe('Regression Tests — Accessibility DOM Controller', () => {
         ctrl.destroy();
     });
 
-    it('debe limpiar todos los listeners de controles en destroy() y permitir reinicialización limpia', () => {
-        const env = createFakeDOM();
+    it('debe cerrar panel abierto, restaurar foco, limpiar timers/listeners e idempotencia al llamar destroy() múltiples veces', () => {
+        const env = createFakeDOM({ fakeTimers: true });
+        const triggerBtn = createFakeElement('loginBtn');
+        triggerBtn._ownerDoc = env.doc;
+        env.doc.activeElement = triggerBtn;
+
         const ctrl1 = initAccessibility(env);
         assert.ok(ctrl1);
 
+        // Abrir el panel (mueve foco a a11yPanelTitle y agenda announceTimer)
+        ctrl1.openPanel();
+        assert.equal(ctrl1.isOpen(), true);
+        assert.equal(env.elements.get('a11yPanel').hidden, false);
+        assert.equal(env.elements.get('a11yBackdrop').hidden, false);
+        assert.equal(env.elements.get('a11yToggleBtn').getAttribute('aria-expanded'), 'true');
+        assert.equal(env.doc.activeElement, env.elements.get('a11yPanelTitle'));
+        assert.equal(env.timerCalls.set.length, 1);
+
+        env.elements.get('a11yVoiceBtn').click();
+        env.elements.get('a11yVoiceReadPageBtn').click();
         env.elements.get('a11yContrastBtn').click();
         assert.equal(ctrl1.getPreferences().highContrast, true);
 
+        const cancelBefore = env.speechCalls.filter((c) => c === 'cancel').length;
+
+        // Llamar destroy() con el panel abierto y timer pendiente
         ctrl1.destroy();
 
-        // Tras destroy(), pulsar controles no debe abrir el panel ni alterar el DOM/storage
+        assert.equal(ctrl1.isOpen(), false);
+        assert.equal(env.elements.get('a11yPanel').hidden, true);
+        assert.equal(env.elements.get('a11yPanel').classList.contains('is-open'), false);
+        assert.equal(env.elements.get('a11yBackdrop').hidden, true);
+        assert.equal(env.elements.get('a11yBackdrop').classList.contains('is-open'), false);
+        assert.equal(env.elements.get('a11yToggleBtn').getAttribute('aria-expanded'), 'false');
+        assert.equal(env.doc.activeElement, triggerBtn, 'destroy() debe restaurar foco al cerrar panel abierto');
+        assert.ok(env.timerCalls.cleared.length >= 1, 'destroy() debe cancelar timers pendientes');
+        assert.ok(
+            env.speechCalls.filter((c) => c === 'cancel').length > cancelBefore,
+            'destroy() debe detener la síntesis de voz activa'
+        );
+        assert.equal((env.speechListeners.get('voiceschanged') || []).length, 0);
+
+        // Idempotencia en llamadas repetidas a destroy()
+        const clearedAfterFirst = env.timerCalls.cleared.length;
+        ctrl1.destroy();
+        ctrl1.destroy();
+        assert.equal(env.timerCalls.cleared.length, clearedAfterFirst);
+
+        // Tras destroy(), pulsar controles o usar Alt + A no debe abrir el panel ni alterar el DOM/storage
         env.elements.get('a11yToggleBtn').click();
         assert.equal(env.elements.get('a11yPanel').hidden, true, 'destroy() debe remover listener de #a11yToggleBtn');
+        env.doc.dispatch('keydown', { altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, key: 'a', code: 'KeyA' });
+        assert.equal(env.elements.get('a11yPanel').hidden, true, 'destroy() debe remover listener global de Alt + A');
         env.elements.get('a11yContrastBtn').click();
         assert.equal(
             env.doc.documentElement.getAttribute('data-a11y-contrast'),
@@ -571,6 +871,8 @@ describe('Regression Tests — Accessibility DOM Controller', () => {
         env.elements.get('a11yContrastBtn').click();
         assert.equal(ctrl2.getPreferences().highContrast, false, 'Solo el nuevo controlador debe procesar el clic');
         assert.equal(env.doc.documentElement.getAttribute('data-a11y-contrast'), null);
+        ctrl2.openPanel();
+        assert.equal(ctrl2.isOpen(), true);
         ctrl2.destroy();
     });
 
@@ -609,9 +911,11 @@ describe('Structural Regression Guards — Anti-Deletion Protection', () => {
         assert.equal(fs.readFileSync(boldPath).subarray(0, 4).toString('ascii'), 'wOF2');
     });
 
-    it('debe mantener el widget azul en index.html y estilos para claro, oscuro, móvil y alto contraste', () => {
+    it('debe mantener el widget azul en index.html, marcado explícito de campos sensibles y ejecución CI de test:a11y', () => {
         const html = fs.readFileSync(path.resolve('frontend/index.html'), 'utf8');
         const css = fs.readFileSync(path.resolve('frontend/styles.css'), 'utf8');
+        const pkg = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8'));
+        const ciYml = fs.readFileSync(path.resolve('.github/workflows/ci.yml'), 'utf8');
 
         assert.ok(html.includes('id="a11yToggleBtn"'));
         assert.ok(html.includes('id="a11yPanel"'));
@@ -620,6 +924,27 @@ describe('Structural Regression Guards — Anti-Deletion Protection', () => {
         assert.ok(html.includes('id="a11y-filter-tritanopia"'));
         assert.ok(!html.includes('REPLACE_WITH_YOUR_ACCOUNT_ID'), 'Nunca debe volver a existir un ID ficticio');
         assert.ok(!html.includes('cdn.userway.org'), 'No debe depender del CDN externo de UserWay');
+
+        // Marcado explícito de privacidad sobre campos de pago y contraseñas
+        assert.match(html, /id="cardNumber"[^>]*data-a11y-sensitive="payment-card"/);
+        assert.match(html, /id="cardExpiry"[^>]*data-a11y-sensitive="payment-expiry"/);
+        assert.match(html, /id="cardCvc"[^>]*data-a11y-sensitive="payment-cvc"/);
+        assert.match(html, /id="loginPassword"[^>]*data-a11y-sensitive="password"/);
+        assert.match(html, /id="registerPassword"[^>]*data-a11y-sensitive="password"/);
+
+        // Integración obligatoria en package.json y GitHub Actions CI
+        assert.ok(pkg.scripts?.['test:a11y']?.includes('tests/unit/accessibility.test.mjs'));
+        assert.ok(ciYml.includes('npm run test:a11y'), 'ci.yml debe ejecutar npm run test:a11y');
+
+        // Guardias WCAG 2.5.3 Label in Name en botón flotante y controles A-/A+
+        assert.ok(html.includes('class="a11y-fab-wrap"'), 'Debe envolver el FAB y su insignia fuera del botón');
+        const toggleBtnMatch = html.match(/<button\b[^>]*id="a11yToggleBtn"[^>]*>[\s\S]*?<\/button>/);
+        assert.ok(
+            toggleBtnMatch && !toggleBtnMatch[0].includes('id="a11yActiveBadge"'),
+            'La insignia numérica no debe vivir dentro de #a11yToggleBtn'
+        );
+        assert.match(html, /id="a11yFontDecBtn"[^>]*aria-label="A-,/);
+        assert.match(html, /id="a11yFontIncBtn"[^>]*aria-label="A\+,/);
 
         assert.ok(css.includes('.a11y-fab'));
         assert.ok(css.includes('html[data-a11y-contrast="high"]'));

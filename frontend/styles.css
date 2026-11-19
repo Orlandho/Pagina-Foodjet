@@ -4864,6 +4864,12 @@ h1[tabindex="-1"]:focus {
 }
 
 /* Botón flotante azul de accesibilidad universal */
+.a11y-fab-wrap {
+    position: relative;
+    display: inline-flex;
+    z-index: 1081;
+}
+
 .a11y-fab {
     position: relative;
     z-index: 1081;
@@ -4908,6 +4914,8 @@ h1[tabindex="-1"]:focus {
     position: absolute;
     top: -4px;
     right: -4px;
+    z-index: 1082;
+    pointer-events: none;
     min-width: 22px;
     height: 22px;
     padding: 0 5px;
@@ -5442,6 +5450,16 @@ h1[tabindex="-1"]:focus {
     }
 }
 
+@media (max-width: 420px) {
+    .a11y-panel__shortcut {
+        display: none;
+    }
+
+    .a11y-panel__title {
+        font-size: 15px;
+    }
+}
+
 /* --------------------------------------------------------------------------
    Modos de accesibilidad aplicados al documento (html[data-a11y-*])
    -------------------------------------------------------------------------- */
@@ -5715,6 +5733,9 @@ html[data-a11y-contrast="high"] .foodjet-hero-cta-btn,
 html[data-a11y-contrast="high"] .foodjet-pill--active,
 html[data-a11y-contrast="high"] .btn-primary,
 html[data-a11y-contrast="high"] .foodjet-badge--soldout,
+html[data-a11y-contrast="high"] .foodjet-badge--popular,
+html[data-a11y-contrast="high"] .foodjet-badge--new,
+html[data-a11y-contrast="high"] .foodjet-badge--student,
 html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile,
 html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile,
 html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected {
@@ -5967,6 +5988,9 @@ html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
     html[data-a11y-contrast="high"] .foodjet-pill--active,
     html[data-a11y-contrast="high"] .btn-primary,
     html[data-a11y-contrast="high"] .foodjet-badge--soldout,
+    html[data-a11y-contrast="high"] .foodjet-badge--popular,
+    html[data-a11y-contrast="high"] .foodjet-badge--new,
+    html[data-a11y-contrast="high"] .foodjet-badge--student,
     html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile,
     html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile,
     html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected {

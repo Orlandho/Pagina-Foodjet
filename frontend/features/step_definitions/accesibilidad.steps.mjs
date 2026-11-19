@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
     STORAGE_KEY,
+    classifyVoiceAvailability,
     clearPreferences,
     countActiveAdjustments,
     createDefaultPreferences,
@@ -222,4 +223,129 @@ Then('todos los fragmentos tienen como máximo {int} caracteres', function (maxL
     for (const chunk of this.speechChunks) {
         expect(chunk.length).to.be.at.most(maxLen);
     }
+});
+
+When('extraigo texto legible de una contraseña mostrada temporalmente como texto con etiqueta {string}', function (label) {
+    this.secretSample = 'ClaveFicticia#2026';
+    const fakeVisiblePwd = {
+        tagName: 'INPUT',
+        id: 'loginPassword',
+        type: 'text',
+        value: this.secretSample,
+        getAttribute: (name) =>
+            name === 'aria-label'
+                ? label
+                : name === 'type'
+                    ? 'text'
+                    : name === 'autocomplete'
+                        ? 'current-password'
+                        : name === 'data-a11y-sensitive'
+                            ? 'password'
+                            : null
+    };
+    this.extractedText = extractReadableText(fakeVisiblePwd);
+});
+
+Then('el texto extraído no expone datos confidenciales y conserva {string}', function (expectedKind) {
+    expect(this.extractedText).to.not.include(this.secretSample);
+    expect(this.extractedText).to.include(expectedKind);
+});
+
+When('extraigo texto legible de un campo de número de tarjeta con dato ficticio', function () {
+    this.cardSecret = '4111 1111 1111 1111';
+    this.extractedText = extractReadableText({
+        tagName: 'INPUT',
+        id: 'cardNumber',
+        type: 'text',
+        value: this.cardSecret,
+        getAttribute: (name) =>
+            name === 'aria-label'
+                ? 'Número de tarjeta'
+                : name === 'autocomplete'
+                    ? 'cc-number'
+                    : name === 'data-a11y-sensitive'
+                        ? 'payment-card'
+                        : null
+    });
+});
+
+Then('el texto extraído no expone el número de tarjeta y anuncia {string}', function (expectedKind) {
+    expect(this.extractedText).to.not.include('4111');
+    expect(this.extractedText).to.include(expectedKind);
+});
+
+When('extraigo texto legible de un campo de vencimiento con dato ficticio', function () {
+    this.expSecret = '12/29';
+    this.extractedText = extractReadableText({
+        tagName: 'INPUT',
+        id: 'cardExpiry',
+        type: 'text',
+        value: this.expSecret,
+        getAttribute: (name) =>
+            name === 'aria-label'
+                ? 'Vencimiento'
+                : name === 'autocomplete'
+                    ? 'cc-exp'
+                    : name === 'data-a11y-sensitive'
+                        ? 'payment-expiry'
+                        : null
+    });
+});
+
+Then('el texto extraído no expone la fecha y anuncia {string}', function (expectedKind) {
+    expect(this.extractedText).to.not.include(this.expSecret);
+    expect(this.extractedText).to.include(expectedKind);
+});
+
+When('extraigo texto legible de un campo CVC con dato ficticio', function () {
+    this.cvcSecret = '999';
+    this.extractedText = extractReadableText({
+        tagName: 'INPUT',
+        id: 'cardCvc',
+        type: 'text',
+        value: this.cvcSecret,
+        getAttribute: (name) =>
+            name === 'aria-label'
+                ? 'CVC / CVV'
+                : name === 'autocomplete'
+                    ? 'cc-csc'
+                    : name === 'data-a11y-sensitive'
+                        ? 'payment-cvc'
+                        : null
+    });
+});
+
+Then('el texto extraído no expone el CVC y anuncia {string}', function (expectedKind) {
+    expect(this.extractedText).to.not.include(this.cvcSecret);
+    expect(this.extractedText).to.include(expectedKind);
+});
+
+When('evalúo voces donde todas son remotas', function () {
+    this.voiceResult = classifyVoiceAvailability([
+        { lang: 'es-PE', name: 'Google Español Remota', localService: false },
+        { lang: 'es-ES', name: 'Cloud Voice', localService: false }
+    ]);
+});
+
+When('evalúo una lista vacía de voces', function () {
+    this.voiceResult = classifyVoiceAvailability([]);
+});
+
+When('evalúo voces mixtas con una voz remota en español y una voz local en español', function () {
+    this.voiceResult = classifyVoiceAvailability([
+        { lang: 'es-PE', name: 'Google Remota', localService: false },
+        { lang: 'es-PE', name: 'Microsoft Raúl Local', localService: true }
+    ]);
+});
+
+Then('ninguna voz es seleccionada y el motivo es {string}', function (motivo) {
+    expect(this.voiceResult.available).to.equal(false);
+    expect(this.voiceResult.voice).to.equal(null);
+    expect(this.voiceResult.reason).to.equal(motivo);
+});
+
+Then('se selecciona únicamente la voz local en español', function () {
+    expect(this.voiceResult.available).to.equal(true);
+    expect(this.voiceResult.voice.localService).to.equal(true);
+    expect(this.voiceResult.voice.name).to.equal('Microsoft Raúl Local');
 });
