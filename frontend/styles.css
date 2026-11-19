@@ -4995,8 +4995,8 @@ h1[tabindex="-1"]:focus {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    background-color: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background-color: rgba(0, 0, 0, 0.22);
     color: #FFFFFF;
     display: inline-flex;
     align-items: center;
@@ -5008,7 +5008,7 @@ h1[tabindex="-1"]:focus {
 }
 
 .a11y-panel__close:hover {
-    background-color: rgba(255, 255, 255, 0.28);
+    background-color: rgba(0, 0, 0, 0.38);
 }
 
 .a11y-panel__close:focus-visible {
@@ -5185,6 +5185,11 @@ h1[tabindex="-1"]:focus {
     color: #FFFFFF;
 }
 
+.a11y-tile.is-active:hover {
+    background-color: var(--a11y-blue-hover);
+    border-color: var(--a11y-blue-hover);
+}
+
 .a11y-tile.is-active .a11y-tile__icon {
     color: #FFFFFF;
 }
@@ -5218,6 +5223,11 @@ h1[tabindex="-1"]:focus {
     color: #FFFFFF;
 }
 
+.a11y-chip.is-active:hover {
+    background-color: var(--a11y-blue-hover);
+    border-color: var(--a11y-blue-hover);
+}
+
 .a11y-voice-controls {
     padding: 10px;
     border-radius: 12px;
@@ -5249,6 +5259,12 @@ h1[tabindex="-1"]:focus {
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
+}
+
+.a11y-voice-btn:not(.a11y-voice-btn--primary):hover:not(:disabled) {
+    border-color: var(--a11y-blue);
+    background-color: var(--a11y-blue-soft);
+    color: var(--a11y-blue);
 }
 
 .a11y-voice-btn--primary {
@@ -5380,6 +5396,18 @@ h1[tabindex="-1"]:focus {
     .a11y-tile:hover,
     .a11y-chip:hover {
         border-color: #5A9BFF;
+    }
+
+    .a11y-tile.is-active:hover,
+    .a11y-chip.is-active:hover {
+        background-color: var(--a11y-blue-hover);
+        border-color: #9BC4FF;
+    }
+
+    .a11y-voice-btn:not(.a11y-voice-btn--primary):hover:not(:disabled) {
+        border-color: #5A9BFF;
+        background-color: var(--a11y-blue-soft);
+        color: #9BC4FF;
     }
 
     .a11y-reset-btn {
@@ -5749,6 +5777,12 @@ html[data-a11y-contrast="high"] body > footer .logo-circle {
     border: 2px solid #FFFFFF !important;
 }
 
+html[data-a11y-contrast="high"] .a11y-fab__badge {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+    border-color: #FFFFFF !important;
+}
+
 html[data-a11y-contrast="high"] .a11y-panel {
     border: 2px solid #000000 !important;
     background-color: #FFFFFF !important;
@@ -5964,6 +5998,12 @@ html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
     html[data-a11y-contrast="high"] .foodjet-hero-badge {
         background-color: #FFD700 !important;
         color: #000000 !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-fab__badge {
+        background-color: #FFD700 !important;
+        color: #000000 !important;
+        border-color: #000000 !important;
     }
 
     html[data-a11y-contrast="high"] .a11y-panel {

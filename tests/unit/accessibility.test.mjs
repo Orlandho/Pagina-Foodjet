@@ -23,6 +23,7 @@ import {
 import {
     applyPreferencesToDocument,
     createAccessibilityController,
+    initAccessibility,
     splitTextForSpeech
 } from '../../frontend/js/accessibility.js';
 
@@ -543,6 +544,56 @@ describe('Regression Tests — Accessibility DOM Controller', () => {
 
         ctrl.destroy();
     });
+
+    it('debe limpiar todos los listeners de controles en destroy() y permitir reinicialización limpia', () => {
+        const env = createFakeDOM();
+        const ctrl1 = initAccessibility(env);
+        assert.ok(ctrl1);
+
+        env.elements.get('a11yContrastBtn').click();
+        assert.equal(ctrl1.getPreferences().highContrast, true);
+
+        ctrl1.destroy();
+
+        // Tras destroy(), pulsar controles no debe abrir el panel ni alterar el DOM/storage
+        env.elements.get('a11yToggleBtn').click();
+        assert.equal(env.elements.get('a11yPanel').hidden, true, 'destroy() debe remover listener de #a11yToggleBtn');
+        env.elements.get('a11yContrastBtn').click();
+        assert.equal(
+            env.doc.documentElement.getAttribute('data-a11y-contrast'),
+            'high',
+            'destroy() debe remover listener de #a11yContrastBtn'
+        );
+
+        // Reinicializar mediante initAccessibility sobre el mismo DOM no debe duplicar eventos
+        const ctrl2 = initAccessibility(env);
+        assert.notEqual(ctrl2, ctrl1, 'initAccessibility debe crear nueva instancia tras destroy()');
+        env.elements.get('a11yContrastBtn').click();
+        assert.equal(ctrl2.getPreferences().highContrast, false, 'Solo el nuevo controlador debe procesar el clic');
+        assert.equal(env.doc.documentElement.getAttribute('data-a11y-contrast'), null);
+        ctrl2.destroy();
+    });
+
+    it('debe conservar el estado de lectura activa o pausada si cambia otra preferencia durante la síntesis de voz', () => {
+        const env = createFakeDOM({ speechSupported: true });
+        const ctrl = createAccessibilityController(env);
+
+        env.elements.get('a11yVoiceBtn').click();
+        env.elements.get('a11yVoiceReadPageBtn').click();
+        assert.equal(env.elements.get('a11yVoiceStatus').textContent, 'Leyendo en voz alta…');
+
+        // Cambiar otro ajuste (ej. alto contraste) no debe borrar el estado activo de lectura
+        env.elements.get('a11yContrastBtn').click();
+        assert.equal(env.elements.get('a11yVoiceStatus').textContent, 'Leyendo en voz alta…');
+
+        env.elements.get('a11yVoicePauseBtn').click();
+        assert.equal(env.elements.get('a11yVoiceStatus').textContent, 'Lectura en pausa.');
+
+        env.elements.get('a11yFontIncBtn').click();
+        assert.equal(env.elements.get('a11yVoiceStatus').textContent, 'Lectura en pausa.');
+
+        ctrl.destroy();
+    });
 });
 
 describe('Structural Regression Guards — Anti-Deletion Protection', () => {
@@ -609,83 +660,205 @@ describe('Structural Regression Guards — Anti-Deletion Protection', () => {
         }
     });
 
-    it('debe garantizar contraste WCAG 2.1 AA en estados hover e indicador de escala del widget en modo oscuro', () => {
+    it('debe garantizar contraste WCAG 2.1 AA/AAA en estados hover, botón cerrar, insignia e indicador de escala', () => {
         const css = fs.readFileSync(path.resolve('frontend/styles.css'), 'utf8');
-        const darkBlockMatch = css.match(
-            /\/\* Adaptación del widget a modo oscuro del sistema \*\/[\s\S]*?@media \(prefers-color-scheme: dark\) \{([\s\S]*?)\r?\n\}\r?\n\r?\n\/\* Adaptación responsiva/
-        );
-        assert.ok(darkBlockMatch, 'Debe existir el bloque @media (prefers-color-scheme: dark) del widget de accesibilidad');
-        const darkBlock = darkBlockMatch[1];
 
-        const hexToRgb = (hex) => {
-            const clean = hex.replace('#', '');
-            return [0, 2, 4].map((i) => parseInt(clean.slice(i, i + 2), 16));
+        // Extractor estructural con balance de llaves (independiente de comentarios o formato)
+        const extractMediaBlocks = (source, query) => {
+            const blocks = [];
+            const needle = `@media (${query})`;
+            let cursor = 0;
+            while (cursor < source.length) {
+                const idx = source.indexOf(needle, cursor);
+                if (idx === -1) break;
+                const openBrace = source.indexOf('{', idx + needle.length);
+                if (openBrace === -1) break;
+                let depth = 1;
+                let pos = openBrace + 1;
+                while (pos < source.length && depth > 0) {
+                    const ch = source[pos];
+                    if (ch === '{') depth += 1;
+                    else if (ch === '}') depth -= 1;
+                    pos += 1;
+                }
+                if (depth === 0) {
+                    blocks.push(source.slice(openBrace + 1, pos - 1));
+                }
+                cursor = pos;
+            }
+            return blocks;
         };
+
+        const extractRulesBySelector = (source, selectorTarget) => {
+            const matches = [];
+            const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
+            const ruleRegex = /([^{}]+)\{([^{}]*)\}/g;
+            let m;
+            while ((m = ruleRegex.exec(clean)) !== null) {
+                const selectors = m[1].split(',').map((s) => s.trim().replace(/\s+/g, ' '));
+                if (selectors.includes(selectorTarget)) {
+                    matches.push(m[2]);
+                }
+            }
+            return matches;
+        };
+
+        const parseColor = (raw) => {
+            const val = raw.trim().replace(/\s*!important\s*$/i, '');
+            if (val.startsWith('#')) {
+                const clean = val.slice(1);
+                return {
+                    r: parseInt(clean.slice(0, 2), 16),
+                    g: parseInt(clean.slice(2, 4), 16),
+                    b: parseInt(clean.slice(4, 6), 16),
+                    a: 1
+                };
+            }
+            const rgba = val.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)$/i);
+            if (!rgba) return null;
+            return {
+                r: Number(rgba[1]),
+                g: Number(rgba[2]),
+                b: Number(rgba[3]),
+                a: rgba[4] === undefined ? 1 : Number(rgba[4])
+            };
+        };
+
+        const compositeOver = (fg, bg) => ({
+            r: Math.round(fg.r * fg.a + bg.r * (1 - fg.a)),
+            g: Math.round(fg.g * fg.a + bg.g * (1 - fg.a)),
+            b: Math.round(fg.b * fg.a + bg.b * (1 - fg.a)),
+            a: 1
+        });
+
         const srgbToLin = (c) => {
             const v = c / 255;
             return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
         };
-        const lum = (hex) => {
-            const [r, g, b] = hexToRgb(hex).map(srgbToLin);
-            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-        };
-        const contrastRatio = (hexA, hexB) => {
-            const l1 = lum(hexA);
-            const l2 = lum(hexB);
+        const lum = ({ r, g, b }) => 0.2126 * srgbToLin(r) + 0.7152 * srgbToLin(g) + 0.0722 * srgbToLin(b);
+        const contrastRatio = (colorA, colorB) => {
+            const cA = typeof colorA === 'string' ? parseColor(colorA) : colorA;
+            const cB = typeof colorB === 'string' ? parseColor(colorB) : colorB;
+            const l1 = lum(cA);
+            const l2 = lum(cB);
             return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
         };
-        const readVar = (name) => {
-            const m = darkBlock.match(new RegExp(`${name}:\\s*(#[0-9A-Fa-f]{6})`));
-            assert.ok(m, `Debe definirse ${name} en modo oscuro`);
-            return m[1];
+        const readProp = (body, prop) => {
+            const m = body.match(new RegExp(`(?:^|[;\\s])${prop}:\\s*([^;]+)`));
+            return m ? m[1].trim() : null;
         };
 
-        const blueSoft = readVar('--a11y-blue-soft');
-        const surface = readVar('--a11y-surface');
-        const surfaceSubtle = readVar('--a11y-surface-subtle');
+        const darkBlocks = extractMediaBlocks(css, 'prefers-color-scheme: dark');
+        const darkWidgetBlock = darkBlocks.find(
+            (b) => extractRulesBySelector(b, '.a11y-widget').length > 0 && !b.includes('data-a11y-contrast="high"')
+        );
+        const darkHcBlock = darkBlocks.find((b) => b.includes('html[data-a11y-contrast="high"] .a11y-widget'));
+        assert.ok(darkWidgetBlock, 'Debe existir el bloque @media (prefers-color-scheme: dark) del widget de accesibilidad');
+        assert.ok(darkHcBlock, 'Debe existir el bloque @media (prefers-color-scheme: dark) de alto contraste');
 
-        const stepHoverRule = darkBlock.match(/\.a11y-step-btn:hover:not\(:disabled\)\s*\{([^}]*)\}/);
-        assert.ok(stepHoverRule, 'Debe existir override de .a11y-step-btn:hover:not(:disabled) en modo oscuro');
-        const stepHoverColor = stepHoverRule[1].match(/(?:^|[;\s])color:\s*(#[0-9A-Fa-f]{6})/);
-        const stepHoverBorder = stepHoverRule[1].match(/border-color:\s*(#[0-9A-Fa-f]{6})/);
-        assert.ok(stepHoverColor, '.a11y-step-btn:hover:not(:disabled) debe definir color explícito en modo oscuro');
-        assert.ok(stepHoverBorder, '.a11y-step-btn:hover:not(:disabled) debe definir border-color explícito en modo oscuro');
+        const darkWidgetVars = extractRulesBySelector(darkWidgetBlock, '.a11y-widget').join('\n');
+        const readDarkVar = (name) => {
+            const value = readProp(darkWidgetVars, name);
+            assert.ok(value && value.startsWith('#'), `Debe definirse ${name} en modo oscuro`);
+            return value;
+        };
 
-        assert.ok(
-            contrastRatio(stepHoverColor[1], blueSoft) >= 4.5,
-            `Contraste texto hover de .a11y-step-btn en modo oscuro debe ser >= 4.5:1 (actual: ${contrastRatio(stepHoverColor[1], blueSoft).toFixed(2)}:1)`
+        const blueHover = readDarkVar('--a11y-blue-hover');
+        const blueSoft = readDarkVar('--a11y-blue-soft');
+        const surface = readDarkVar('--a11y-surface');
+        const surfaceSubtle = readDarkVar('--a11y-surface-subtle');
+        const darkBlue = readDarkVar('--a11y-blue');
+
+        // 1. .a11y-step-btn:hover:not(:disabled) en modo oscuro
+        const stepHoverBody = extractRulesBySelector(darkWidgetBlock, '.a11y-step-btn:hover:not(:disabled)').join('\n');
+        assert.ok(stepHoverBody, 'Debe existir override de .a11y-step-btn:hover:not(:disabled) en modo oscuro');
+        const stepHoverColor = readProp(stepHoverBody, 'color');
+        const stepHoverBorder = readProp(stepHoverBody, 'border-color');
+        assert.ok(stepHoverColor && stepHoverBorder);
+        assert.ok(contrastRatio(stepHoverColor, blueSoft) >= 4.5, 'Contraste texto hover de .a11y-step-btn en modo oscuro >= 4.5:1');
+        assert.ok(contrastRatio(stepHoverBorder, blueSoft) >= 3.0, 'Contraste borde hover de .a11y-step-btn vs --a11y-blue-soft >= 3:1');
+        assert.ok(contrastRatio(stepHoverBorder, surface) >= 3.0, 'Contraste borde hover de .a11y-step-btn vs --a11y-surface >= 3:1');
+
+        // 2. .a11y-tile:hover y .a11y-chip:hover (inactivo y activo) en modo oscuro
+        for (const sel of ['.a11y-tile:hover', '.a11y-chip:hover']) {
+            const body = extractRulesBySelector(darkWidgetBlock, sel).join('\n');
+            const border = readProp(body, 'border-color');
+            assert.ok(border, `Debe existir border-color para ${sel} en modo oscuro`);
+            assert.ok(contrastRatio(border, surfaceSubtle) >= 3.0, `Borde ${sel} vs --a11y-surface-subtle >= 3:1`);
+            assert.ok(contrastRatio(border, surface) >= 3.0, `Borde ${sel} vs --a11y-surface >= 3:1`);
+        }
+
+        for (const sel of ['.a11y-tile.is-active:hover', '.a11y-chip.is-active:hover']) {
+            const body = extractRulesBySelector(darkWidgetBlock, sel).join('\n');
+            const border = readProp(body, 'border-color');
+            assert.ok(border, `Debe existir border-color para ${sel} en modo oscuro`);
+            assert.ok(contrastRatio('#FFFFFF', blueHover) >= 4.5, `Texto blanco en ${sel} sobre --a11y-blue-hover >= 4.5:1`);
+            assert.ok(contrastRatio(border, blueHover) >= 3.0, `Borde ${sel} vs relleno activo hover >= 3:1`);
+            assert.ok(contrastRatio(border, surface) >= 3.0, `Borde ${sel} vs --a11y-surface >= 3:1`);
+        }
+
+        // 3. .a11y-voice-btn secundario :hover en modo oscuro
+        const voiceHoverBody = extractRulesBySelector(
+            darkWidgetBlock,
+            '.a11y-voice-btn:not(.a11y-voice-btn--primary):hover:not(:disabled)'
+        ).join('\n');
+        assert.ok(voiceHoverBody, 'Debe existir hover de .a11y-voice-btn secundario en modo oscuro');
+        assert.ok(contrastRatio(readProp(voiceHoverBody, 'color'), blueSoft) >= 4.5);
+        assert.ok(contrastRatio(readProp(voiceHoverBody, 'border-color'), blueSoft) >= 3.0);
+
+        // 4. .a11y-font-track__fill en modo oscuro y alto contraste oscuro
+        const trackFillDark = readProp(extractRulesBySelector(darkWidgetBlock, '.a11y-font-track__fill').join('\n'), 'background-color');
+        assert.ok(trackFillDark && contrastRatio(trackFillDark, surfaceSubtle) >= 3.0);
+        const trackFillHcDark = readProp(
+            extractRulesBySelector(darkHcBlock, 'html[data-a11y-contrast="high"] .a11y-font-track__fill').join('\n'),
+            'background-color'
         );
+        assert.ok(trackFillHcDark && contrastRatio(trackFillHcDark, '#000000') >= 7.0);
+
+        // 5. .a11y-panel__close (normal y hover) sobre encabezados claro, oscuro, HC claro y HC oscuro
+        const closeBg = parseColor(readProp(extractRulesBySelector(css, '.a11y-panel__close').join('\n'), 'background-color'));
+        const closeHoverBg = parseColor(readProp(extractRulesBySelector(css, '.a11y-panel__close:hover').join('\n'), 'background-color'));
+        assert.ok(closeBg && closeHoverBg, 'Debe definirse background-color en .a11y-panel__close y :hover');
+
+        const headerModes = [
+            { name: 'claro normal', bg: '#0052CC', min: 4.5 },
+            { name: 'oscuro normal', bg: darkBlue, min: 4.5 },
+            { name: 'alto contraste claro', bg: '#003399', min: 7.0 },
+            { name: 'alto contraste oscuro', bg: '#002B80', min: 7.0 }
+        ];
+        for (const mode of headerModes) {
+            const baseBg = parseColor(mode.bg);
+            const effDefault = compositeOver(closeBg, baseBg);
+            const effHover = compositeOver(closeHoverBg, baseBg);
+            assert.ok(
+                contrastRatio('#FFFFFF', effDefault) >= mode.min,
+                `.a11y-panel__close en ${mode.name} debe ser >= ${mode.min}:1`
+            );
+            assert.ok(
+                contrastRatio('#FFFFFF', effHover) >= mode.min,
+                `.a11y-panel__close:hover en ${mode.name} debe ser >= ${mode.min}:1`
+            );
+        }
+
+        // 6. .a11y-fab__badge en alto contraste claro y oscuro (>= 7:1 AAA)
+        const hcLightBadgeRules = extractRulesBySelector(
+            css.replace(darkHcBlock, ''),
+            'html[data-a11y-contrast="high"] .a11y-fab__badge'
+        ).join('\n');
+        assert.ok(hcLightBadgeRules, 'Debe existir override de .a11y-fab__badge en alto contraste claro');
         assert.ok(
-            contrastRatio(stepHoverBorder[1], blueSoft) >= 3.0,
-            'Contraste de borde hover de .a11y-step-btn sobre --a11y-blue-soft debe ser >= 3:1'
-        );
-        assert.ok(
-            contrastRatio(stepHoverBorder[1], surface) >= 3.0,
-            'Contraste de borde hover de .a11y-step-btn sobre --a11y-surface debe ser >= 3:1'
+            contrastRatio(readProp(hcLightBadgeRules, 'color'), readProp(hcLightBadgeRules, 'background-color')) >= 7.0,
+            '.a11y-fab__badge en alto contraste claro debe cumplir >= 7:1 AAA'
         );
 
-        const tileChipHoverRule = darkBlock.match(
-            /\.a11y-tile:hover,\s*\.a11y-chip:hover\s*\{([^}]*)\}/
-        );
-        assert.ok(tileChipHoverRule, 'Debe existir override de .a11y-tile:hover y .a11y-chip:hover en modo oscuro');
-        const tileChipBorder = tileChipHoverRule[1].match(/border-color:\s*(#[0-9A-Fa-f]{6})/);
-        assert.ok(tileChipBorder, '.a11y-tile:hover y .a11y-chip:hover deben definir border-color en modo oscuro');
+        const hcDarkBadgeRules = extractRulesBySelector(
+            darkHcBlock,
+            'html[data-a11y-contrast="high"] .a11y-fab__badge'
+        ).join('\n');
+        assert.ok(hcDarkBadgeRules, 'Debe existir override de .a11y-fab__badge en alto contraste oscuro');
         assert.ok(
-            contrastRatio(tileChipBorder[1], surfaceSubtle) >= 3.0,
-            'Contraste de borde hover en .a11y-tile/.a11y-chip sobre --a11y-surface-subtle debe ser >= 3:1'
-        );
-        assert.ok(
-            contrastRatio(tileChipBorder[1], surface) >= 3.0,
-            'Contraste de borde hover en .a11y-tile/.a11y-chip sobre --a11y-surface debe ser >= 3:1'
-        );
-
-        const trackFillRule = darkBlock.match(/\.a11y-font-track__fill\s*\{([^}]*)\}/);
-        assert.ok(trackFillRule, 'Debe existir override de .a11y-font-track__fill en modo oscuro');
-        const trackFillBg = trackFillRule[1].match(/background-color:\s*(#[0-9A-Fa-f]{6})/);
-        assert.ok(trackFillBg, '.a11y-font-track__fill debe definir background-color explícito en modo oscuro');
-        assert.ok(
-            contrastRatio(trackFillBg[1], surfaceSubtle) >= 3.0,
-            'Contraste del indicador de escala .a11y-font-track__fill en modo oscuro debe ser >= 3:1'
+            contrastRatio(readProp(hcDarkBadgeRules, 'color'), readProp(hcDarkBadgeRules, 'background-color')) >= 7.0,
+            '.a11y-fab__badge en alto contraste oscuro debe cumplir >= 7:1 AAA'
         );
     });
 

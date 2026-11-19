@@ -237,12 +237,27 @@ export function createAccessibilityController({
     let speechQueueId = 0;
     let lastSpokenElement = null;
     let lastSpokenAt = 0;
+    let announceTimer = null;
+    const cleanups = [];
+
+    function on(target, type, listener, options) {
+        if (!target || typeof target.addEventListener !== 'function') return;
+        target.addEventListener(type, listener, options);
+        cleanups.push(() => {
+            target.removeEventListener?.(type, listener, options);
+        });
+    }
 
     function announce(message) {
         if (!liveRegion || !message) return;
+        if (announceTimer !== null && typeof win?.clearTimeout === 'function') {
+            win.clearTimeout(announceTimer);
+            announceTimer = null;
+        }
         liveRegion.textContent = '';
         if (typeof win?.setTimeout === 'function') {
-            win.setTimeout(() => {
+            announceTimer = win.setTimeout(() => {
+                announceTimer = null;
                 liveRegion.textContent = message;
             }, 30);
         } else {
@@ -305,6 +320,8 @@ export function createAccessibilityController({
                 voiceStatus.textContent = 'Tu navegador no soporta síntesis de voz (Web Speech API).';
             } else if (statusText) {
                 voiceStatus.textContent = statusText;
+            } else if (isSpeaking) {
+                voiceStatus.textContent = isPaused ? 'Lectura en pausa.' : 'Leyendo en voz alta…';
             } else if (prefs.voiceReader) {
                 voiceStatus.textContent =
                     'Activo: haz clic o navega con teclado sobre un texto para escucharlo, o pulsa "Leer vista".';
@@ -652,22 +669,22 @@ export function createAccessibilityController({
         }
     }
 
-    // Bindings de controles del panel
-    toggleBtn.addEventListener('click', () => togglePanel());
-    closeBtn?.addEventListener('click', () => closePanel({ restoreFocus: true }));
-    backdrop?.addEventListener('click', () => closePanel({ restoreFocus: true }));
+    // Bindings de controles del panel (registrados con limpieza garantizada en destroy())
+    on(toggleBtn, 'click', () => togglePanel());
+    on(closeBtn, 'click', () => closePanel({ restoreFocus: true }));
+    on(backdrop, 'click', () => closePanel({ restoreFocus: true }));
 
-    fontDecBtn?.addEventListener('click', () => {
+    on(fontDecBtn, 'click', () => {
         const nextScale = stepFontScale(prefs.fontScale, -1);
         commitPreferences({ ...prefs, fontScale: nextScale }, `Tamaño de texto en ${nextScale} por ciento.`);
     });
 
-    fontIncBtn?.addEventListener('click', () => {
+    on(fontIncBtn, 'click', () => {
         const nextScale = stepFontScale(prefs.fontScale, 1);
         commitPreferences({ ...prefs, fontScale: nextScale }, `Tamaño de texto en ${nextScale} por ciento.`);
     });
 
-    contrastBtn?.addEventListener('click', () => {
+    on(contrastBtn, 'click', () => {
         const next = !prefs.highContrast;
         commitPreferences(
             { ...prefs, highContrast: next },
@@ -675,7 +692,7 @@ export function createAccessibilityController({
         );
     });
 
-    dyslexiaBtn?.addEventListener('click', () => {
+    on(dyslexiaBtn, 'click', () => {
         const next = !prefs.dyslexiaFont;
         commitPreferences(
             { ...prefs, dyslexiaFont: next },
@@ -683,7 +700,7 @@ export function createAccessibilityController({
         );
     });
 
-    motionBtn?.addEventListener('click', () => {
+    on(motionBtn, 'click', () => {
         const next = !prefs.reducedMotion;
         commitPreferences(
             { ...prefs, reducedMotion: next },
@@ -693,7 +710,7 @@ export function createAccessibilityController({
         );
     });
 
-    keyboardBtn?.addEventListener('click', () => {
+    on(keyboardBtn, 'click', () => {
         const next = !prefs.keyboardFocus;
         commitPreferences(
             { ...prefs, keyboardFocus: next },
@@ -702,7 +719,7 @@ export function createAccessibilityController({
     });
 
     for (const btn of colorFilterButtons) {
-        btn.addEventListener('click', () => {
+        on(btn, 'click', () => {
             const selected = btn.getAttribute('data-a11y-filter-option') || 'none';
             if (!COLOR_FILTERS.includes(selected)) return;
             const label = COLOR_FILTER_LABELS[selected] || selected;
@@ -715,7 +732,7 @@ export function createAccessibilityController({
         });
     }
 
-    voiceBtn?.addEventListener('click', () => {
+    on(voiceBtn, 'click', () => {
         const next = !prefs.voiceReader;
         if (!next) {
             stopSpeech({ silent: true });
@@ -732,21 +749,21 @@ export function createAccessibilityController({
         }
     });
 
-    voiceReadPageBtn?.addEventListener('click', () => {
+    on(voiceReadPageBtn, 'click', () => {
         const { text, target } = getActiveReadingTarget();
         speakText(text, target);
     });
 
-    voicePauseBtn?.addEventListener('click', () => togglePauseSpeech());
-    voiceStopBtn?.addEventListener('click', () => stopSpeech());
+    on(voicePauseBtn, 'click', () => togglePauseSpeech());
+    on(voiceStopBtn, 'click', () => stopSpeech());
 
-    voiceRateSelect?.addEventListener('change', (e) => {
+    on(voiceRateSelect, 'change', (e) => {
         const rate = Number(e.target?.value);
         if (!SPEECH_RATES.includes(rate)) return;
         commitPreferences({ ...prefs, speechRate: rate }, `Velocidad de lectura ajustada a ${rate}x.`);
     });
 
-    resetBtn?.addEventListener('click', () => {
+    on(resetBtn, 'click', () => {
         stopSpeech({ silent: true });
         const defaults = clearPreferences(storage);
         prefs = applyPreferencesToDocument(defaults, doc, win);
@@ -757,12 +774,12 @@ export function createAccessibilityController({
     const handleBeforeUnload = () => stopSpeech({ silent: true });
     const handleWindowLoad = () => syncHeroCarouselMotion(prefs.reducedMotion, doc, win);
 
-    doc.addEventListener('keydown', handleGlobalKeydown, true);
-    doc.addEventListener('focusin', handlePanelFocusGuard, true);
-    doc.addEventListener('click', handlePageInteractionForVoice);
-    doc.addEventListener('focusin', handlePageInteractionForVoice);
-    win?.addEventListener?.('beforeunload', handleBeforeUnload);
-    win?.addEventListener?.('load', handleWindowLoad);
+    on(doc, 'keydown', handleGlobalKeydown, true);
+    on(doc, 'focusin', handlePanelFocusGuard, true);
+    on(doc, 'click', handlePageInteractionForVoice);
+    on(doc, 'focusin', handlePageInteractionForVoice);
+    on(win, 'beforeunload', handleBeforeUnload);
+    on(win, 'load', handleWindowLoad);
 
     // Aplicar estado inicial restaurado de localStorage
     prefs = applyPreferencesToDocument(prefs, doc, win);
@@ -783,13 +800,15 @@ export function createAccessibilityController({
             syncUI();
         },
         destroy: () => {
+            if (announceTimer !== null && typeof win?.clearTimeout === 'function') {
+                win.clearTimeout(announceTimer);
+                announceTimer = null;
+            }
             stopSpeech({ silent: true });
-            doc.removeEventListener('keydown', handleGlobalKeydown, true);
-            doc.removeEventListener('focusin', handlePanelFocusGuard, true);
-            doc.removeEventListener('click', handlePageInteractionForVoice);
-            doc.removeEventListener('focusin', handlePageInteractionForVoice);
-            win?.removeEventListener?.('beforeunload', handleBeforeUnload);
-            win?.removeEventListener?.('load', handleWindowLoad);
+            while (cleanups.length > 0) {
+                const cleanup = cleanups.pop();
+                cleanup();
+            }
         }
     };
 }
@@ -802,7 +821,19 @@ let singletonController = null;
 export function initAccessibility(options = {}) {
     if (singletonController) return singletonController;
     try {
-        singletonController = createAccessibilityController(options);
+        const controller = createAccessibilityController(options);
+        if (!controller) {
+            singletonController = null;
+            return null;
+        }
+        const originalDestroy = controller.destroy;
+        controller.destroy = () => {
+            originalDestroy();
+            if (singletonController === controller) {
+                singletonController = null;
+            }
+        };
+        singletonController = controller;
     } catch {
         // Degradación limpia: nunca impedir que FoodJet funcione
         singletonController = null;
