@@ -702,6 +702,7 @@
                                             <input type="text" class="form-control foodjet-input" id="cardNumber"
                                                    placeholder="1234 5678 9012 3456" maxlength="19"
                                                    inputmode="numeric" autocomplete="cc-number"
+                                                   data-a11y-sensitive="payment-card"
                                                    aria-describedby="cardNumberError">
                                             <div class="invalid-feedback" id="cardNumberError"></div>
                                         </div>
@@ -712,6 +713,7 @@
                                                 <input type="text" class="form-control foodjet-input" id="cardExpiry"
                                                        placeholder="MM/AA" maxlength="5"
                                                        inputmode="numeric" autocomplete="cc-exp"
+                                                       data-a11y-sensitive="payment-expiry"
                                                        aria-describedby="cardExpiryError">
                                                 <div class="invalid-feedback" id="cardExpiryError"></div>
                                             </div>
@@ -720,6 +722,7 @@
                                                 <input type="text" class="form-control foodjet-input" id="cardCvc"
                                                        placeholder="123" maxlength="4"
                                                        inputmode="numeric" autocomplete="cc-csc"
+                                                       data-a11y-sensitive="payment-cvc"
                                                        aria-describedby="cardCvcError">
                                                 <div class="invalid-feedback" id="cardCvcError"></div>
                                             </div>
@@ -1249,7 +1252,8 @@
                             </label>
                             <div class="position-relative">
                                 <input type="password" class="form-control foodjet-input pe-5" id="loginPassword"
-                                       placeholder="••••••••" required autocomplete="current-password">
+                                       placeholder="••••••••" required autocomplete="current-password"
+                                       data-a11y-sensitive="password">
                                 <button type="button" class="foodjet-password-toggle position-absolute top-50 end-0 translate-middle-y me-2"
                                         aria-label="Mostrar contraseña" data-target="loginPassword">
                                     <i class="bi bi-eye" aria-hidden="true"></i>
@@ -1330,7 +1334,8 @@
                             </label>
                             <div class="position-relative">
                                 <input type="password" class="form-control foodjet-input pe-5" id="registerPassword"
-                                       placeholder="••••••••" minlength="6" required autocomplete="new-password">
+                                       placeholder="••••••••" minlength="6" required autocomplete="new-password"
+                                       data-a11y-sensitive="password">
                                 <button type="button" class="foodjet-password-toggle position-absolute top-50 end-0 translate-middle-y me-2"
                                         aria-label="Mostrar contraseña" data-target="registerPassword">
                                     <i class="bi bi-eye" aria-hidden="true"></i>
@@ -1591,6 +1596,196 @@
             </div>
         </div>
     </div>
+
+    <!-- Filtros SVG locales de compensación (Daltonización con preservación de luminancia y blancos neutros) -->
+    <svg class="a11y-svg-filters" aria-hidden="true" focusable="false" width="0" height="0">
+        <defs>
+            <!-- Protanopia: proyecta diferencia L-M en canal S (azul) preservando luminancia y contraste -->
+            <filter id="a11y-filter-protanopia" color-interpolation-filters="linearRGB">
+                <feColorMatrix type="matrix" values="
+                    1.000000  0.000000  0.000000  0  0
+                   -0.080000  1.080000  0.000000  0  0
+                    0.650000 -0.650000  1.000000  0  0
+                    0         0         0         1  0" />
+            </filter>
+            <!-- Deuteranopia: proyecta diferencia M-L en canal S (azul) preservando luminancia y contraste -->
+            <filter id="a11y-filter-deuteranopia" color-interpolation-filters="linearRGB">
+                <feColorMatrix type="matrix" values="
+                    1.000000  0.000000  0.000000  0  0
+                   -0.060000  1.060000  0.000000  0  0
+                    0.550000 -0.550000  1.000000  0  0
+                    0         0         0         1  0" />
+            </filter>
+            <!-- Tritanopia: proyecta diferencia azul-verde sobre eje L-M preservando luminancia y contraste -->
+            <filter id="a11y-filter-tritanopia" color-interpolation-filters="linearRGB">
+                <feColorMatrix type="matrix" values="
+                    0.820000 -0.270000  0.450000  0  0
+                    0.080000  1.050000 -0.130000  0  0
+                    0.000000  0.000000  1.000000  0  0
+                    0         0         0         1  0" />
+            </filter>
+        </defs>
+    </svg>
+
+    <!-- Widget de Accesibilidad Universal de FoodJet (nativo, sin dependencias externas) -->
+    <aside id="a11yWidgetContainer" class="a11y-widget" aria-label="Herramientas de accesibilidad">
+        <div id="a11yBackdrop" class="a11y-backdrop" hidden></div>
+
+        <div class="a11y-fab-wrap">
+            <button
+                type="button"
+                id="a11yToggleBtn"
+                class="a11y-fab"
+                aria-label="Opciones de accesibilidad (atajo Alt + A)"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                aria-controls="a11yPanel"
+                title="Accesibilidad (Alt + A)"
+            >
+                <svg class="a11y-fab__icon" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="4.2" r="2.1" fill="currentColor"></circle>
+                    <path fill="currentColor" d="M20.5 7.4c-.2-.5-.8-.8-1.3-.6-2.3.8-4.7 1.2-7.2 1.2s-4.9-.4-7.2-1.2c-.5-.2-1.1.1-1.3.6-.2.5.1 1.1.6 1.3 1.7.6 3.5 1 5.4 1.2v3.3l-2.3 6.3c-.2.5.1 1.1.6 1.3.1.1.2.1.3.1.4 0 .8-.3 1-.7l2.2-5.7h1.4l2.2 5.7c.2.4.5.7 1 .7.1 0 .2 0 .3-.1.5-.2.8-.8.6-1.3l-2.3-6.3V9.9c1.9-.2 3.7-.6 5.4-1.2.5-.2.8-.8.6-1.3z"></path>
+                </svg>
+            </button>
+            <span id="a11yActiveBadge" class="a11y-fab__badge" aria-hidden="true" hidden>0</span>
+        </div>
+
+        <div
+            id="a11yPanel"
+            class="a11y-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="a11yPanelTitle"
+            aria-describedby="a11yPanelDesc"
+            hidden
+        >
+            <header class="a11y-panel__header">
+                <div class="a11y-panel__title-group">
+                    <h2 id="a11yPanelTitle" class="a11y-panel__title" tabindex="-1">Accesibilidad</h2>
+                    <span class="a11y-panel__shortcut" aria-hidden="true">Alt + A</span>
+                </div>
+                <button
+                    type="button"
+                    id="a11yCloseBtn"
+                    class="a11y-panel__close"
+                    aria-label="Cerrar panel de accesibilidad"
+                    title="Cerrar (Escape)"
+                >
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
+            </header>
+
+            <div class="a11y-panel__body">
+                <p id="a11yPanelDesc" class="a11y-panel__intro">
+                    Personaliza lectura, contraste, colores y voz. Usa <kbd>Alt</kbd> + <kbd>A</kbd> para abrir o cerrar y <kbd>Tab</kbd> para navegar.
+                </p>
+
+                <!-- 1. Tamaño de texto hasta 200 % -->
+                <section class="a11y-section" aria-labelledby="a11yFontHeading">
+                    <div class="a11y-section__row">
+                        <h3 id="a11yFontHeading" class="a11y-section__heading">Tamaño de texto</h3>
+                        <span id="a11yFontValue" class="a11y-font-value" aria-live="polite">100%</span>
+                    </div>
+                    <div class="a11y-font-controls" role="group" aria-label="Control de ampliación tipográfica hasta 200 por ciento">
+                        <button type="button" id="a11yFontDecBtn" class="a11y-step-btn" aria-label="A-, reducir tamaño de texto" disabled>
+                            <span aria-hidden="true">A-</span>
+                        </button>
+                        <div class="a11y-font-track" aria-hidden="true">
+                            <div id="a11yFontMeter" class="a11y-font-track__fill" style="width: 0%;"></div>
+                        </div>
+                        <button type="button" id="a11yFontIncBtn" class="a11y-step-btn" aria-label="A+, aumentar tamaño de texto hasta 200 por ciento">
+                            <span aria-hidden="true">A+</span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- 2. Ajustes visuales, tipografía, movimiento y teclado -->
+                <section class="a11y-section" aria-labelledby="a11yAdjustmentsHeading">
+                    <h3 id="a11yAdjustmentsHeading" class="a11y-section__heading">Ajustes de visualización y navegación</h3>
+                    <div class="a11y-toggle-grid">
+                        <button type="button" id="a11yContrastBtn" class="a11y-tile" aria-pressed="false">
+                            <i class="bi bi-circle-half a11y-tile__icon" aria-hidden="true"></i>
+                            <span class="a11y-tile__label">Alto contraste</span>
+                        </button>
+
+                        <button type="button" id="a11yDyslexiaBtn" class="a11y-tile" aria-pressed="false">
+                            <i class="bi bi-type a11y-tile__icon" aria-hidden="true"></i>
+                            <span class="a11y-tile__label">Tipografía dislexia</span>
+                        </button>
+
+                        <button type="button" id="a11yMotionBtn" class="a11y-tile" aria-pressed="false">
+                            <i class="bi bi-pause-circle a11y-tile__icon" aria-hidden="true"></i>
+                            <span class="a11y-tile__label">Sin animaciones</span>
+                        </button>
+
+                        <button type="button" id="a11yKeyboardBtn" class="a11y-tile" aria-pressed="false">
+                            <i class="bi bi-keyboard a11y-tile__icon" aria-hidden="true"></i>
+                            <span class="a11y-tile__label">Foco de teclado</span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- 3. Filtros de daltonismo -->
+                <section class="a11y-section" aria-labelledby="a11yColorHeading">
+                    <h3 id="a11yColorHeading" class="a11y-section__heading">Filtros para daltonismo</h3>
+                    <div class="a11y-filter-grid" role="group" aria-label="Filtros de compensación para daltonismo">
+                        <button type="button" id="a11yFilterNone" class="a11y-chip is-active" data-a11y-filter-option="none" aria-pressed="true">
+                            Normal
+                        </button>
+                        <button type="button" id="a11yFilterProtanopia" class="a11y-chip" data-a11y-filter-option="protanopia" aria-pressed="false">
+                            Protanopia
+                        </button>
+                        <button type="button" id="a11yFilterDeuteranopia" class="a11y-chip" data-a11y-filter-option="deuteranopia" aria-pressed="false">
+                            Deuteranopia
+                        </button>
+                        <button type="button" id="a11yFilterTritanopia" class="a11y-chip" data-a11y-filter-option="tritanopia" aria-pressed="false">
+                            Tritanopia
+                        </button>
+                    </div>
+                </section>
+
+                <!-- 4. Lectura asistida por voz -->
+                <section class="a11y-section" aria-labelledby="a11yVoiceHeading">
+                    <h3 id="a11yVoiceHeading" class="a11y-section__heading">Lectura asistida por voz</h3>
+                    <button type="button" id="a11yVoiceBtn" class="a11y-tile a11y-tile--full" aria-pressed="false">
+                        <i class="bi bi-volume-up-fill a11y-tile__icon" aria-hidden="true"></i>
+                        <span class="a11y-tile__label">Activar lectura por voz (clic o teclado)</span>
+                    </button>
+
+                    <div id="a11yVoiceControls" class="a11y-voice-controls" hidden>
+                        <div class="a11y-voice-actions">
+                            <button type="button" id="a11yVoiceReadPageBtn" class="a11y-voice-btn a11y-voice-btn--primary">
+                                <i class="bi bi-play-fill me-1" aria-hidden="true"></i>Leer vista
+                            </button>
+                            <button type="button" id="a11yVoicePauseBtn" class="a11y-voice-btn" disabled>Pausar</button>
+                            <button type="button" id="a11yVoiceStopBtn" class="a11y-voice-btn" disabled>Detener</button>
+                        </div>
+                        <div class="a11y-voice-rate">
+                            <label for="a11yVoiceRateSelect" class="a11y-voice-rate__label">Velocidad:</label>
+                            <select id="a11yVoiceRateSelect" class="a11y-voice-rate__select">
+                                <option value="0.8">0.8x (Lenta)</option>
+                                <option value="1" selected>1.0x (Normal)</option>
+                                <option value="1.25">1.25x (Rápida)</option>
+                                <option value="1.5">1.5x (Muy rápida)</option>
+                            </select>
+                        </div>
+                        <p id="a11yVoiceStatus" class="a11y-voice-status" aria-live="polite"></p>
+                    </div>
+                </section>
+            </div>
+
+            <footer class="a11y-panel__footer">
+                <button type="button" id="a11yResetBtn" class="a11y-reset-btn">
+                    <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Restablecer preferencias
+                </button>
+                <p class="a11y-panel__note">
+                    Tus preferencias se guardan en este navegador. Este panel complementa, y no reemplaza, la accesibilidad nativa WCAG 2.1 AA.
+                </p>
+            </footer>
+        </div>
+
+        <div id="a11yLiveRegion" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+    </aside>
 
 </body>
 </html>

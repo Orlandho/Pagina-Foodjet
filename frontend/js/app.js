@@ -10,6 +10,7 @@ import { isTokenExpired, isAuthFailure } from './domain/session.js';
 import { buscarDireccionGuardada, faltaMarcarUbicacion, coordenadasValidas } from './domain/ubicacion.js';
 import { crearMapaSeguimiento } from './mapaSeguimiento.js';
 import { iniciarMapaEntrega, obtenerUbicacion, enfocarMapa } from './mapaEntrega.js';
+import { initAccessibility } from './accessibility.js';
 
 // El cuerpo de este módulo se ejecuta antes de que se dispare
 // DOMContentLoaded, así que legacy.js —que es un script clásico y no puede
@@ -26,6 +27,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Exponer temporalmente para testing y compatibilidad con legacy
     window.state = state;
     window.ui = ui;
+
+    // Inicializar accesibilidad antes de llamadas de red para garantizar disponibilidad inmediata
+    window.FoodJetAccessibility = initAccessibility();
 
     descartarSesionCaducada();
 

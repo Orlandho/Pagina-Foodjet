@@ -4803,4 +4803,1288 @@ h1[tabindex="-1"]:focus {
     background-color: rgba(244, 81, 30, 0.02);
 }
 
+/* ==========================================================================
+   8. Widget de Accesibilidad Universal de FoodJet (Nativo / Autoalojado)
+   ========================================================================== */
+
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('fonts/OpenDyslexic-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('fonts/OpenDyslexic-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Contenedor de filtros SVG: nunca usar display:none porque invalida url(#...) */
+.a11y-svg-filters {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.a11y-widget {
+    --a11y-blue: #0052CC;
+    --a11y-blue-hover: #003D99;
+    --a11y-blue-soft: #EBF3FF;
+    --a11y-surface: #FFFFFF;
+    --a11y-surface-subtle: #F4F6FA;
+    --a11y-text: #1C1C1C;
+    --a11y-text-muted: #4A4F5A;
+    --a11y-border: #D4DBE6;
+    --a11y-shadow: 0 12px 32px rgba(0, 32, 80, 0.22);
+    --a11y-focus-ring: #0052CC;
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 1080;
+    font-family: var(--font-family-base);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.a11y-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.28);
+    z-index: 1079;
+}
+
+.a11y-backdrop[hidden] {
+    display: none;
+}
+
+/* Botón flotante azul de accesibilidad universal */
+.a11y-fab-wrap {
+    position: relative;
+    display: inline-flex;
+    z-index: 1081;
+}
+
+.a11y-fab {
+    position: relative;
+    z-index: 1081;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.92);
+    background-color: var(--a11y-blue);
+    color: #FFFFFF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0, 82, 204, 0.42);
+    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    padding: 0;
+}
+
+.a11y-fab:hover {
+    background-color: var(--a11y-blue-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(0, 61, 153, 0.48);
+}
+
+.a11y-fab:active {
+    transform: translateY(0);
+}
+
+.a11y-fab:focus-visible {
+    outline: 3px solid #FFD700;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px rgba(0, 82, 204, 0.45);
+}
+
+.a11y-fab__icon {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+.a11y-fab__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    z-index: 1082;
+    pointer-events: none;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background-color: #D03D0A;
+    color: #FFFFFF;
+    border: 2px solid #FFFFFF;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+}
+
+.a11y-fab__badge[hidden] {
+    display: none;
+}
+
+/* Panel flotante del diálogo de accesibilidad */
+.a11y-panel {
+    position: fixed;
+    right: 20px;
+    bottom: 84px;
+    z-index: 1082;
+    width: min(370px, calc(100vw - 24px));
+    max-height: min(780px, calc(100vh - 96px));
+    background-color: var(--a11y-surface);
+    color: var(--a11y-text);
+    border: 1px solid var(--a11y-border);
+    border-radius: 18px;
+    box-shadow: var(--a11y-shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-size: clamp(14px, 0.9rem, 17px);
+}
+
+.a11y-panel[hidden] {
+    display: none;
+}
+
+.a11y-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    background-color: var(--a11y-blue);
+    color: #FFFFFF;
+    flex-shrink: 0;
+}
+
+.a11y-panel__title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.a11y-panel__title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1.25;
+}
+
+.a11y-panel__title:focus,
+.a11y-panel__title:focus-visible {
+    outline: 2px solid #FFD700 !important;
+    outline-offset: 3px !important;
+    border-radius: 4px;
+}
+
+.a11y-panel__shortcut {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background-color: rgba(0, 0, 0, 0.28);
+    color: #FFFFFF;
+    white-space: nowrap;
+}
+
+.a11y-panel__close {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background-color: rgba(0, 0, 0, 0.22);
+    color: #FFFFFF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-size: 15px;
+    padding: 0;
+}
+
+.a11y-panel__close:hover {
+    background-color: rgba(0, 0, 0, 0.38);
+}
+
+.a11y-panel__close:focus-visible {
+    outline: 3px solid #FFD700;
+    outline-offset: 2px;
+}
+
+.a11y-panel__body {
+    padding: 12px 14px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.a11y-panel__intro {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--a11y-text-muted);
+    line-height: 1.45;
+}
+
+.a11y-panel__intro kbd {
+    background-color: var(--a11y-surface-subtle);
+    color: var(--a11y-text);
+    border: 1px solid var(--a11y-border);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.a11y-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.a11y-section__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.a11y-section__heading {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--a11y-text-muted);
+}
+
+.a11y-font-value {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--a11y-blue);
+    background-color: var(--a11y-blue-soft);
+    padding: 2px 9px;
+    border-radius: 999px;
+}
+
+.a11y-font-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.a11y-step-btn {
+    min-width: 44px;
+    min-height: 40px;
+    border-radius: 10px;
+    border: 1.5px solid var(--a11y-border);
+    background-color: var(--a11y-surface-subtle);
+    color: var(--a11y-text);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+}
+
+.a11y-step-btn:hover:not(:disabled) {
+    border-color: var(--a11y-blue);
+    background-color: var(--a11y-blue-soft);
+    color: var(--a11y-blue);
+}
+
+.a11y-step-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.a11y-step-btn:focus-visible,
+.a11y-tile:focus-visible,
+.a11y-chip:focus-visible,
+.a11y-voice-btn:focus-visible,
+.a11y-voice-rate__select:focus-visible,
+.a11y-reset-btn:focus-visible {
+    outline: 3px solid var(--a11y-focus-ring);
+    outline-offset: 2px;
+}
+
+.a11y-font-track {
+    flex: 1;
+    height: 8px;
+    border-radius: 999px;
+    background-color: var(--a11y-surface-subtle);
+    border: 1px solid var(--a11y-border);
+    overflow: hidden;
+}
+
+.a11y-font-track__fill {
+    height: 100%;
+    background-color: var(--a11y-blue);
+    border-radius: 999px;
+}
+
+.a11y-toggle-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.a11y-tile {
+    min-height: 48px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1.5px solid var(--a11y-border);
+    background-color: var(--a11y-surface-subtle);
+    color: var(--a11y-text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.a11y-tile--full {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    min-height: 44px;
+    padding: 10px 12px;
+    text-align: left;
+    width: 100%;
+}
+
+.a11y-tile__icon {
+    font-size: 18px;
+    color: var(--a11y-blue);
+    flex-shrink: 0;
+}
+
+.a11y-tile__label {
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.a11y-tile:hover {
+    border-color: var(--a11y-blue);
+}
+
+.a11y-tile.is-active {
+    background-color: var(--a11y-blue);
+    border-color: var(--a11y-blue);
+    color: #FFFFFF;
+}
+
+.a11y-tile.is-active:hover {
+    background-color: var(--a11y-blue-hover);
+    border-color: var(--a11y-blue-hover);
+}
+
+.a11y-tile.is-active .a11y-tile__icon {
+    color: #FFFFFF;
+}
+
+.a11y-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.a11y-chip {
+    min-height: 40px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1.5px solid var(--a11y-border);
+    background-color: var(--a11y-surface-subtle);
+    color: var(--a11y-text);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+}
+
+.a11y-chip:hover {
+    border-color: var(--a11y-blue);
+}
+
+.a11y-chip.is-active {
+    background-color: var(--a11y-blue);
+    border-color: var(--a11y-blue);
+    color: #FFFFFF;
+}
+
+.a11y-chip.is-active:hover {
+    background-color: var(--a11y-blue-hover);
+    border-color: var(--a11y-blue-hover);
+}
+
+.a11y-voice-controls {
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid var(--a11y-border);
+    background-color: var(--a11y-surface-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.a11y-voice-controls[hidden] {
+    display: none;
+}
+
+.a11y-voice-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.a11y-voice-btn {
+    flex: 1 1 auto;
+    min-height: 36px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--a11y-border);
+    background-color: var(--a11y-surface);
+    color: var(--a11y-text);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.a11y-voice-btn:not(.a11y-voice-btn--primary):hover:not(:disabled) {
+    border-color: var(--a11y-blue);
+    background-color: var(--a11y-blue-soft);
+    color: var(--a11y-blue);
+}
+
+.a11y-voice-btn--primary {
+    background-color: var(--a11y-blue);
+    border-color: var(--a11y-blue);
+    color: #FFFFFF;
+}
+
+.a11y-voice-btn--primary:hover:not(:disabled) {
+    background-color: var(--a11y-blue-hover);
+}
+
+.a11y-voice-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.a11y-voice-rate {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.a11y-voice-rate__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--a11y-text-muted);
+    margin: 0;
+}
+
+.a11y-voice-rate__select {
+    min-height: 34px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--a11y-border);
+    background-color: var(--a11y-surface);
+    color: var(--a11y-text);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.a11y-voice-status {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--a11y-text-muted);
+    line-height: 1.4;
+}
+
+.a11y-panel__footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--a11y-border);
+    background-color: var(--a11y-surface-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.a11y-reset-btn {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1.5px solid var(--a11y-blue);
+    background-color: var(--a11y-surface);
+    color: var(--a11y-blue);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.a11y-reset-btn:hover {
+    background-color: var(--a11y-blue-soft);
+}
+
+.a11y-panel__note {
+    margin: 0;
+    font-size: 11px;
+    color: var(--a11y-text-muted);
+    line-height: 1.35;
+}
+
+/* Resaltado visual del elemento en lectura asistida por voz */
+.a11y-reading-highlight {
+    outline: 3px solid #0052CC !important;
+    outline-offset: 3px !important;
+    background-color: rgba(0, 82, 204, 0.1) !important;
+    border-radius: 6px;
+}
+
+/* Adaptación del widget a modo oscuro del sistema */
+@media (prefers-color-scheme: dark) {
+    .a11y-widget {
+        --a11y-blue: #0B5ED7;
+        --a11y-blue-hover: #094CB0;
+        --a11y-blue-soft: #1E3254;
+        --a11y-surface: #181C24;
+        --a11y-surface-subtle: #232936;
+        --a11y-text: #F4F6FA;
+        --a11y-text-muted: #C2CAD8;
+        --a11y-border: #394457;
+        --a11y-shadow: 0 14px 36px rgba(0, 0, 0, 0.65);
+        --a11y-focus-ring: #FFD700;
+    }
+
+    .a11y-fab {
+        border-color: rgba(255, 255, 255, 0.85);
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.6);
+    }
+
+    .a11y-font-value {
+        color: #9BC4FF;
+    }
+
+    .a11y-font-track__fill {
+        background-color: #5A9BFF;
+    }
+
+    .a11y-step-btn:hover:not(:disabled) {
+        border-color: #5A9BFF;
+        color: #9BC4FF;
+    }
+
+    .a11y-tile__icon {
+        color: #7BB3FF;
+    }
+
+    .a11y-tile:hover,
+    .a11y-chip:hover {
+        border-color: #5A9BFF;
+    }
+
+    .a11y-tile.is-active:hover,
+    .a11y-chip.is-active:hover {
+        background-color: var(--a11y-blue-hover);
+        border-color: #9BC4FF;
+    }
+
+    .a11y-voice-btn:not(.a11y-voice-btn--primary):hover:not(:disabled) {
+        border-color: #5A9BFF;
+        background-color: var(--a11y-blue-soft);
+        color: #9BC4FF;
+    }
+
+    .a11y-reset-btn {
+        color: #9BC4FF;
+        border-color: #5A9BFF;
+    }
+
+    .a11y-reading-highlight {
+        outline-color: #FFD700 !important;
+        background-color: rgba(255, 215, 0, 0.14) !important;
+    }
+}
+
+/* Adaptación responsiva en dispositivos móviles */
+@media (max-width: 575.98px) {
+    .a11y-widget {
+        right: 14px;
+        bottom: 14px;
+    }
+
+    .a11y-fab {
+        width: 52px;
+        height: 52px;
+    }
+
+    .a11y-panel {
+        right: 12px;
+        left: 12px;
+        width: auto;
+        bottom: 76px;
+        max-height: calc(100vh - 92px);
+    }
+}
+
+@media (max-width: 420px) {
+    .a11y-panel__shortcut {
+        display: none;
+    }
+
+    .a11y-panel__title {
+        font-size: 15px;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Modos de accesibilidad aplicados al documento (html[data-a11y-*])
+   -------------------------------------------------------------------------- */
+
+/* 1. Ampliación tipográfica hasta 200 % (respeta el tamaño base del navegador) */
+html[data-a11y-font-scale] {
+    font-size: calc(100% * var(--a11y-font-scale, 1));
+}
+
+html[data-a11y-font-scale] .foodjet-hero-title,
+html[data-a11y-font-scale] .foodjet-home-heading,
+html[data-a11y-font-scale] .card-title,
+html[data-a11y-font-scale] .btn,
+html[data-a11y-font-scale] .foodjet-pill {
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
+html[data-a11y-font-scale] .foodjet-hero-carousel {
+    height: auto;
+    min-height: 280px;
+}
+
+html[data-a11y-font-scale] .foodjet-hero-slide {
+    height: auto;
+}
+
+@media (max-width: 767.98px) {
+    html[data-a11y-font-scale] .foodjet-hero-content,
+    html[data-a11y-font-scale] .foodjet-hero-image-col {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    html[data-a11y-font-scale] .foodjet-hero-image-col {
+        margin-top: 16px;
+        justify-content: center !important;
+    }
+}
+
+html[data-a11y-font-scale] .foodjet-search-input {
+    padding-left: 2.5rem !important;
+}
+
+/* 2. Tipografía adaptada para dislexia (preservando iconos Bootstrap Icons) */
+html[data-a11y-dyslexia="true"] {
+    --font-family-base: 'OpenDyslexic', 'Verdana', 'Tahoma', 'Arial', sans-serif;
+}
+
+html[data-a11y-dyslexia="true"] body,
+html[data-a11y-dyslexia="true"] button,
+html[data-a11y-dyslexia="true"] input,
+html[data-a11y-dyslexia="true"] select,
+html[data-a11y-dyslexia="true"] textarea {
+    font-family: 'OpenDyslexic', 'Verdana', 'Tahoma', 'Arial', sans-serif !important;
+    letter-spacing: 0.04em;
+    word-spacing: 0.14em;
+    line-height: 1.65;
+    font-variant-ligatures: none;
+}
+
+html[data-a11y-dyslexia="true"] .bi,
+html[data-a11y-dyslexia="true"] .bi::before,
+html[data-a11y-dyslexia="true"] [class^="bi-"]::before,
+html[data-a11y-dyslexia="true"] [class*=" bi-"]::before {
+    font-family: bootstrap-icons !important;
+    letter-spacing: normal;
+    word-spacing: normal;
+}
+
+/* 3. Reducción de animaciones y distracciones */
+html[data-a11y-reduced-motion="true"],
+html[data-a11y-reduced-motion="true"] * {
+    scroll-behavior: auto !important;
+}
+
+html[data-a11y-reduced-motion="true"] *,
+html[data-a11y-reduced-motion="true"] *::before,
+html[data-a11y-reduced-motion="true"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+}
+
+html[data-a11y-reduced-motion="true"] .product-card:hover,
+html[data-a11y-reduced-motion="true"] .foodjet-card--interactive:hover,
+html[data-a11y-reduced-motion="true"] .a11y-fab:hover {
+    transform: none !important;
+}
+
+/* 4. Navegación por teclado resaltada */
+html[data-a11y-keyboard-nav="true"] a:focus,
+html[data-a11y-keyboard-nav="true"] button:focus,
+html[data-a11y-keyboard-nav="true"] input:focus,
+html[data-a11y-keyboard-nav="true"] select:focus,
+html[data-a11y-keyboard-nav="true"] textarea:focus,
+html[data-a11y-keyboard-nav="true"] [tabindex]:focus {
+    outline: 3px solid #0052CC !important;
+    outline-offset: 3px !important;
+    box-shadow: 0 0 0 5px rgba(0, 82, 204, 0.28) !important;
+}
+
+html[data-a11y-keyboard-nav="true"] main a,
+html[data-a11y-keyboard-nav="true"] footer a {
+    text-decoration: underline !important;
+    text-underline-offset: 3px;
+}
+
+@media (prefers-color-scheme: dark) {
+    html[data-a11y-keyboard-nav="true"] a:focus,
+    html[data-a11y-keyboard-nav="true"] button:focus,
+    html[data-a11y-keyboard-nav="true"] input:focus,
+    html[data-a11y-keyboard-nav="true"] select:focus,
+    html[data-a11y-keyboard-nav="true"] textarea:focus,
+    html[data-a11y-keyboard-nav="true"] [tabindex]:focus {
+        outline-color: #FFD700 !important;
+        box-shadow: 0 0 0 5px rgba(255, 215, 0, 0.35) !important;
+    }
+}
+
+/* 5. Filtros de compensación para daltonismo aplicados a los contenedores de contenido
+      (sin afectar html/body para preservar position:fixed en modales y widget) */
+html[data-a11y-color-filter="protanopia"] body > nav,
+html[data-a11y-color-filter="protanopia"] body > main,
+html[data-a11y-color-filter="protanopia"] body > footer,
+html[data-a11y-color-filter="protanopia"] body > .modal,
+html[data-a11y-color-filter="protanopia"] body > .offcanvas,
+html[data-a11y-color-filter="protanopia"] body > .toast-container {
+    filter: url(#a11y-filter-protanopia);
+}
+
+html[data-a11y-color-filter="deuteranopia"] body > nav,
+html[data-a11y-color-filter="deuteranopia"] body > main,
+html[data-a11y-color-filter="deuteranopia"] body > footer,
+html[data-a11y-color-filter="deuteranopia"] body > .modal,
+html[data-a11y-color-filter="deuteranopia"] body > .offcanvas,
+html[data-a11y-color-filter="deuteranopia"] body > .toast-container {
+    filter: url(#a11y-filter-deuteranopia);
+}
+
+html[data-a11y-color-filter="tritanopia"] body > nav,
+html[data-a11y-color-filter="tritanopia"] body > main,
+html[data-a11y-color-filter="tritanopia"] body > footer,
+html[data-a11y-color-filter="tritanopia"] body > .modal,
+html[data-a11y-color-filter="tritanopia"] body > .offcanvas,
+html[data-a11y-color-filter="tritanopia"] body > .toast-container {
+    filter: url(#a11y-filter-tritanopia);
+}
+
+/* 6. Alto contraste (compatible con modo claro y modo oscuro, >= 7:1 AAA) */
+html[data-a11y-contrast="high"] {
+    --color-background: #FFFFFF;
+    --color-surface: #FFFFFF;
+    --color-text-primary: #000000;
+    --color-text-secondary: #111111;
+    --color-text-muted: #1A1A1A;
+    --color-border: #000000;
+    --color-text-accessible-orange: #003399;
+    --bs-body-bg: #FFFFFF;
+    --bs-body-color: #000000;
+    --bs-border-color: #000000;
+}
+
+html[data-a11y-contrast="high"] .a11y-widget {
+    --a11y-blue: #003399;
+    --a11y-blue-hover: #002266;
+    --a11y-blue-soft: #FFFFFF;
+    --a11y-surface: #FFFFFF;
+    --a11y-surface-subtle: #FFFFFF;
+    --a11y-text: #000000;
+    --a11y-text-muted: #000000;
+    --a11y-border: #000000;
+}
+
+html[data-a11y-contrast="high"] body,
+html[data-a11y-contrast="high"] .bg-white,
+html[data-a11y-contrast="high"] .bg-light,
+html[data-a11y-contrast="high"] .navbar,
+html[data-a11y-contrast="high"] .foodjet-navbar,
+html[data-a11y-contrast="high"] .card,
+html[data-a11y-contrast="high"] .foodjet-card,
+html[data-a11y-contrast="high"] .modal-content,
+html[data-a11y-contrast="high"] .offcanvas,
+html[data-a11y-contrast="high"] .dropdown-menu,
+html[data-a11y-contrast="high"] .dropdown-item,
+html[data-a11y-contrast="high"] .list-group-item,
+html[data-a11y-contrast="high"] .table,
+html[data-a11y-contrast="high"] .form-control,
+html[data-a11y-contrast="high"] .form-select,
+html[data-a11y-contrast="high"] .foodjet-search-input,
+html[data-a11y-contrast="high"] .foodjet-input,
+html[data-a11y-contrast="high"] .foodjet-pill,
+html[data-a11y-contrast="high"] .foodjet-address-bar,
+html[data-a11y-contrast="high"] .foodjet-payment-tile,
+html[data-a11y-contrast="high"] .foodjet-quick-login-btn {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
+}
+
+html[data-a11y-contrast="high"] .card,
+html[data-a11y-contrast="high"] .foodjet-card,
+html[data-a11y-contrast="high"] .foodjet-pill,
+html[data-a11y-contrast="high"] .foodjet-input,
+html[data-a11y-contrast="high"] .foodjet-search-input,
+html[data-a11y-contrast="high"] .foodjet-address-bar,
+html[data-a11y-contrast="high"] .foodjet-payment-tile,
+html[data-a11y-contrast="high"] .foodjet-quick-login-btn,
+html[data-a11y-contrast="high"] .form-control,
+html[data-a11y-contrast="high"] .form-select,
+html[data-a11y-contrast="high"] .dropdown-menu {
+    border: 2px solid #000000 !important;
+    box-shadow: none !important;
+}
+
+html[data-a11y-contrast="high"] .text-muted,
+html[data-a11y-contrast="high"] .text-secondary,
+html[data-a11y-contrast="high"] .text-dark,
+html[data-a11y-contrast="high"] p,
+html[data-a11y-contrast="high"] h1,
+html[data-a11y-contrast="high"] h2,
+html[data-a11y-contrast="high"] h3,
+html[data-a11y-contrast="high"] h4,
+html[data-a11y-contrast="high"] h5,
+html[data-a11y-contrast="high"] h6,
+html[data-a11y-contrast="high"] label,
+html[data-a11y-contrast="high"] .foodjet-brand-text,
+html[data-a11y-contrast="high"] .foodjet-brand-bolt,
+html[data-a11y-contrast="high"] .foodjet-payment-tile__title {
+    color: #000000 !important;
+}
+
+html[data-a11y-contrast="high"] .foodjet-navbar-brand {
+    text-decoration: none !important;
+}
+
+html[data-a11y-contrast="high"] .text-primary,
+html[data-a11y-contrast="high"] .foodjet-step.text-primary,
+html[data-a11y-contrast="high"] .btn-link {
+    color: #003399 !important;
+}
+
+html[data-a11y-contrast="high"] .text-success,
+html[data-a11y-contrast="high"] .foodjet-step.text-success,
+html[data-a11y-contrast="high"] #studentDiscountAmount,
+html[data-a11y-contrast="high"] #checkoutDiscount,
+html[data-a11y-contrast="high"] #couponDiscountRate {
+    color: #005A2B !important;
+}
+
+html[data-a11y-contrast="high"] .text-danger {
+    color: #9E001C !important;
+}
+
+html[data-a11y-contrast="high"] a:not(.btn) {
+    color: #003399 !important;
+    text-decoration: underline !important;
+}
+
+html[data-a11y-contrast="high"] .btn-outline-primary,
+html[data-a11y-contrast="high"] .btn-outline-secondary,
+html[data-a11y-contrast="high"] .btn-outline-danger {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    border: 2px solid #000000 !important;
+}
+
+html[data-a11y-contrast="high"] .foodjet-btn-primary,
+html[data-a11y-contrast="high"] .foodjet-cart-btn,
+html[data-a11y-contrast="high"] .foodjet-hero-cta-btn,
+html[data-a11y-contrast="high"] .foodjet-pill--active,
+html[data-a11y-contrast="high"] .btn-primary,
+html[data-a11y-contrast="high"] .foodjet-badge--soldout,
+html[data-a11y-contrast="high"] .foodjet-badge--popular,
+html[data-a11y-contrast="high"] .foodjet-badge--new,
+html[data-a11y-contrast="high"] .foodjet-badge--student,
+html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile,
+html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile,
+html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+    border: 2px solid #000000 !important;
+    box-shadow: none !important;
+    transition: none !important;
+}
+
+html[data-a11y-contrast="high"] .foodjet-btn-primary span,
+html[data-a11y-contrast="high"] .foodjet-btn-primary i,
+html[data-a11y-contrast="high"] .foodjet-cart-btn span,
+html[data-a11y-contrast="high"] .foodjet-cart-btn i,
+html[data-a11y-contrast="high"] .foodjet-hero-cta-btn span,
+html[data-a11y-contrast="high"] .foodjet-hero-cta-btn i,
+html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__icon,
+html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__icon,
+html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected .foodjet-payment-tile__icon,
+html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__title,
+html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__title,
+html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected .foodjet-payment-tile__title,
+html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__subtitle,
+html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__subtitle,
+html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected .foodjet-payment-tile__subtitle {
+    color: #FFFFFF !important;
+}
+
+html[data-a11y-contrast="high"] .foodjet-hero-carousel {
+    background: #FFFFFF !important;
+    border: 2px solid #000000 !important;
+    box-shadow: none !important;
+}
+
+html[data-a11y-contrast="high"] .foodjet-hero-title,
+html[data-a11y-contrast="high"] .foodjet-hero-subtitle {
+    color: #000000 !important;
+    text-shadow: none !important;
+}
+
+html[data-a11y-contrast="high"] .foodjet-hero-badge {
+    background-color: #000000 !important;
+    color: #FFFF00 !important;
+    border: 1px solid #000000 !important;
+}
+
+html[data-a11y-contrast="high"] body > footer,
+html[data-a11y-contrast="high"] body > footer p,
+html[data-a11y-contrast="high"] body > footer p.text-muted,
+html[data-a11y-contrast="high"] body > footer .text-muted,
+html[data-a11y-contrast="high"] body > footer h5,
+html[data-a11y-contrast="high"] body > footer span,
+html[data-a11y-contrast="high"] body > footer a {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+}
+
+html[data-a11y-contrast="high"] body > footer .logo-circle {
+    background-color: #000000 !important;
+    border: 2px solid #FFFFFF !important;
+}
+
+html[data-a11y-contrast="high"] .a11y-fab__badge {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+    border-color: #FFFFFF !important;
+}
+
+html[data-a11y-contrast="high"] .a11y-panel {
+    border: 2px solid #000000 !important;
+    background-color: #FFFFFF !important;
+}
+
+html[data-a11y-contrast="high"] .a11y-panel__header {
+    background-color: #003399 !important;
+}
+
+html[data-a11y-contrast="high"] .a11y-panel__footer {
+    background-color: #FFFFFF !important;
+    border-top: 2px solid #000000 !important;
+}
+
+html[data-a11y-contrast="high"] .a11y-font-value {
+    background-color: #FFFFFF !important;
+    color: #003399 !important;
+    border: 2px solid #003399 !important;
+}
+
+html[data-a11y-contrast="high"] .a11y-tile,
+html[data-a11y-contrast="high"] .a11y-chip,
+html[data-a11y-contrast="high"] .a11y-step-btn,
+html[data-a11y-contrast="high"] .a11y-reset-btn,
+html[data-a11y-contrast="high"] .a11y-voice-btn,
+html[data-a11y-contrast="high"] .a11y-voice-rate__select {
+    border: 2px solid #000000 !important;
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    transition: none !important;
+}
+
+html[data-a11y-contrast="high"] .a11y-reset-btn {
+    color: #003399 !important;
+    border-color: #003399 !important;
+}
+
+html[data-a11y-contrast="high"] .a11y-tile.is-active,
+html[data-a11y-contrast="high"] .a11y-chip.is-active,
+html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
+    background-color: #003399 !important;
+    border-color: #000000 !important;
+    color: #FFFFFF !important;
+}
+
+html[data-a11y-contrast="high"] .a11y-panel__title,
+html[data-a11y-contrast="high"] .a11y-panel__shortcut,
+html[data-a11y-contrast="high"] .a11y-panel__close,
+html[data-a11y-contrast="high"] .a11y-tile.is-active .a11y-tile__label,
+html[data-a11y-contrast="high"] .a11y-tile.is-active .a11y-tile__icon,
+html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
+    color: #FFFFFF !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    html[data-a11y-contrast="high"] {
+        --color-background: #000000;
+        --color-surface: #000000;
+        --color-text-primary: #FFFFFF;
+        --color-text-secondary: #F0F0F0;
+        --color-text-muted: #E5E5E5;
+        --color-border: #FFFFFF;
+        --color-text-accessible-orange: #FFD700;
+        --bs-body-bg: #000000;
+        --bs-body-color: #FFFFFF;
+        --bs-border-color: #FFFFFF;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-widget {
+        --a11y-blue: #002B80;
+        --a11y-blue-hover: #001F5C;
+        --a11y-blue-soft: #000000;
+        --a11y-surface: #000000;
+        --a11y-surface-subtle: #000000;
+        --a11y-text: #FFFFFF;
+        --a11y-text-muted: #FFFFFF;
+        --a11y-border: #FFFFFF;
+    }
+
+    html[data-a11y-contrast="high"] body,
+    html[data-a11y-contrast="high"] .bg-white,
+    html[data-a11y-contrast="high"] .bg-light,
+    html[data-a11y-contrast="high"] .navbar,
+    html[data-a11y-contrast="high"] .foodjet-navbar,
+    html[data-a11y-contrast="high"] .card,
+    html[data-a11y-contrast="high"] .foodjet-card,
+    html[data-a11y-contrast="high"] .modal-content,
+    html[data-a11y-contrast="high"] .offcanvas,
+    html[data-a11y-contrast="high"] .dropdown-menu,
+    html[data-a11y-contrast="high"] .dropdown-item,
+    html[data-a11y-contrast="high"] .list-group-item,
+    html[data-a11y-contrast="high"] .table,
+    html[data-a11y-contrast="high"] .form-control,
+    html[data-a11y-contrast="high"] .form-select,
+    html[data-a11y-contrast="high"] select,
+    html[data-a11y-contrast="high"] option,
+    html[data-a11y-contrast="high"] .foodjet-search-input,
+    html[data-a11y-contrast="high"] .foodjet-input,
+    html[data-a11y-contrast="high"] .foodjet-pill,
+    html[data-a11y-contrast="high"] .foodjet-address-bar,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile,
+    html[data-a11y-contrast="high"] .foodjet-quick-login-btn,
+    html[data-a11y-contrast="high"] .foodjet-hero-carousel {
+        background-color: #000000 !important;
+        color: #FFFFFF !important;
+        border-color: #FFFFFF !important;
+    }
+
+    html[data-a11y-contrast="high"] .foodjet-hero-carousel {
+        background: #000000 !important;
+        box-shadow: none !important;
+    }
+
+    html[data-a11y-contrast="high"] .card,
+    html[data-a11y-contrast="high"] .foodjet-card,
+    html[data-a11y-contrast="high"] .foodjet-pill,
+    html[data-a11y-contrast="high"] .foodjet-input,
+    html[data-a11y-contrast="high"] .foodjet-search-input,
+    html[data-a11y-contrast="high"] .foodjet-address-bar,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile,
+    html[data-a11y-contrast="high"] .foodjet-quick-login-btn,
+    html[data-a11y-contrast="high"] .form-control,
+    html[data-a11y-contrast="high"] .form-select,
+    html[data-a11y-contrast="high"] .dropdown-menu,
+    html[data-a11y-contrast="high"] .foodjet-hero-carousel {
+        border: 2px solid #FFFFFF !important;
+        box-shadow: none !important;
+    }
+
+    html[data-a11y-contrast="high"] .text-muted,
+    html[data-a11y-contrast="high"] .text-secondary,
+    html[data-a11y-contrast="high"] .text-dark,
+    html[data-a11y-contrast="high"] p,
+    html[data-a11y-contrast="high"] h1,
+    html[data-a11y-contrast="high"] h2,
+    html[data-a11y-contrast="high"] h3,
+    html[data-a11y-contrast="high"] h4,
+    html[data-a11y-contrast="high"] h5,
+    html[data-a11y-contrast="high"] h6,
+    html[data-a11y-contrast="high"] label,
+    html[data-a11y-contrast="high"] .foodjet-hero-title,
+    html[data-a11y-contrast="high"] .foodjet-hero-subtitle,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile__title {
+        color: #FFFFFF !important;
+    }
+
+    html[data-a11y-contrast="high"] .foodjet-brand-text,
+    html[data-a11y-contrast="high"] .foodjet-brand-bolt {
+        color: #FFD700 !important;
+    }
+
+    html[data-a11y-contrast="high"] a:not(.btn),
+    html[data-a11y-contrast="high"] .text-primary,
+    html[data-a11y-contrast="high"] .foodjet-step.text-primary,
+    html[data-a11y-contrast="high"] .btn-link {
+        color: #66E0FF !important;
+    }
+
+    html[data-a11y-contrast="high"] .text-success,
+    html[data-a11y-contrast="high"] .foodjet-step.text-success,
+    html[data-a11y-contrast="high"] #studentDiscountAmount,
+    html[data-a11y-contrast="high"] #checkoutDiscount,
+    html[data-a11y-contrast="high"] #couponDiscountRate {
+        color: #5CE69C !important;
+    }
+
+    html[data-a11y-contrast="high"] .text-danger {
+        color: #FF8A9A !important;
+    }
+
+    html[data-a11y-contrast="high"] .btn-outline-primary,
+    html[data-a11y-contrast="high"] .btn-outline-secondary,
+    html[data-a11y-contrast="high"] .btn-outline-danger {
+        background-color: #000000 !important;
+        color: #FFD700 !important;
+        border: 2px solid #FFD700 !important;
+    }
+
+    html[data-a11y-contrast="high"] .foodjet-btn-primary,
+    html[data-a11y-contrast="high"] .foodjet-cart-btn,
+    html[data-a11y-contrast="high"] .foodjet-hero-cta-btn,
+    html[data-a11y-contrast="high"] .foodjet-pill--active,
+    html[data-a11y-contrast="high"] .btn-primary,
+    html[data-a11y-contrast="high"] .foodjet-badge--soldout,
+    html[data-a11y-contrast="high"] .foodjet-badge--popular,
+    html[data-a11y-contrast="high"] .foodjet-badge--new,
+    html[data-a11y-contrast="high"] .foodjet-badge--student,
+    html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile,
+    html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected {
+        background-color: #FFD700 !important;
+        color: #000000 !important;
+        border: 2px solid #FFFFFF !important;
+        box-shadow: none !important;
+        transition: none !important;
+    }
+
+    html[data-a11y-contrast="high"] .foodjet-btn-primary span,
+    html[data-a11y-contrast="high"] .foodjet-btn-primary i,
+    html[data-a11y-contrast="high"] .foodjet-cart-btn span,
+    html[data-a11y-contrast="high"] .foodjet-cart-btn i,
+    html[data-a11y-contrast="high"] .foodjet-hero-cta-btn span,
+    html[data-a11y-contrast="high"] .foodjet-hero-cta-btn i,
+    html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__icon,
+    html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__icon,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected .foodjet-payment-tile__icon,
+    html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__title,
+    html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__title,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected .foodjet-payment-tile__title,
+    html[data-a11y-contrast="high"] .payment-option input:checked + .foodjet-payment-tile .foodjet-payment-tile__subtitle,
+    html[data-a11y-contrast="high"] .btn-check:checked + .foodjet-payment-tile .foodjet-payment-tile__subtitle,
+    html[data-a11y-contrast="high"] .foodjet-payment-tile.is-selected .foodjet-payment-tile__subtitle {
+        color: #000000 !important;
+    }
+
+    html[data-a11y-contrast="high"] .foodjet-hero-badge {
+        background-color: #FFD700 !important;
+        color: #000000 !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-fab__badge {
+        background-color: #FFD700 !important;
+        color: #000000 !important;
+        border-color: #000000 !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-panel {
+        background-color: #000000 !important;
+        border: 2px solid #FFD700 !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-panel__header {
+        background-color: #002B80 !important;
+        border-bottom: 2px solid #FFD700 !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-panel__body,
+    html[data-a11y-contrast="high"] .a11y-panel__footer {
+        background-color: #000000 !important;
+        border-top-color: #FFD700 !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-font-value {
+        background-color: #000000 !important;
+        color: #FFD700 !important;
+        border: 2px solid #FFD700 !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-font-track__fill {
+        background-color: #FFD700 !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-tile,
+    html[data-a11y-contrast="high"] .a11y-chip,
+    html[data-a11y-contrast="high"] .a11y-step-btn,
+    html[data-a11y-contrast="high"] .a11y-voice-btn,
+    html[data-a11y-contrast="high"] .a11y-voice-rate__select {
+        background-color: #000000 !important;
+        color: #FFFFFF !important;
+        border: 2px solid #FFFFFF !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-reset-btn {
+        background-color: #000000 !important;
+        color: #FFD700 !important;
+        border: 2px solid #FFD700 !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-tile.is-active,
+    html[data-a11y-contrast="high"] .a11y-chip.is-active,
+    html[data-a11y-contrast="high"] .a11y-voice-btn--primary {
+        background-color: #FFD700 !important;
+        border-color: #FFD700 !important;
+        color: #000000 !important;
+    }
+
+    html[data-a11y-contrast="high"] .a11y-tile.is-active .a11y-tile__label,
+    html[data-a11y-contrast="high"] .a11y-tile.is-active .a11y-tile__icon {
+        color: #000000 !important;
+    }
+}
+
+
 
