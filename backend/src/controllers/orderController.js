@@ -3,7 +3,8 @@ const {
     normalizeEstado,
     isEstadoValido,
     isCancelable,
-    isValidTransition
+    isValidTransition,
+    nextEstado
 } = require('../domain/orderStatus');
 const {
     METODOS_VALIDOS,
@@ -11,7 +12,7 @@ const {
     resolvePaymentStatus,
     resolveInitialOrderStatus
 } = require('../domain/payment');
-const { leerConfigSimulacion, crearPlan, progresoDelPedido } = require('../domain/simulacion');
+const { leerConfigSimulacion, crearPlan, progresoDelPedido, estadoVencido } = require('../domain/simulacion');
 const { cambiarEstado, prepararRuta } = require('../services/estadoPedido');
 
 exports.createOrder = async (req, res) => {
@@ -241,7 +242,7 @@ exports.getOrderById = async (req, res) => {
             return res.status(400).json({ error: 'Identificador de pedido inválido.' });
         }
 
-        const order = await prisma.order.findUnique({
+        const obtenerPedido = () => prisma.order.findUnique({
             where: { id: orderId },
             include: {
                 Restaurant: {
@@ -261,6 +262,7 @@ exports.getOrderById = async (req, res) => {
             }
         });
 
+        let order = await obtenerPedido();
         if (!order) {
             return res.status(404).json({ error: 'Pedido no encontrado.' });
         }
@@ -272,8 +274,19 @@ exports.getOrderById = async (req, res) => {
             return res.status(403).json({ error: 'No tienes permiso para ver este pedido.' });
         }
 
-        const { OrderStatusHistory: historial, ...resto } = order;
         const ahora = Date.now();
+        const ultimoEstado = order.OrderStatusHistory.at(-1);
+        if (process.env.FOODJET_SIMULAR_EN_CONSULTA === 'true' &&
+            ultimoEstado?.estado === order.estado &&
+            estadoVencido(order.estado, ultimoEstado.fecha, order.plan_tiempos, ahora)) {
+            const siguiente = nextEstado(order.estado);
+            if (siguiente) {
+                await cambiarEstado(order.id, siguiente, 'simulador', { desde: order.estado });
+                order = await obtenerPedido() ?? order;
+            }
+        }
+
+        const { OrderStatusHistory: historial, ...resto } = order;
 
         res.json({
             ...resto,

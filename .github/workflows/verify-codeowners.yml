@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - EBUSINESS/main
 
 jobs:
   validar-codeowners:
