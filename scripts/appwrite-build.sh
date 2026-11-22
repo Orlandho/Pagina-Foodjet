@@ -3,6 +3,9 @@ set -eu
 
 (
     cd backend
+    curl --fail --silent --show-error --location \
+        https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt \
+        --output prisma/supabase-ca.crt
     ./node_modules/.bin/prisma generate
     ./node_modules/.bin/prisma migrate deploy
     if [ "${RUN_SEED:-false}" = true ]; then
