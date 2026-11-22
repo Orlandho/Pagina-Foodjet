@@ -215,8 +215,13 @@ describe('White-Box Unit Tests - Google Analytics 4 Module (Frontend)', () => {
         const win = createFakeWindow();
         assert.equal(trackSearch('a', win), false);
         assert.equal(trackSearch('   ', win), false);
-        assert.equal(trackSearch('  pizza  ', win), true);
+        assert.equal(trackSearch('  Pizza  ', win), true);
         assert.deepEqual(win.calls.at(-1), ['event', 'search', { search_term: 'pizza' }]);
+
+        for (const query of ['demo@example.test', '999 888 777', 'pizza para demo@example.test', 'Av. Ficticia 123']) {
+            assert.equal(trackSearch(query, win), true);
+            assert.deepEqual(win.calls.at(-1), ['event', 'search', { search_term: '(otro)' }]);
+        }
 
         assert.equal(trackSelectContent('categoria', 'Pizzas', win), true);
         assert.deepEqual(win.calls.at(-1), [
