@@ -11,6 +11,15 @@ import { buscarDireccionGuardada, faltaMarcarUbicacion, coordenadasValidas } fro
 import { crearMapaSeguimiento } from './mapaSeguimiento.js';
 import { iniciarMapaEntrega, obtenerUbicacion, enfocarMapa } from './mapaEntrega.js';
 import { initAccessibility } from './accessibility.js';
+import {
+    buildCartItems,
+    toItem,
+    trackAddToCart,
+    trackRemoveFromCart,
+    trackCartEvent,
+    trackPurchase,
+    trackSelectContent
+} from './analytics.js';
 
 // El cuerpo de este módulo se ejecuta antes de que se dispare
 // DOMContentLoaded, así que legacy.js —que es un script clásico y no puede
@@ -170,6 +179,7 @@ function initEventListeners() {
 }
 
 function openCart() {
+    trackCartEvent('view_cart', state.getCart(), state.getProductById, state.getCartTotal());
     // eslint-disable-next-line no-undef
     const cartOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('cartOffcanvas'));
     cartOffcanvas.show();
@@ -196,6 +206,7 @@ function handleCheckoutNavigation() {
         return;
     }
 
+    trackCartEvent('begin_checkout', state.getCart(), state.getProductById, state.getCartTotal());
     ui.showView('checkoutView');
 
     // eslint-disable-next-line no-undef
@@ -606,6 +617,15 @@ async function submitOrder(orderPayload, paymentMethod) {
         const result = await api.createOrderAPI(orderPayload, window.authToken);
 
         if (result.ok) {
+            const { items: purchasedItems } = buildCartItems(state.getCart(), state.getProductById);
+            const activeCoupon = state.getActiveCoupon();
+            trackPurchase({
+                order: result.data.order,
+                items: purchasedItems,
+                paymentMethod,
+                couponCode: activeCoupon?.codigo
+            });
+
             // Limpiar carrito
             state.clearCart();
             state.setActiveCoupon(null);
@@ -651,6 +671,9 @@ window.app = {
             const result = await api.toggleFavoriteAPI(productId, window.authToken);
 
             if (result.ok) {
+                if (result.data?.isFavorite) {
+                    trackSelectContent('favorito', productId);
+                }
                 await window.app.loadFavorites();
                 ui.showToast(result.data.isFavorite ? 'Añadido a favoritos' : 'Eliminado de favoritos', 'success');
             } else {
@@ -664,6 +687,7 @@ window.app = {
     handleAddToCart: (productId) => {
         const result = state.addToCart(productId);
         if (result.success) {
+            trackAddToCart(state.getProductById(productId), 1);
             ui.renderProducts();
             ui.renderCartOffcanvas(); 
             ui.renderCheckoutCart();
@@ -683,13 +707,23 @@ window.app = {
         }
     },
     handleRemoveFromCart: (productId) => {
+        const hadItem = Boolean(state.getCart()[productId]);
+        const item = hadItem ? toItem(state.getProductById(productId), 1) : null;
         state.removeFromCart(productId);
+        if (item) {
+            trackRemoveFromCart([item]);
+        }
         ui.renderProducts();
         ui.renderCartOffcanvas(); 
         ui.renderCheckoutCart();
     },
     handleRemoveItemCompletely: (productId) => {
+        const prevQty = state.getCart()[productId] || 0;
+        const item = prevQty > 0 ? toItem(state.getProductById(productId), prevQty) : null;
         state.removeItemCompletely(productId);
+        if (item) {
+            trackRemoveFromCart([item]);
+        }
         ui.renderProducts();
         ui.renderCartOffcanvas(); 
         ui.renderCheckoutCart();

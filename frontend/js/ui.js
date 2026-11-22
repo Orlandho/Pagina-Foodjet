@@ -18,6 +18,15 @@ import {
 import { lineaDeTiempo, formatearRestante } from './domain/seguimiento.js';
 import { mostrarMapaSeguimiento, detenerMapaSeguimiento } from './mapaSeguimiento.js';
 import { direccionInicial } from './domain/ubicacion.js';
+import {
+    trackViewChange,
+    trackAddToCart,
+    trackRemoveFromCart,
+    trackSearch,
+    trackSelectContent,
+    toItem,
+    buildCartItems
+} from './analytics.js';
 
 // UTILIDADES GENERALES DE UI
 export function showToast(message, type = 'success') {
@@ -86,6 +95,7 @@ export function showView(viewToShowId) {
         // teclado o lector de pantalla se queda donde estaba y no percibe que
         // la página cambió (WCAG 2.4.3, orden del foco).
         viewToShow.querySelector('h1')?.focus();
+        trackViewChange(viewToShowId);
     }
 
     // Sin esto el sondeo del pedido seguiría corriendo para siempre en
@@ -388,9 +398,14 @@ export function initRestaurantChangeModal() {
         confirmBtn.dataset.initialized = 'true';
         confirmBtn.addEventListener('click', () => {
             if (pendingProductIdForRestaurantChange) {
+                const prevCart = buildCartItems(state.getCart(), state.getProductById);
                 state.clearCart();
                 const res = state.addToCart(pendingProductIdForRestaurantChange);
                 if (res.success) {
+                    if (prevCart.items.length > 0) {
+                        trackRemoveFromCart(prevCart.items, prevCart.value);
+                    }
+                    trackAddToCart(state.getProductById(pendingProductIdForRestaurantChange), 1);
                     renderCartOffcanvas();
                     renderProducts();
                     if (typeof renderCheckoutCart === 'function') renderCheckoutCart();
@@ -417,6 +432,9 @@ export function initRestaurantChangeModal() {
 // BUSCADOR Y ESTADOS DE FEEDBACK DEL CATÁLOGO
 // ==========================================
 
+let catalogSearchDebounceTimer = null;
+let lastTrackedSearchTerm = '';
+
 export function initCatalogSearch() {
     const searchInput = document.getElementById('catalogSearchInput');
     const clearBtn = document.getElementById('catalogSearchClear');
@@ -425,20 +443,36 @@ export function initCatalogSearch() {
     if (!searchInput.dataset.initialized) {
         searchInput.dataset.initialized = 'true';
         searchInput.addEventListener('input', () => {
+            const term = searchInput.value.trim();
             if (clearBtn) {
-                if (searchInput.value.trim().length > 0) {
+                if (term.length > 0) {
                     clearBtn.classList.remove('d-none');
                 } else {
                     clearBtn.classList.add('d-none');
                 }
             }
             renderProducts();
+
+            clearTimeout(catalogSearchDebounceTimer);
+            if (term.length >= 2) {
+                catalogSearchDebounceTimer = setTimeout(() => {
+                    const current = searchInput.value.trim();
+                    if (current.length >= 2 && current.toLowerCase() !== lastTrackedSearchTerm) {
+                        lastTrackedSearchTerm = current.toLowerCase();
+                        trackSearch(current);
+                    }
+                }, 800);
+            } else {
+                lastTrackedSearchTerm = '';
+            }
         });
     }
 
     if (clearBtn && !clearBtn.dataset.initialized) {
         clearBtn.dataset.initialized = 'true';
         clearBtn.addEventListener('click', () => {
+            clearTimeout(catalogSearchDebounceTimer);
+            lastTrackedSearchTerm = '';
             searchInput.value = '';
             clearBtn.classList.add('d-none');
             renderProducts();
@@ -456,7 +490,8 @@ export function initQuickFilters() {
     if (ratingBtn && !ratingBtn.dataset.initialized) {
         ratingBtn.dataset.initialized = 'true';
         ratingBtn.addEventListener('click', () => {
-            ratingBtn.classList.toggle('foodjet-pill--active');
+            const isActive = ratingBtn.classList.toggle('foodjet-pill--active');
+            if (isActive) trackSelectContent('filtro_rapido', 'mejor_valorados');
             renderProducts();
         });
     }
@@ -473,6 +508,7 @@ export function initQuickFilters() {
                     maxPriceInput.value = '';
                 }
             }
+            if (isActive) trackSelectContent('filtro_rapido', 'menos_20');
             renderProducts();
         });
     }
@@ -485,6 +521,7 @@ export function initQuickFilters() {
             if (timeRadio) {
                 timeRadio.checked = isActive;
             }
+            if (isActive) trackSelectContent('filtro_rapido', 'menos_30_min');
             renderProducts();
         });
     }
@@ -492,6 +529,7 @@ export function initQuickFilters() {
     if (sortSelect && !sortSelect.dataset.initialized) {
         sortSelect.dataset.initialized = 'true';
         sortSelect.addEventListener('change', () => {
+            trackSelectContent('orden', sortSelect.value);
             renderProducts();
         });
     }
@@ -754,6 +792,7 @@ export function renderProducts() {
             const productId = parseInt(btn.dataset.id);
             const result = state.addToCart(productId);
             if (result.success) {
+                trackAddToCart(state.getProductById(productId), 1);
                 renderCartOffcanvas();
                 if (typeof bootstrap !== 'undefined') {
                     const cartEl = document.getElementById('cartOffcanvas');
@@ -815,6 +854,7 @@ export function renderProducts() {
                     window.app.loadFavorites();
                 }
                 if (result.data?.isFavorite) {
+                    trackSelectContent('favorito', productId);
                     showToast('Añadido a favoritos');
                 } else {
                     showToast('Eliminado de favoritos');
@@ -922,6 +962,7 @@ export function renderFavoritesOffcanvas() {
             const result = state.addToCart(productId);
 
             if (result.success) {
+                trackAddToCart(state.getProductById(productId), 1);
                 if (typeof bootstrap !== 'undefined') {
                     const favOffcanvasEl = document.getElementById('favoritesOffcanvas');
                     if (favOffcanvasEl) {
@@ -1033,7 +1074,11 @@ export function renderCartOffcanvas() {
         `;
 
         document.getElementById('clearCartBtn')?.addEventListener('click', () => {
+            const removed = buildCartItems(state.getCart(), state.getProductById);
             state.clearCart();
+            if (removed.items.length > 0) {
+                trackRemoveFromCart(removed.items, removed.value);
+            }
             renderCartOffcanvas();
             renderProducts();
             if (typeof renderCheckoutCart === 'function') renderCheckoutCart();
@@ -1118,7 +1163,10 @@ export function renderCartOffcanvas() {
     document.querySelectorAll('.plus-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const productId = parseInt(e.currentTarget.dataset.id);
-            state.addToCart(productId);
+            const res = state.addToCart(productId);
+            if (res.success) {
+                trackAddToCart(state.getProductById(productId), 1);
+            }
             renderCartOffcanvas();
         });
     });
@@ -1126,7 +1174,12 @@ export function renderCartOffcanvas() {
     document.querySelectorAll('.minus-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const productId = parseInt(e.currentTarget.dataset.id);
+            const item = toItem(state.getProductById(productId), 1);
+            const hadItem = Boolean(state.getCart()[productId]);
             state.removeFromCart(productId);
+            if (hadItem && item) {
+                trackRemoveFromCart([item]);
+            }
             renderCartOffcanvas();
         });
     });
@@ -1134,7 +1187,12 @@ export function renderCartOffcanvas() {
     document.querySelectorAll('.remove-item-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const productId = parseInt(e.currentTarget.dataset.id);
+            const prevQty = state.getCart()[productId] || 0;
+            const item = prevQty > 0 ? toItem(state.getProductById(productId), prevQty) : null;
             state.removeItemCompletely(productId);
+            if (item) {
+                trackRemoveFromCart([item]);
+            }
             renderCartOffcanvas();
             renderProducts();
             if (typeof renderCheckoutCart === 'function') renderCheckoutCart();
@@ -1939,6 +1997,7 @@ export function renderFoodTypeFilters() {
             document.querySelectorAll('#filter-food-type-container label.foodjet-pill').forEach(l => l.classList.remove('foodjet-pill--active'));
             btnAll.classList.add('foodjet-pill--active');
             btnAll.setAttribute('aria-pressed', 'true');
+            trackSelectContent('categoria', 'Todos');
             renderProducts();
         });
     }
@@ -1950,6 +2009,7 @@ export function renderFoodTypeFilters() {
                 label?.classList.add('foodjet-pill--active');
                 btnAll?.classList.remove('foodjet-pill--active');
                 btnAll?.setAttribute('aria-pressed', 'false');
+                trackSelectContent('categoria', cb.value);
             } else {
                 label?.classList.remove('foodjet-pill--active');
                 const anyChecked = container.querySelector('.filter-food-type:checked');

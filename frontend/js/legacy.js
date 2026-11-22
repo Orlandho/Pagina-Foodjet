@@ -178,6 +178,7 @@ async function handleLogin(e) {
         if (response.ok) {
             window.authToken = data.token;
             window.currentUser = data.user;
+            window.foodjetAnalytics?.track('login', { method: 'email' });
 
             localStorage.setItem('token', window.authToken);
             localStorage.setItem('user', JSON.stringify(window.currentUser));
@@ -243,6 +244,7 @@ async function handleRegister(e) {
         const data = await response.json();
 
         if (response.ok) {
+            window.foodjetAnalytics?.track('sign_up', { method: 'email' });
             const registerError = document.getElementById('registerError');
             if (registerError) registerError.style.display = 'none';
 
@@ -301,6 +303,7 @@ function handleLogout(e) {
             if(el) el.style.display = 'none';
         });
         homeView.style.display = 'block';
+        window.foodjetAnalytics?.trackViewChange('homeView');
     }
     showToast('Has cerrado sesión', 'info');
 }
@@ -369,7 +372,10 @@ function displayDashboard() {
         if(el) el.style.display = 'none';
     });
 
-    if(dashboardView) dashboardView.style.display = 'block';
+    if(dashboardView) {
+        dashboardView.style.display = 'block';
+        window.foodjetAnalytics?.trackViewChange('dashboardView');
+    }
     renderOperationsPanel();
 }
 
