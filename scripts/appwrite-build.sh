@@ -3,6 +3,7 @@ set -eu
 
 (
     cd backend
+    npm ci --include=dev --no-audit --no-fund
     node --input-type=module <<'NODE'
 import { writeFile } from 'node:fs/promises';
 
@@ -19,16 +20,15 @@ NODE
     npm prune --omit=dev --ignore-scripts --no-audit --no-fund
 )
 
-mkdir -p appwrite-dist/backend appwrite-dist/frontend
-cp -R backend/package.json backend/src backend/prisma backend/node_modules appwrite-dist/backend/
+mkdir -p appwrite-web
 for asset in index.html styles.css logo.ico fonts img js; do
-    cp -R "frontend/$asset" appwrite-dist/frontend/
+    cp -R "frontend/$asset" appwrite-web/
 done
 
 # La versión pública del curso conserva el diseño e identifica sus pagos simulados.
 node -e "
 const fs = require('node:fs');
-const file = 'appwrite-dist/frontend/index.html';
+const file = 'appwrite-web/index.html';
 const html = fs.readFileSync(file, 'utf8');
 const main = '<main id=\x22main-content\x22>';
 if (!html.includes(main)) throw new Error('No se encontró el contenido principal de FoodJet.');

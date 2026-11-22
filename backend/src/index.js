@@ -51,7 +51,7 @@ app.use('/api/config', configRoutes);
 
 if (serveWeb) {
     app.use('/api', (req, res) => res.status(404).json({ error: 'Ruta de API no encontrada.' }));
-    app.use(express.static(path.resolve(__dirname, '../../frontend'), {
+    app.use(express.static(path.resolve(__dirname, '../../appwrite-web'), {
         setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache')
     }));
 }
@@ -61,8 +61,12 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT}`);
-    startJobs();
-});
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT}`);
+        startJobs();
+    });
+}
+
+module.exports = app;
