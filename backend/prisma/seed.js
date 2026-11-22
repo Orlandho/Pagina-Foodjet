@@ -12,8 +12,10 @@
  * Es idempotente: todo se escribe con upsert sobre claves fijas, así que
  * volver a ejecutarlo no duplica filas.
  */
+const { randomBytes } = require('node:crypto');
 const bcrypt = require('bcryptjs');
 const prisma = require('../src/config/db');
+const privateSeed = process.env.FOODJET_PRIVATE_SEED === 'true';
 
 /**
  * QR de cobro por restaurante.
@@ -41,7 +43,8 @@ async function seedUsers() {
     ];
 
     for (const { password, ...datos } of usuarios) {
-        const hash = await bcrypt.hash(password, 10);
+        const seedPassword = privateSeed ? randomBytes(32).toString('hex') : password;
+        const hash = await bcrypt.hash(seedPassword, 10);
         await prisma.user.upsert({
             where: { id: datos.id },
             update: { ...datos, password: hash },
@@ -199,6 +202,11 @@ async function main() {
     console.log(`   pedidos:       ${await seedOrders()}`);
 
     await resyncSequences();
+
+    if (privateSeed) {
+        console.log('Seed completado con credenciales aleatorias.');
+        return;
+    }
 
     console.log('✅ Seed completado. Credenciales de acceso:');
     console.log('   admin@foodjet.com  / Admin123!    (rol admin)');
