@@ -151,12 +151,18 @@ export function trackPurchase({ order, items, paymentMethod, couponCode } = {}, 
     return track('purchase', payload, win);
 }
 
+const CATALOG_SEARCH_TERMS = new Set([
+    'bebida', 'cena', 'comida rápida', 'ensalada', 'hamburguesa', 'pizza', 'sushi'
+]);
+
 export function trackSearch(term, win = globalThis.window) {
     if (typeof term !== 'string') return false;
-    const clean = term.trim();
-    if (clean.length < 2) return false;
+    const query = term.trim().toLowerCase();
+    if (query.length < 2) return false;
 
-    return track('search', { search_term: clean }, win);
+    // El buscador acepta texto libre. GA4 solo recibe términos públicos predefinidos.
+    const searchTerm = CATALOG_SEARCH_TERMS.has(query) ? query : '(otro)';
+    return track('search', { search_term: searchTerm }, win);
 }
 
 export function trackSelectContent(contentType, itemId, win = globalThis.window) {
