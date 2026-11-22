@@ -3,9 +3,14 @@ set -eu
 
 (
     cd backend
-    curl --fail --silent --show-error --location \
-        https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt \
-        --output prisma/supabase-ca.crt
+    node --input-type=module <<'NODE'
+import { writeFile } from 'node:fs/promises';
+
+const certificateUrl = 'https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt';
+const response = await fetch(certificateUrl);
+if (!response.ok) throw new Error(`No se pudo obtener el certificado de Supabase (${response.status}).`);
+await writeFile('prisma/supabase-ca.crt', await response.text());
+NODE
     ./node_modules/.bin/prisma generate
     ./node_modules/.bin/prisma migrate deploy
     if [ "${RUN_SEED:-false}" = true ]; then
